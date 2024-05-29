@@ -86,9 +86,9 @@ class SsoMib:
         return token
 
 
-if __name__ == '__main__':
-    ssomib = SsoMib()
-
+def run_as_plugin(ssomib):
+    print("Running as browser plugin.", file=sys.stderr)
+    print("For interactive mode, start with --interactive", file=sys.stderr)
     while True:
         receivedMessage = NativeMessaging.getMessage()
         if receivedMessage == "acquirePrtSsoCookie":
@@ -96,3 +96,9 @@ if __name__ == '__main__':
             NativeMessaging.sendMessage(
                 NativeMessaging.encodeMessage(
                     ssomib.acquirePrtSsoCookie(accounts[0])))
+
+
+if __name__ == '__main__':
+    ssomib = SsoMib()
+    if len(sys.argv) == 1:
+        run_as_plugin(ssomib)
