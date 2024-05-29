@@ -89,10 +89,10 @@ class SsoMib:
 def run_as_plugin(ssomib):
     print("Running as browser plugin.", file=sys.stderr)
     print("For interactive mode, start with --interactive", file=sys.stderr)
+    accounts = ssomib.getAccounts()
     while True:
         receivedMessage = NativeMessaging.getMessage()
         if receivedMessage == "acquirePrtSsoCookie":
-            accounts = ssomib.getAccounts()
             NativeMessaging.sendMessage(
                 NativeMessaging.encodeMessage(
                     ssomib.acquirePrtSsoCookie(accounts[0])))
