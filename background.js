@@ -1,7 +1,7 @@
 console.log('started sso_mib')
 
 let port = browser.runtime.connectNative("sso_mib");
-let PRT_LIFETIME_S = 60 * 60;
+let PRT_LIFETIME_S = 30 * 60;
 let prt_sso_cookie = {
   data: {},
   validUntil: new Date(0)
