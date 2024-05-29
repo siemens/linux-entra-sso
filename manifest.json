@@ -4,11 +4,11 @@
     "name": "EntraID SSO",
     "version": "0.1",
     "icons": {
-        "48": "icons/sso_mib.png"
+        "48": "icons/sso-mib.png"
     },
     "browser_specific_settings": {
         "gecko": {
-            "id": "sso_mib@example.com",
+            "id": "sso-mib@example.com",
             "strict_min_version": "109.0"
         }
     },

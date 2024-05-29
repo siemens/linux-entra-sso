@@ -1,4 +1,4 @@
-console.log('started sso_mib')
+console.log('started sso-mib')
 
 let port = browser.runtime.connectNative("sso_mib");
 let PRT_LIFETIME_S = 30 * 60;

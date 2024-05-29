@@ -1,9 +1,9 @@
 {
     "name": "sso_mib",
     "description": "Single Sign On via Microsoft Identity Broker",
-    "path": "/usr/local/lib/mozilla/sso_mib.py",
+    "path": "/usr/local/lib/mozilla/sso-mib.py",
     "type": "stdio",
     "allowed_extensions": [
-        "sso_mib@example.com"
+        "sso-mib@example.com"
     ]
 }
