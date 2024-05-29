@@ -86,7 +86,7 @@ class SsoMib:
         return token
 
 
-def run_as_plugin(ssomib):
+def run_as_plugin(ssomib: SsoMib):
     print("Running as browser plugin.", file=sys.stderr)
     print("For interactive mode, start with --interactive", file=sys.stderr)
     accounts = ssomib.getAccounts()
@@ -98,7 +98,31 @@ def run_as_plugin(ssomib):
                     ssomib.acquirePrtSsoCookie(accounts[0])))
 
 
+def run_interactive(ssomib: SsoMib):
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--interactive", action="store_true",
+                        help="run in interactive mode")
+    parser.add_argument("-a", "--account", type=int, default=0,
+                        help="account index to use for operations")
+    parser.add_argument("command", choices=["getAccounts",
+                                            "acquirePrtSsoCookie"])
+    args = parser.parse_args()
+
+    accounts = ssomib.getAccounts()
+    if args.command == 'getAccounts':
+        json.dump(accounts, indent=2, fp=sys.stdout)
+    elif args.command == "acquirePrtSsoCookie":
+        account = accounts[args.account]
+        cookie = ssomib.acquirePrtSsoCookie(account)
+        json.dump(cookie, indent=2, fp=sys.stdout)
+    # add newline
+    print()
+
+
 if __name__ == '__main__':
     ssomib = SsoMib()
-    if len(sys.argv) == 1:
+    if '--interactive' in sys.argv or '-i' in sys.argv:
+        run_interactive(ssomib)
+    else:
         run_as_plugin(ssomib)
