@@ -1,0 +1,18 @@
+variables:
+  http_proxy: $CODE_PROXY
+  https_proxy: $CODE_PROXY
+  no_proxy: code.siemens.com,docker.siemens.com,devops.bt.siemens.com
+
+stages:
+  - build
+
+build-xpi:
+  stage: build
+  image: debian:bookworm-slim
+  before_script:
+    - apt-get update && apt-get install -y make git zip
+  script:
+    - make package
+  artifacts:
+    paths:
+      - "sso-mib*.xpi"
