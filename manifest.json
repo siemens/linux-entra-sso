@@ -8,7 +8,7 @@
     },
     "browser_specific_settings": {
         "gecko": {
-            "id": "sso_mib@siemens.com",
+            "id": "sso_mib@example.com",
             "strict_min_version": "50.0"
         }
     },
@@ -17,17 +17,10 @@
             "background.js"
         ]
     },
-    "content_scripts": [
-        {
-            "matches": [
-                "*://login.microsoftonline.com/*"
-            ],
-            "js": ["content.js"]
-        }
-    ],
     "permissions": [
         "nativeMessaging",
-        "cookies"
+        "webRequest",
+        "webRequestBlocking"
     ],
     "host_permissions": [
         "*://login.microsoftonline.com/*"

@@ -4,6 +4,6 @@
     "path": "/usr/local/lib/mozilla/sso_mib.py",
     "type": "stdio",
     "allowed_extensions": [
-        "sso_mib@siemens.com"
+        "sso_mib@example.com"
     ]
 }
