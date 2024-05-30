@@ -57,7 +57,7 @@ class SsoMib:
                                        json.dumps(context))
         return json.loads(resp)['accounts']
 
-    def acquirePrtSsoCookie(self, account):
+    def acquirePrtSsoCookie(self, account, ssoUrl='https://login.microsoftonline.com/'):
         tenant = account['realm']
         request = {
             'account': account,
@@ -78,8 +78,7 @@ class SsoMib:
                 'username': account['username'],
                 'uxContextHandle': -1
                 },
-            'ssoUrl': 'https://login.microsoftonline.com'
-                      f'/{tenant}/oauth2/v2.0/authorize'
+            'ssoUrl': ssoUrl
         }
         token = json.loads(self.broker.acquirePrtSsoCookie(
             '0.0', str(self.session_id), json.dumps(request)))
@@ -105,6 +104,8 @@ def run_interactive(ssomib: SsoMib):
                         help="run in interactive mode")
     parser.add_argument("-a", "--account", type=int, default=0,
                         help="account index to use for operations")
+    parser.add_argument("-s", "--ssoUrl", default="https://login.microsoftonline.com/",
+                        help="ssoUrl part of SSO PRT cookie request")
     parser.add_argument("command", choices=["getAccounts",
                                             "acquirePrtSsoCookie"])
     args = parser.parse_args()
@@ -114,7 +115,7 @@ def run_interactive(ssomib: SsoMib):
         json.dump(accounts, indent=2, fp=sys.stdout)
     elif args.command == "acquirePrtSsoCookie":
         account = accounts[args.account]
-        cookie = ssomib.acquirePrtSsoCookie(account)
+        cookie = ssomib.acquirePrtSsoCookie(account, args.ssoUrl)
         json.dump(cookie, indent=2, fp=sys.stdout)
     # add newline
     print()
