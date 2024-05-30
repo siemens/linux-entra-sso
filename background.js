@@ -80,7 +80,7 @@ async function on_before_send_headers(e){
 
 browser.webRequest.onBeforeSendHeaders.addListener(
   on_before_send_headers,
-  { urls: ["*://login.microsoftonline.com/*"] },
+  { urls: ["https://login.microsoftonline.com/*"] },
   ["blocking", "requestHeaders"]
 )
 

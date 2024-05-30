@@ -23,6 +23,6 @@
         "webRequestBlocking"
     ],
     "host_permissions": [
-        "*://login.microsoftonline.com/*"
+        "https://login.microsoftonline.com/*"
       ]
 }
