@@ -17,10 +17,10 @@ as temporary extension. For that, perform the following steps:
 
 1. clone this repository
 2. run `make` to build the extension `sso-mib-*.xpi`
-3. run `make local-install` to install the native messaging app in the user's ~/.mozilla folder
-4. Permit unsigned extension is Firefox by setting xpinstall.signatures.required to false
+3. run `make local-install` to install the native messaging app in the user's `.mozilla` folder
+4. Permit unsigned extensions is Firefox by setting `xpinstall.signatures.required` to `false`
 5. Install the extension in Firefox from the local `sso-mib-*.xpi` file
-6. Enable "Access your data for *://login.microsoftonline.com" under the extension's permissions
+6. Enable "Access your data for https://login.microsoftonline.com" under the extension's permissions
 
 ## Usage
 
