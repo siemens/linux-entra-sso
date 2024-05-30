@@ -67,7 +67,12 @@ function cookie_keyvalues_set(original_cookies, key, value) {
 
 async function on_before_send_headers(e){
   let header_cookie = e.requestHeaders.find(header => header.name.toLowerCase() === "cookie");
-  let prt = await get_or_request_prt();
+  // filter out requests that are not part of the OAuth2.0 flow
+  accept = e.requestHeaders.find(header => header.name.toLowerCase() === "accept")
+  if(accept === undefined || !accept.value.includes('text/html')){
+    return { requestHeaders: e.requestHeaders };
+  }
+  let prt = await get_or_request_prt(e.url);
   let new_cookie = cookie_keyvalues_set(header_cookie === undefined ? "" : header_cookie.value, prt.cookieName, prt.cookieContent);
   // no cookies at all
   if (header_cookie === undefined) {
