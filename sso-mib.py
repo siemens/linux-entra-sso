@@ -6,6 +6,12 @@ import struct
 from pydbus import SessionBus
 import uuid
 
+# the ssoUrl is a mandatory parameter when requesting a PRT SSO
+# Cookie, but the correct value is not checked as of 30.05.2024
+# by the authorization backend. By that, a static (fallback)
+# value can be used, if no real value is provided.
+SSO_URL_DEFAULT = "https://login.microsoftonline.com/"
+
 
 class NativeMessaging:
     @staticmethod
@@ -57,8 +63,7 @@ class SsoMib:
                                        json.dumps(context))
         return json.loads(resp)['accounts']
 
-    def acquirePrtSsoCookie(self, account, ssoUrl='https://login.microsoftonline.com/'):
-        tenant = account['realm']
+    def acquirePrtSsoCookie(self, account, ssoUrl):
         request = {
             'account': account,
             'authParameters': {
@@ -91,10 +96,12 @@ def run_as_plugin(ssomib: SsoMib):
     accounts = ssomib.getAccounts()
     while True:
         receivedMessage = NativeMessaging.getMessage()
-        if receivedMessage == "acquirePrtSsoCookie":
+        if receivedMessage['command'] == "acquirePrtSsoCookie":
+            ssoUrl = receivedMessage['ssoUrl'] or SSO_URL_DEFAULT
+            token = ssomib.acquirePrtSsoCookie(accounts[0], ssoUrl)
+            token['ssoUrl'] = ssoUrl
             NativeMessaging.sendMessage(
-                NativeMessaging.encodeMessage(
-                    ssomib.acquirePrtSsoCookie(accounts[0])))
+                NativeMessaging.encodeMessage(token))
 
 
 def run_interactive(ssomib: SsoMib):
@@ -104,7 +111,7 @@ def run_interactive(ssomib: SsoMib):
                         help="run in interactive mode")
     parser.add_argument("-a", "--account", type=int, default=0,
                         help="account index to use for operations")
-    parser.add_argument("-s", "--ssoUrl", default="https://login.microsoftonline.com/",
+    parser.add_argument("-s", "--ssoUrl", default=SSO_URL_DEFAULT,
                         help="ssoUrl part of SSO PRT cookie request")
     parser.add_argument("command", choices=["getAccounts",
                                             "acquirePrtSsoCookie"])

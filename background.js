@@ -4,7 +4,8 @@ let port = browser.runtime.connectNative("sso_mib");
 let PRT_LIFETIME_S = 30 * 60;
 let prt_sso_cookie = {
   data: {},
-  validUntil: new Date(0)
+  validUntil: new Date(0),
+  ssoUrl: ''
 };
 
 /*
@@ -16,15 +17,15 @@ let waitFor = async function waitFor(f){
     return f();
 };
 
-async function get_or_request_prt(){
-  if(prt_sso_cookie.validUntil < new Date()){
-    console.log('request new PrtSsoCookie from broker')
-    port.postMessage("acquirePrtSsoCookie")
+async function get_or_request_prt(ssoUrl){
+  if(prt_sso_cookie.validUntil < new Date() || prt_sso_cookie.ssoUrl !== ssoUrl){
+    console.log('request new PrtSsoCookie from broker for ssoUrl: ', ssoUrl);
+    port.postMessage({'command': 'acquirePrtSsoCookie', 'ssoUrl': ssoUrl})
   } else {
-    console.log('use cached PrtSsoCookie, valid until: ', prt_sso_cookie.validUntil);
+    console.log('use cached PrtSsoCookie, valid until: ', prt_sso_cookie.validUntil, ' ssoUrl: ', ssoUrl);
   }
   return waitFor(() => {
-    if(prt_sso_cookie.validUntil > new Date()){
+    if(prt_sso_cookie.validUntil > new Date() && prt_sso_cookie.ssoUrl === ssoUrl){
       return prt_sso_cookie.data;
     }
     return false;
@@ -92,5 +93,6 @@ browser.webRequest.onBeforeSendHeaders.addListener(
 port.onMessage.addListener((response) => {
   console.log('received PRT cookie from broker');
   prt_sso_cookie.data = response;
+  prt_sso_cookie.ssoUrl = response.ssoUrl;
   prt_sso_cookie.validUntil = new Date(Date.now() + 1000 * PRT_LIFETIME_S);
 });
