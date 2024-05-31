@@ -26,7 +26,7 @@ ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG).xpi
 PACKAGE_FILES= \
 	background.js \
 	manifest.json \
-	icons/sso-mib.png
+	icons/sso-mib.svg
 
 UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
 

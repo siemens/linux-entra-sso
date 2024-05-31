@@ -4,7 +4,7 @@
     "name": "EntraID SSO",
     "version": "0.1",
     "icons": {
-        "48": "icons/sso-mib.png"
+        "48": "icons/sso-mib.svg"
     },
     "browser_specific_settings": {
         "gecko": {
