@@ -1,7 +1,7 @@
 variables:
   http_proxy: $CODE_PROXY
   https_proxy: $CODE_PROXY
-  no_proxy: code.siemens.com,docker.siemens.com,devops.bt.siemens.com
+  no_proxy: $CODE_NO_PROXY
 
 stages:
   - build
