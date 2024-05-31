@@ -134,6 +134,10 @@ class SsoMib:
 
 
 def run_as_plugin():
+    def respond(message):
+        NativeMessaging.sendMessage(
+            NativeMessaging.encodeMessage(message))
+
     print("Running as browser plugin.", file=sys.stderr)
     print("For interactive mode, start with --interactive", file=sys.stderr)
     ssomib = SsoMib(daemon=True)
@@ -146,8 +150,7 @@ def run_as_plugin():
             ssoUrl = receivedMessage['ssoUrl'] or SSO_URL_DEFAULT
             token = ssomib.acquirePrtSsoCookie(accounts[0], ssoUrl)
             token['ssoUrl'] = ssoUrl
-            NativeMessaging.sendMessage(
-                NativeMessaging.encodeMessage(token))
+            respond(token)
 
 
 def run_interactive():
