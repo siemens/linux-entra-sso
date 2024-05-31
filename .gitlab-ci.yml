@@ -8,7 +8,22 @@ variables:
   no_proxy: $CODE_NO_PROXY
 
 stages:
+  - check
   - build
+
+reuse-and-codestyle:
+  stage: check
+  image: python:latest
+  variables:
+    GIT_DEPTH: "0"
+  before_script:
+    - python3 -m venv ../venv
+    - . ../venv/bin/activate
+    - pip3 install fsfe-reuse flake8
+    - git clean -f -d
+  script:
+    - reuse lint
+    - flake8
 
 build-xpi:
   stage: build
