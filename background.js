@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: MPL-2.0
+ * SPDX-FileCopyrightText: Copyright 2024 Siemens AG
+ */
+
 console.log('started sso-mib')
 
 let port = browser.runtime.connectNative("sso_mib");

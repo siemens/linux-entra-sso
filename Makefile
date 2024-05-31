@@ -1,8 +1,9 @@
 #
 # Firefox Intune Plugin
 #
-# Copyright (c) Jan Kiszka, 2020-2024
-# Copyright (c) Siemens AG, 2024
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: Copyright (c) Jan Kiszka, 2020-2024
+# SPDX-FileCopyrightText: Copyright (c) Siemens AG, 2024
 #
 # Authors:
 #  Jan Kiszka <jan.kiszka@siemens.de>

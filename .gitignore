@@ -1,2 +1,6 @@
+# SPDX-FileCopyrightText: Copyright 2024 Siemens AG
+#
+# SPDX-License-Identifier: MPL-2.0
+
 sso-mib*.xpi
 __pycache__/

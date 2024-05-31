@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: Copyright 2024 Siemens AG
+SPDX-License-Identifier: MPL-2.0
+-->
+
 # Single Sign On via Microsoft Identity Broker
 
 This browser plugin uses a locally running microsoft identity broker
@@ -29,6 +34,11 @@ No configuration is required. However, you might need to clear all cookies on
 will automatically acquire a [PRT SSO Cookie](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-oapxbc/105e4d17-defd-4637-a520-173db2393a4b)
 from the locally running device identity broker and inject that into the OAuth2 login workflow for all entra-id enabled sites
 (the ones you log in via `login.microsoftonline.com`).
+
+## License
+
+This project is licensed according to the terms of the Mozilla Public
+License, v. 2.0. A copy of the license is provided in `LICENSES/MPL-2.0.txt`.
 
 ## Maintainers
 
