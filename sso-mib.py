@@ -8,6 +8,7 @@ import json
 import struct
 from pydbus import SessionBus
 import uuid
+from gi.repository import GLib
 
 # the ssoUrl is a mandatory parameter when requesting a PRT SSO
 # Cookie, but the correct value is not checked as of 30.05.2024
@@ -50,13 +51,50 @@ class NativeMessaging:
 
 
 class SsoMib:
-    def __init__(self):
-        self.broker = SessionBus().get(
-            "com.microsoft.identity.broker1",
-            "/com/microsoft/identity/broker1")
+    NO_BROKER = {'error': 'Broker not available'}
+    BROKER_NAME = 'com.microsoft.identity.broker1'
+    BROKER_PATH = '/com/microsoft/identity/broker1'
+
+    def __init__(self, daemon=False):
+        self._bus = SessionBus()
+        self.broker_online = False
         self.session_id = uuid.uuid4()
+        self._check_broker_online()
+        if daemon:
+            self._monitor_bus()
+
+    def _check_broker_online(self):
+        dbus = self._bus.get('org.freedesktop.DBus', '/')
+        if dbus.NameHasOwner(self.BROKER_NAME):
+            self._instantiate_broker()
+            self.broker_online = True
+        else:
+            self.broker_online = False
+
+    def _instantiate_broker(self):
+        self.broker = self._bus.get(self.BROKER_NAME, self.BROKER_PATH)
+
+    def _monitor_bus(self):
+        self._bus.subscribe(
+            sender="org.freedesktop.DBus",
+            object="/org/freedesktop/DBus",
+            signal="NameOwnerChanged",
+            arg0=self.BROKER_NAME,
+            signal_fired=self._broker_state_changed)
+
+    def _broker_state_changed(self, sender, object, iface, signal, params):
+        # params = (name, old_owner, new_owner)
+        if params[2]:
+            print(f"{self.BROKER_NAME} appeared on bus.", file=sys.stderr)
+            self._instantiate_broker()
+            self.broker_online = True
+        else:
+            print(f"{self.BROKER_NAME} disappeared on bus.", file=sys.stderr)
+            self.broker_online = False
 
     def getAccounts(self):
+        if not self.broker_online:
+            return self.NO_BROKER
         context = {
             'clientId': str(self.session_id),
             'redirectUri': str(self.session_id)
@@ -67,6 +105,8 @@ class SsoMib:
         return json.loads(resp)['accounts']
 
     def acquirePrtSsoCookie(self, account, ssoUrl):
+        if not self.broker_online:
+            self.NO_BROKER
         request = {
             'account': account,
             'authParameters': {
@@ -93,12 +133,15 @@ class SsoMib:
         return token
 
 
-def run_as_plugin(ssomib: SsoMib):
+def run_as_plugin():
     print("Running as browser plugin.", file=sys.stderr)
     print("For interactive mode, start with --interactive", file=sys.stderr)
+    ssomib = SsoMib(daemon=True)
     accounts = ssomib.getAccounts()
+    loop = GLib.MainLoop()
     while True:
         receivedMessage = NativeMessaging.getMessage()
+        loop.get_context().iteration(False)
         if receivedMessage['command'] == "acquirePrtSsoCookie":
             ssoUrl = receivedMessage['ssoUrl'] or SSO_URL_DEFAULT
             token = ssomib.acquirePrtSsoCookie(accounts[0], ssoUrl)
@@ -107,7 +150,7 @@ def run_as_plugin(ssomib: SsoMib):
                 NativeMessaging.encodeMessage(token))
 
 
-def run_interactive(ssomib: SsoMib):
+def run_interactive():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--interactive", action="store_true",
@@ -117,8 +160,16 @@ def run_interactive(ssomib: SsoMib):
     parser.add_argument("-s", "--ssoUrl", default=SSO_URL_DEFAULT,
                         help="ssoUrl part of SSO PRT cookie request")
     parser.add_argument("command", choices=["getAccounts",
-                                            "acquirePrtSsoCookie"])
+                                            "acquirePrtSsoCookie",
+                                            "monitor"])
     args = parser.parse_args()
+
+    monitor_mode = args.command == "monitor"
+    ssomib = SsoMib(daemon=monitor_mode)
+    if monitor_mode:
+        print("Monitoring D-Bus for broker availability.")
+        GLib.MainLoop().run()
+        return
 
     accounts = ssomib.getAccounts()
     if args.command == 'getAccounts':
@@ -132,8 +183,7 @@ def run_interactive(ssomib: SsoMib):
 
 
 if __name__ == '__main__':
-    ssomib = SsoMib()
     if '--interactive' in sys.argv or '-i' in sys.argv:
-        run_interactive(ssomib)
+        run_interactive()
     else:
-        run_as_plugin(ssomib)
+        run_as_plugin()
