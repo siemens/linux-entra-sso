@@ -102,11 +102,11 @@ class SsoMib:
         resp = self.broker.getAccounts('0.0',
                                        str(self.session_id),
                                        json.dumps(context))
-        return json.loads(resp)['accounts']
+        return json.loads(resp)
 
     def acquirePrtSsoCookie(self, account, ssoUrl):
         if not self.broker_online:
-            self.NO_BROKER
+            return self.NO_BROKER
         request = {
             'account': account,
             'authParameters': {
@@ -137,7 +137,7 @@ def run_as_plugin():
     print("Running as browser plugin.", file=sys.stderr)
     print("For interactive mode, start with --interactive", file=sys.stderr)
     ssomib = SsoMib(daemon=True)
-    accounts = ssomib.getAccounts()
+    accounts = ssomib.getAccounts()["accounts"]
     loop = GLib.MainLoop()
     while True:
         receivedMessage = NativeMessaging.getMessage()
@@ -175,7 +175,7 @@ def run_interactive():
     if args.command == 'getAccounts':
         json.dump(accounts, indent=2, fp=sys.stdout)
     elif args.command == "acquirePrtSsoCookie":
-        account = accounts[args.account]
+        account = accounts['accounts'][args.account]
         cookie = ssomib.acquirePrtSsoCookie(account, args.ssoUrl)
         json.dump(cookie, indent=2, fp=sys.stdout)
     # add newline
