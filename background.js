@@ -6,11 +6,9 @@
 console.log('started sso-mib')
 
 let port = browser.runtime.connectNative("sso_mib");
-let PRT_LIFETIME_S = 30 * 60;
 let prt_sso_cookie = {
     data: {},
-    validUntil: new Date(0),
-    ssoUrl: ''
+    hasData: false
 };
 
 /*
@@ -23,18 +21,20 @@ let waitFor = async function waitFor(f) {
 };
 
 async function get_or_request_prt(ssoUrl) {
-    if (prt_sso_cookie.validUntil < new Date() || prt_sso_cookie.ssoUrl !== ssoUrl) {
-        console.log('request new PrtSsoCookie from broker for ssoUrl: ', ssoUrl);
-        port.postMessage({'command': 'acquirePrtSsoCookie', 'ssoUrl': ssoUrl})
-    } else {
-        console.log('use cached PrtSsoCookie, valid until: ', prt_sso_cookie.validUntil, ' ssoUrl: ', ssoUrl);
-    }
-    return waitFor(() => {
-        if (prt_sso_cookie.validUntil > new Date() && prt_sso_cookie.ssoUrl === ssoUrl) {
-            return prt_sso_cookie.data;
+    console.log('request new PrtSsoCookie from broker for ssoUrl: ', ssoUrl);
+    port.postMessage({'command': 'acquirePrtSsoCookie', 'ssoUrl': ssoUrl})
+    await waitFor(() => {
+        if (prt_sso_cookie.hasData) {
+            return true;
         }
         return false;
     })
+    prt_sso_cookie.hasData = false;
+    data = prt_sso_cookie.data
+    if('error' in data) {
+        console.log('could not acquire PRT SSO cookie: ', data.error);
+    }
+    return data;
 }
 
 /*
@@ -80,6 +80,10 @@ async function on_before_send_headers(e) {
         return { requestHeaders: e.requestHeaders };
     }
     let prt = await get_or_request_prt(e.url);
+    if ('error' in prt){
+        return { requestHeaders: e.requestHeaders };
+    }
+    console.log('inject PRT SSO cookie into request headers');
     let new_cookie = cookie_keyvalues_set(header_cookie === undefined ? "" : header_cookie.value, prt.cookieName, prt.cookieContent);
     // no cookies at all
     if (header_cookie === undefined) {
@@ -97,8 +101,6 @@ browser.webRequest.onBeforeSendHeaders.addListener(
 );
 
 port.onMessage.addListener((response) => {
-    console.log('received PRT cookie from broker');
     prt_sso_cookie.data = response;
-    prt_sso_cookie.ssoUrl = response.ssoUrl;
-    prt_sso_cookie.validUntil = new Date(Date.now() + 1000 * PRT_LIFETIME_S);
+    prt_sso_cookie.hasData = true;
 });

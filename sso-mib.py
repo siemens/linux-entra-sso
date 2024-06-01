@@ -155,7 +155,6 @@ def run_as_plugin():
         if receivedMessage['command'] == "acquirePrtSsoCookie":
             ssoUrl = receivedMessage['ssoUrl'] or SSO_URL_DEFAULT
             token = ssomib.acquirePrtSsoCookie(accounts[0], ssoUrl)
-            token['ssoUrl'] = ssoUrl
             respond(token)
 
 
