@@ -101,6 +101,10 @@ browser.webRequest.onBeforeSendHeaders.addListener(
 );
 
 port.onMessage.addListener((response) => {
-    prt_sso_cookie.data = response;
-    prt_sso_cookie.hasData = true;
+    if (response.command == "acquirePrtSsoCookie"){
+        prt_sso_cookie.data = response.message;
+        prt_sso_cookie.hasData = true;
+    } else {
+        console.log('unknown command: ', response.command);
+    }
 });
