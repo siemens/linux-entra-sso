@@ -15,6 +15,7 @@ from gi.repository import GLib
 # by the authorization backend. By that, a static (fallback)
 # value can be used, if no real value is provided.
 SSO_URL_DEFAULT = "https://login.microsoftonline.com/"
+EDGE_BROWSER_CLIENT_ID = "d7b530a4-7680-4c23-a8bf-c52c121d2e87"
 
 
 class NativeMessaging:
@@ -96,7 +97,7 @@ class SsoMib:
         if not self.broker_online:
             return self.NO_BROKER
         context = {
-            'clientId': str(self.session_id),
+            'clientId': EDGE_BROWSER_CLIENT_ID,
             'redirectUri': str(self.session_id)
         }
         resp = self.broker.getAccounts('0.0',
@@ -115,7 +116,7 @@ class SsoMib:
                 'additionalQueryParametersForAuthorization': {},
                 'authority': 'https://login.microsoftonline.com/common',
                 'authorizationType': 8,  # OAUTH2
-                'clientId': str(self.session_id),
+                'clientId': EDGE_BROWSER_CLIENT_ID,
                 'decodedClaims': '',
                 'enrollmentId': '',
                 'password': '',
