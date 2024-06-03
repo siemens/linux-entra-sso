@@ -55,6 +55,7 @@ class SsoMib:
     NO_BROKER = {'error': 'Broker not available'}
     BROKER_NAME = 'com.microsoft.identity.broker1'
     BROKER_PATH = '/com/microsoft/identity/broker1'
+    GRAPH_SCOPES = ["https://graph.microsoft.com/.default"]
 
     def __init__(self, daemon=False):
         self._bus = SessionBus()
@@ -93,6 +94,25 @@ class SsoMib:
             print(f"{self.BROKER_NAME} disappeared on bus.", file=sys.stderr)
             self.broker_online = False
 
+    def _get_auth_parameters(self, account, scopes):
+        return {
+            'accessTokenToRenew': '',
+            'account': account,
+            'additionalQueryParametersForAuthorization': {},
+            'authority': 'https://login.microsoftonline.com/common',
+            'authorizationType': 8,  # OAUTH2
+            'clientId': EDGE_BROWSER_CLIENT_ID,
+            'decodedClaims': '',
+            'enrollmentId': '',
+            'password': '',
+            'popParams': None,
+            'redirectUri': 'https://login.microsoftonline.com'
+                            '/common/oauth2/nativeclient',
+            'requestedScopes': scopes,
+            'username': account['username'],
+            'uxContextHandle': -1
+        }
+
     def getAccounts(self):
         if not self.broker_online:
             return self.NO_BROKER
@@ -105,31 +125,26 @@ class SsoMib:
                                        json.dumps(context))
         return json.loads(resp)
 
-    def acquirePrtSsoCookie(self, account, ssoUrl):
+    def acquirePrtSsoCookie(self, account, ssoUrl, scopes=GRAPH_SCOPES):
         if not self.broker_online:
             return self.NO_BROKER
         request = {
             'account': account,
-            'authParameters': {
-                'accessTokenToRenew': '',
-                'account': account,
-                'additionalQueryParametersForAuthorization': {},
-                'authority': 'https://login.microsoftonline.com/common',
-                'authorizationType': 8,  # OAUTH2
-                'clientId': EDGE_BROWSER_CLIENT_ID,
-                'decodedClaims': '',
-                'enrollmentId': '',
-                'password': '',
-                'popParams': None,
-                'redirectUri': 'https://login.microsoftonline.com'
-                               '/common/oauth2/nativeclient',
-                'requestedScopes': ["https://graph.microsoft.com/.default"],
-                'username': account['username'],
-                'uxContextHandle': -1
-                },
+            'authParameters': self._get_auth_parameters(account, scopes),
             'ssoUrl': ssoUrl
         }
         token = json.loads(self.broker.acquirePrtSsoCookie(
+            '0.0', str(self.session_id), json.dumps(request)))
+        return token
+
+    def acquireTokenSilently(self, account, scopes=GRAPH_SCOPES):
+        if not self.broker_online:
+            return self.NO_BROKER
+        request = {
+            'account': account,
+            'authParameters': self._get_auth_parameters(account, scopes),
+        }
+        token = json.loads(self.broker.acquireTokenSilently(
             '0.0', str(self.session_id), json.dumps(request)))
         return token
 
@@ -153,6 +168,11 @@ def run_as_plugin():
             ssoUrl = receivedMessage['ssoUrl'] or SSO_URL_DEFAULT
             token = ssomib.acquirePrtSsoCookie(account, ssoUrl)
             respond(cmd, token)
+        elif cmd == "acquireTokenSilently":
+            account = receivedMessage['account']
+            scopes = receivedMessage.get('scopes') or ssomib.GRAPH_SCOPES
+            token = ssomib.acquireTokenSilently(account, scopes)
+            respond(cmd, token)
         elif cmd == "getAccounts":
             respond(cmd, ssomib.getAccounts())
 
@@ -168,6 +188,7 @@ def run_interactive():
                         help="ssoUrl part of SSO PRT cookie request")
     parser.add_argument("command", choices=["getAccounts",
                                             "acquirePrtSsoCookie",
+                                            "acquireTokenSilently",
                                             "monitor"])
     args = parser.parse_args()
 
@@ -185,6 +206,10 @@ def run_interactive():
         account = accounts['accounts'][args.account]
         cookie = ssomib.acquirePrtSsoCookie(account, args.ssoUrl)
         json.dump(cookie, indent=2, fp=sys.stdout)
+    elif args.command == "acquireTokenSilently":
+        account = accounts['accounts'][args.account]
+        token = ssomib.acquireTokenSilently(account)
+        json.dump(token, indent=2, fp=sys.stdout)
     # add newline
     print()
 
