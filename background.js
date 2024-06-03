@@ -10,19 +10,46 @@ let prt_sso_cookie = {
     data: {},
     hasData: false
 };
+let accounts = {
+    registered: [],
+    active: null,
+    queried: false
+};
+load_accounts();
 
 /*
  * Helpers to wait for a value to become available
  */
-let sleep = ms => new Promise(r => setTimeout(r, ms));
-let waitFor = async function waitFor(f) {
+async function sleep (ms){
+    return new Promise(r => setTimeout(r, ms));
+}
+async function waitFor(f) {
     while(!f()) await sleep(200);
     return f();
 };
 
+async function load_accounts() {
+    port.postMessage({'command': 'getAccounts'});
+    await waitFor(() => {
+        if (accounts.queried) {
+            return true;
+        }
+        return false;
+    });
+    if (accounts.registered.length == 0) {
+        console.log('no accounts registered');
+        return;
+    }
+    accounts.active = accounts.registered[0];
+    console.log('active account: ', accounts.active);
+}
+
 async function get_or_request_prt(ssoUrl) {
     console.log('request new PrtSsoCookie from broker for ssoUrl: ', ssoUrl);
-    port.postMessage({'command': 'acquirePrtSsoCookie', 'ssoUrl': ssoUrl})
+    port.postMessage({
+        'command': 'acquirePrtSsoCookie',
+        'account': accounts.active,
+        'ssoUrl': ssoUrl})
     await waitFor(() => {
         if (prt_sso_cookie.hasData) {
             return true;
@@ -79,6 +106,9 @@ async function on_before_send_headers(e) {
     if (accept === undefined || !accept.value.includes('text/html')) {
         return { requestHeaders: e.requestHeaders };
     }
+    if (accounts.active === null) {
+        return { requestHeaders: e.requestHeaders };
+    }
     let prt = await get_or_request_prt(e.url);
     if ('error' in prt){
         return { requestHeaders: e.requestHeaders };
@@ -104,7 +134,15 @@ port.onMessage.addListener((response) => {
     if (response.command == "acquirePrtSsoCookie"){
         prt_sso_cookie.data = response.message;
         prt_sso_cookie.hasData = true;
-    } else {
+    } else if (response.command == "getAccounts") {
+        accounts.queried = true;
+        if ('error' in response) {
+            console.log('could not get accounts: ', response.error);
+            return;
+        }
+        accounts.registered = response.message.accounts;
+    }
+    else {
         console.log('unknown command: ', response.command);
     }
 });

@@ -142,22 +142,18 @@ def run_as_plugin():
     print("Running as browser plugin.", file=sys.stderr)
     print("For interactive mode, start with --interactive", file=sys.stderr)
     ssomib = SsoMib(daemon=True)
-    accounts = []
     loop = GLib.MainLoop()
     while True:
         receivedMessage = NativeMessaging.getMessage()
         cmd = receivedMessage['command']
         loop.get_context().iteration(False)
-        if len(accounts) == 0:
-            accounts_resp = ssomib.getAccounts()
-            if 'error' in accounts_resp:
-                respond(cmd, accounts_resp)
-                continue
-            accounts = accounts_resp["accounts"]
         if cmd == "acquirePrtSsoCookie":
+            account = receivedMessage['account']
             ssoUrl = receivedMessage['ssoUrl'] or SSO_URL_DEFAULT
-            token = ssomib.acquirePrtSsoCookie(accounts[0], ssoUrl)
+            token = ssomib.acquirePrtSsoCookie(account, ssoUrl)
             respond(cmd, token)
+        elif cmd == "getAccounts":
+            respond(cmd, ssomib.getAccounts())
 
 
 def run_interactive():
