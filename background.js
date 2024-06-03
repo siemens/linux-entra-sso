@@ -15,6 +15,7 @@ let accounts = {
     active: null,
     queried: false
 };
+let graph_api_token = null;
 load_accounts();
 
 /*
@@ -42,6 +43,34 @@ async function load_accounts() {
     }
     accounts.active = accounts.registered[0];
     console.log('active account: ', accounts.active);
+
+    // load profile picture and set it as icon
+    port.postMessage({'command': 'acquireTokenSilently', 'account': accounts.active});
+    await waitFor(() => {return graph_api_token !== null; });
+    console.log('API token acquired');
+    const response = await fetch('https://graph.microsoft.com/v1.0/me/photos/48x48/$value', {
+        headers: {
+            'Content-Type': 'image/jpeg',
+            'Authorization': 'Bearer ' + graph_api_token.accessToken
+        }
+      });
+    browser.action.setIcon({
+        'path': URL.createObjectURL(await response.blob())
+    });
+    browser.action.setTitle({
+        title: 'EntraID SSO: ' + accounts.active.username}
+    );
+}
+
+function logout() {
+    accounts.active = null;
+    accounts.queried = false;
+    browser.action.setIcon({
+        'path': 'icons/sso-mib.svg'
+    });
+    browser.action.setTitle({
+        title: 'EntraID SSO disabled. Click to enable.'
+    });
 }
 
 async function get_or_request_prt(ssoUrl) {
@@ -141,8 +170,21 @@ port.onMessage.addListener((response) => {
             return;
         }
         accounts.registered = response.message.accounts;
+    } else if (response.command == "acquireTokenSilently") {
+        if ('error' in response) {
+            console.log('could not acquire token silently: ', response.error);
+            return;
+        }
+        graph_api_token = response.message.brokerTokenResponse;
     }
     else {
         console.log('unknown command: ', response.command);
     }
+});
+
+browser.action.onClicked.addListener(() => {
+    if(accounts.active === null)
+        load_accounts();
+    else
+        logout();
 });

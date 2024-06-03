@@ -12,6 +12,11 @@
             "strict_min_version": "109.0"
         }
     },
+    "action": {
+        "default_icon": "icons/sso-mib.svg",
+        "default_title": "EntraID SSO",
+        "default_area": "navbar"
+    },
     "background": {
         "scripts": [
             "background.js"
