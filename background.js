@@ -3,7 +3,11 @@
  * SPDX-FileCopyrightText: Copyright 2024 Siemens AG
  */
 
-console.log('started sso-mib')
+function ssoLog(message) {
+    console.log('[EntraID SSO] ' + message)
+}
+
+ssoLog('started sso-mib')
 
 let port = browser.runtime.connectNative("sso_mib");
 let prt_sso_cookie = {
@@ -38,16 +42,16 @@ async function load_accounts() {
         return false;
     });
     if (accounts.registered.length == 0) {
-        console.log('no accounts registered');
+        ssoLog('no accounts registered');
         return;
     }
     accounts.active = accounts.registered[0];
-    console.log('active account: ', accounts.active);
+    ssoLog('active account: ', accounts.active);
 
     // load profile picture and set it as icon
     port.postMessage({'command': 'acquireTokenSilently', 'account': accounts.active});
     await waitFor(() => {return graph_api_token !== null; });
-    console.log('API token acquired');
+    ssoLog('API token acquired');
     const response = await fetch('https://graph.microsoft.com/v1.0/me/photos/48x48/$value', {
         headers: {
             'Content-Type': 'image/jpeg',
@@ -74,7 +78,7 @@ function logout() {
 }
 
 async function get_or_request_prt(ssoUrl) {
-    console.log('request new PrtSsoCookie from broker for ssoUrl: ', ssoUrl);
+    ssoLog('request new PrtSsoCookie from broker for ssoUrl: ', ssoUrl);
     port.postMessage({
         'command': 'acquirePrtSsoCookie',
         'account': accounts.active,
@@ -88,7 +92,7 @@ async function get_or_request_prt(ssoUrl) {
     prt_sso_cookie.hasData = false;
     data = prt_sso_cookie.data
     if ('error' in data) {
-        console.log('could not acquire PRT SSO cookie: ', data.error);
+        ssoLog('could not acquire PRT SSO cookie: ', data.error);
     }
     return data;
 }
@@ -142,7 +146,7 @@ async function on_before_send_headers(e) {
     if ('error' in prt) {
         return { requestHeaders: e.requestHeaders };
     }
-    console.log('inject PRT SSO cookie into request headers');
+    ssoLog('inject PRT SSO cookie into request headers');
     let new_cookie = cookie_keyvalues_set(header_cookie === undefined ? "" : header_cookie.value, prt.cookieName, prt.cookieContent);
     // no cookies at all
     if (header_cookie === undefined) {
@@ -166,19 +170,19 @@ port.onMessage.addListener((response) => {
     } else if (response.command == "getAccounts") {
         accounts.queried = true;
         if ('error' in response) {
-            console.log('could not get accounts: ', response.error);
+            ssoLog('could not get accounts: ', response.error);
             return;
         }
         accounts.registered = response.message.accounts;
     } else if (response.command == "acquireTokenSilently") {
         if ('error' in response) {
-            console.log('could not acquire token silently: ', response.error);
+            ssoLog('could not acquire token silently: ', response.error);
             return;
         }
         graph_api_token = response.message.brokerTokenResponse;
     }
     else {
-        console.log('unknown command: ', response.command);
+        ssoLog('unknown command: ', response.command);
     }
 });
 
