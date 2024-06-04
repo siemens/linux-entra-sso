@@ -21,7 +21,7 @@ load_accounts();
 /*
  * Helpers to wait for a value to become available
  */
-async function sleep (ms){
+async function sleep (ms) {
     return new Promise(r => setTimeout(r, ms));
 }
 async function waitFor(f) {
@@ -87,7 +87,7 @@ async function get_or_request_prt(ssoUrl) {
     })
     prt_sso_cookie.hasData = false;
     data = prt_sso_cookie.data
-    if('error' in data) {
+    if ('error' in data) {
         console.log('could not acquire PRT SSO cookie: ', data.error);
     }
     return data;
@@ -139,7 +139,7 @@ async function on_before_send_headers(e) {
         return { requestHeaders: e.requestHeaders };
     }
     let prt = await get_or_request_prt(e.url);
-    if ('error' in prt){
+    if ('error' in prt) {
         return { requestHeaders: e.requestHeaders };
     }
     console.log('inject PRT SSO cookie into request headers');
@@ -160,7 +160,7 @@ browser.webRequest.onBeforeSendHeaders.addListener(
 );
 
 port.onMessage.addListener((response) => {
-    if (response.command == "acquirePrtSsoCookie"){
+    if (response.command == "acquirePrtSsoCookie") {
         prt_sso_cookie.data = response.message;
         prt_sso_cookie.hasData = true;
     } else if (response.command == "getAccounts") {
@@ -183,7 +183,7 @@ port.onMessage.addListener((response) => {
 });
 
 browser.action.onClicked.addListener(() => {
-    if(accounts.active === null)
+    if (accounts.active === null)
         load_accounts();
     else
         logout();
