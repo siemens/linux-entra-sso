@@ -35,6 +35,14 @@ will automatically acquire a [PRT SSO Cookie](https://learn.microsoft.com/en-us/
 from the locally running device identity broker and inject that into the OAuth2 login workflow for all entra-id enabled sites
 (the ones you log in via `login.microsoftonline.com`).
 
+## Known Limitations
+
+### SNAP version not supported
+
+This extension will not work on the snap version of Firefox.
+The extension executes a script `sso-mib.py` on the host that communicates via DBus with the `microsoft-identity-broker` service.
+As the SNAP executes Firefox inside a container, the communication with DBus will not work. Please use the `firefox-esr` Debian package instead.
+
 ## License
 
 This project is licensed according to the terms of the Mozilla Public
