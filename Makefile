@@ -25,8 +25,10 @@ RELEASE_TAG=$(shell git describe --match "v[0-9].[0-9]*" --dirty)
 ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG).xpi
 
 PACKAGE_FILES= \
+	LICENSES/MPL-2.0.txt \
 	background.js \
 	manifest.json \
+	manifest.json.license \
 	icons/sso-mib.svg
 
 UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
