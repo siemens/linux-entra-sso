@@ -17,13 +17,13 @@ reuse-and-codestyle:
   variables:
     GIT_DEPTH: "0"
   before_script:
-    - python3 -m venv ../venv
-    - . ../venv/bin/activate
-    - pip3 install fsfe-reuse flake8
+    - apt-get update && apt-get install -y python3-gi flake8 pylint python3-pydbus
+    - pip3 install --break-system-packages fsfe-reuse
     - git clean -f -d
   script:
     - reuse lint
     - flake8
+    - pylint sso-mib.py
 
 build-xpi:
   stage: build

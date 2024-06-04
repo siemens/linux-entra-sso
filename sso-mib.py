@@ -2,13 +2,18 @@
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright 2024 Siemens AG
 
+# pylint: disable=missing-docstring,invalid-name
 
+# Renable invalid-name check, it should only cover the module name
+# pylint: enable=invalid-name
+
+import argparse
 import sys
 import json
 import struct
-from pydbus import SessionBus
 import uuid
 from gi.repository import GLib
+from pydbus import SessionBus
 
 # the ssoUrl is a mandatory parameter when requesting a PRT SSO
 # Cookie, but the correct value is not checked as of 30.05.2024
@@ -20,34 +25,34 @@ EDGE_BROWSER_CLIENT_ID = "d7b530a4-7680-4c23-a8bf-c52c121d2e87"
 
 class NativeMessaging:
     @staticmethod
-    def getMessage():
+    def get_message():
         """
             Read a message from stdin and decode it.
         """
-        rawLength = sys.stdin.buffer.read(4)
-        if len(rawLength) == 0:
+        raw_length = sys.stdin.buffer.read(4)
+        if not raw_length:
             sys.exit(0)
-        messageLength = struct.unpack('@I', rawLength)[0]
-        message = sys.stdin.buffer.read(messageLength).decode('utf-8')
+        message_length = struct.unpack('@I', raw_length)[0]
+        message = sys.stdin.buffer.read(message_length).decode('utf-8')
         return json.loads(message)
 
     @staticmethod
-    def encodeMessage(messageContent):
+    def encode_message(message_content):
         """
             Encode a message for transmission, given its content
         """
-        encodedContent = json.dumps(messageContent, separators=(',', ':')) \
+        encoded_content = json.dumps(message_content, separators=(',', ':')) \
             .encode('utf-8')
-        encodedLength = struct.pack('@I', len(encodedContent))
-        return {'length': encodedLength, 'content': encodedContent}
+        encoded_length = struct.pack('@I', len(encoded_content))
+        return {'length': encoded_length, 'content': encoded_content}
 
     @staticmethod
-    def sendMessage(encodedMessage):
+    def send_message(encoded_message):
         """
             Send an encoded message to stdout
         """
-        sys.stdout.buffer.write(encodedMessage['length'])
-        sys.stdout.buffer.write(encodedMessage['content'])
+        sys.stdout.buffer.write(encoded_message['length'])
+        sys.stdout.buffer.write(encoded_message['content'])
         sys.stdout.buffer.flush()
 
 
@@ -59,6 +64,7 @@ class SsoMib:
 
     def __init__(self, daemon=False):
         self._bus = SessionBus()
+        self.broker = None
         self.broker_online = False
         self.session_id = uuid.uuid4()
         self._check_broker_online()
@@ -84,7 +90,9 @@ class SsoMib:
             arg0=self.BROKER_NAME,
             signal_fired=self._broker_state_changed)
 
-    def _broker_state_changed(self, sender, object, iface, signal, params):
+    def _broker_state_changed(self, sender, object, iface, signal, params): \
+            # pylint: disable=redefined-builtin,too-many-arguments
+        _ = (sender, object, iface, signal)
         # params = (name, old_owner, new_owner)
         if params[2]:
             print(f"{self.BROKER_NAME} appeared on bus.", file=sys.stderr)
@@ -94,7 +102,8 @@ class SsoMib:
             print(f"{self.BROKER_NAME} disappeared on bus.", file=sys.stderr)
             self.broker_online = False
 
-    def _get_auth_parameters(self, account, scopes):
+    @staticmethod
+    def _get_auth_parameters(account, scopes):
         return {
             'accessTokenToRenew': '',
             'account': account,
@@ -107,13 +116,13 @@ class SsoMib:
             'password': '',
             'popParams': None,
             'redirectUri': 'https://login.microsoftonline.com'
-                            '/common/oauth2/nativeclient',
+                           '/common/oauth2/nativeclient',
             'requestedScopes': scopes,
             'username': account['username'],
             'uxContextHandle': -1
         }
 
-    def getAccounts(self):
+    def get_accounts(self):
         if not self.broker_online:
             return self.NO_BROKER
         context = {
@@ -125,24 +134,26 @@ class SsoMib:
                                        json.dumps(context))
         return json.loads(resp)
 
-    def acquirePrtSsoCookie(self, account, ssoUrl, scopes=GRAPH_SCOPES):
+    def acquire_prt_sso_cookie(self, account, sso_url, scopes=GRAPH_SCOPES): \
+            # pylint: disable=dangerous-default-value
         if not self.broker_online:
             return self.NO_BROKER
         request = {
             'account': account,
-            'authParameters': self._get_auth_parameters(account, scopes),
-            'ssoUrl': ssoUrl
+            'authParameters': SsoMib._get_auth_parameters(account, scopes),
+            'ssoUrl': sso_url
         }
         token = json.loads(self.broker.acquirePrtSsoCookie(
             '0.0', str(self.session_id), json.dumps(request)))
         return token
 
-    def acquireTokenSilently(self, account, scopes=GRAPH_SCOPES):
+    def acquire_token_silently(self, account, scopes=GRAPH_SCOPES): \
+            # pylint: disable=dangerous-default-value
         if not self.broker_online:
             return self.NO_BROKER
         request = {
             'account': account,
-            'authParameters': self._get_auth_parameters(account, scopes),
+            'authParameters': SsoMib._get_auth_parameters(account, scopes),
         }
         token = json.loads(self.broker.acquireTokenSilently(
             '0.0', str(self.session_id), json.dumps(request)))
@@ -151,8 +162,8 @@ class SsoMib:
 
 def run_as_plugin():
     def respond(command, message):
-        NativeMessaging.sendMessage(
-            NativeMessaging.encodeMessage(
+        NativeMessaging.send_message(
+            NativeMessaging.encode_message(
                 {"command": command, "message": message}))
 
     print("Running as browser plugin.", file=sys.stderr)
@@ -160,25 +171,24 @@ def run_as_plugin():
     ssomib = SsoMib(daemon=True)
     loop = GLib.MainLoop()
     while True:
-        receivedMessage = NativeMessaging.getMessage()
-        cmd = receivedMessage['command']
+        received_message = NativeMessaging.get_message()
+        cmd = received_message['command']
         loop.get_context().iteration(False)
         if cmd == "acquirePrtSsoCookie":
-            account = receivedMessage['account']
-            ssoUrl = receivedMessage['ssoUrl'] or SSO_URL_DEFAULT
-            token = ssomib.acquirePrtSsoCookie(account, ssoUrl)
+            account = received_message['account']
+            sso_url = received_message['ssoUrl'] or SSO_URL_DEFAULT
+            token = ssomib.acquire_prt_sso_cookie(account, sso_url)
             respond(cmd, token)
         elif cmd == "acquireTokenSilently":
-            account = receivedMessage['account']
-            scopes = receivedMessage.get('scopes') or ssomib.GRAPH_SCOPES
-            token = ssomib.acquireTokenSilently(account, scopes)
+            account = received_message['account']
+            scopes = received_message.get('scopes') or ssomib.GRAPH_SCOPES
+            token = ssomib.acquire_token_silently(account, scopes)
             respond(cmd, token)
         elif cmd == "getAccounts":
-            respond(cmd, ssomib.getAccounts())
+            respond(cmd, ssomib.get_accounts())
 
 
 def run_interactive():
-    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--interactive", action="store_true",
                         help="run in interactive mode")
@@ -199,16 +209,16 @@ def run_interactive():
         GLib.MainLoop().run()
         return
 
-    accounts = ssomib.getAccounts()
+    accounts = ssomib.get_accounts()
     if args.command == 'getAccounts':
         json.dump(accounts, indent=2, fp=sys.stdout)
     elif args.command == "acquirePrtSsoCookie":
         account = accounts['accounts'][args.account]
-        cookie = ssomib.acquirePrtSsoCookie(account, args.ssoUrl)
+        cookie = ssomib.acquire_prt_sso_cookie(account, args.ssoUrl)
         json.dump(cookie, indent=2, fp=sys.stdout)
     elif args.command == "acquireTokenSilently":
         account = accounts['accounts'][args.account]
-        token = ssomib.acquireTokenSilently(account)
+        token = ssomib.acquire_token_silently(account)
         json.dump(token, indent=2, fp=sys.stdout)
     # add newline
     print()
