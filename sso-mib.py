@@ -67,6 +67,7 @@ class SsoMib:
         self.broker = None
         self.broker_online = False
         self.session_id = uuid.uuid4()
+        self._state_changed_cb = None
         self._check_broker_online()
         if daemon:
             self._monitor_bus()
@@ -95,12 +96,20 @@ class SsoMib:
         _ = (sender, object, iface, signal)
         # params = (name, old_owner, new_owner)
         if params[2]:
-            print(f"{self.BROKER_NAME} appeared on bus.", file=sys.stderr)
             self._instantiate_broker()
             self.broker_online = True
         else:
-            print(f"{self.BROKER_NAME} disappeared on bus.", file=sys.stderr)
             self.broker_online = False
+        if self._state_changed_cb:
+            self._state_changed_cb(self.broker_online)
+
+    def on_broker_state_changed(self, callback):
+        """
+            Register a callback to be called when the broker state changes.
+            The callback should accept a single boolean argument, indicating
+            if the broker is online or not.
+        """
+        self._state_changed_cb = callback
 
     @staticmethod
     def _get_auth_parameters(account, scopes):
@@ -206,6 +215,9 @@ def run_interactive():
     ssomib = SsoMib(daemon=monitor_mode)
     if monitor_mode:
         print("Monitoring D-Bus for broker availability.")
+        ssomib.on_broker_state_changed(
+            lambda online: print(f"{ssomib.BROKER_NAME} is now "
+                                 f"{'online' if online else 'offline'}."))
         GLib.MainLoop().run()
         return
 
