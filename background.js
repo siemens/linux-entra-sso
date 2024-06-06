@@ -46,7 +46,7 @@ async function load_accounts() {
         return;
     }
     accounts.active = accounts.registered[0];
-    ssoLog('active account: ', accounts.active);
+    ssoLog('active account: ' + accounts.active.username);
 
     // load profile picture and set it as icon
     port.postMessage({'command': 'acquireTokenSilently', 'account': accounts.active});
