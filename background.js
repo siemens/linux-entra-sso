@@ -146,7 +146,8 @@ port.onMessage.addListener((response) => {
         }
         graph_api_token = response.message.brokerTokenResponse;
     } else if (response.command == "brokerStateChanged") {
-        if (!state_active) return;
+        if (!state_active)
+            return;
         if (response.message == 'online') {
             ssoLog('connection to broker restored');
             broker_online = true;
@@ -164,7 +165,7 @@ port.onMessage.addListener((response) => {
 
 browser.action.onClicked.addListener(() => {
     state_active = !state_active;
-    if (state_active && broker_online){
+    if (state_active && broker_online) {
         load_accounts();
     } else {
         logout();
