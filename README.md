@@ -16,6 +16,14 @@ check this by running the `intune-portal` application and check if your user
 is logged in (after clicking `sign-in`).
 Also, make sure to use either Firefox ESR, nightly or developer, as [standard Firefox does not allow installing unsigned plugins](https://support.mozilla.org/en-US/kb/add-on-signing-in-firefox#w_what-are-my-options-if-i-want-to-use-an-unsigned-add-on-advanced-users) since version 48.
 
+## Dependencies
+
+The extension requires pydbus as a runtime dependency. On a Debian system please install `python3-pydbus`:
+
+```bash
+sudo apt install python3-pydbus
+```
+
 ## Installation
 
 The extension is not yet signed by Mozilla and hence can only be added
