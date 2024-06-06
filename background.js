@@ -151,10 +151,12 @@ port.onMessage.addListener((response) => {
         if (response.message == 'online') {
             ssoLog('connection to broker restored');
             broker_online = true;
+            browser.action.enable();
             load_accounts();
         } else {
             ssoLog('lost connection to broker');
             broker_online = false;
+            browser.action.disable();
             logout();
         }
     }
@@ -171,3 +173,6 @@ browser.action.onClicked.addListener(() => {
         logout();
     }
 });
+
+browser.action.disable();
+logout();
