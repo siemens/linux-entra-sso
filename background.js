@@ -84,7 +84,7 @@ function logout() {
 }
 
 async function get_or_request_prt(ssoUrl) {
-    ssoLog('request new PrtSsoCookie from broker for ssoUrl: ', ssoUrl);
+    ssoLog('request new PrtSsoCookie from broker for ssoUrl: ' + ssoUrl);
     port.postMessage({
         'command': 'acquirePrtSsoCookie',
         'account': accounts.active,
@@ -98,7 +98,7 @@ async function get_or_request_prt(ssoUrl) {
     prt_sso_cookie.hasData = false;
     data = prt_sso_cookie.data
     if ('error' in data) {
-        ssoLog('could not acquire PRT SSO cookie: ', data.error);
+        ssoLog('could not acquire PRT SSO cookie: ' + data.error);
     }
     return data;
 }
@@ -135,13 +135,13 @@ port.onMessage.addListener((response) => {
     } else if (response.command == "getAccounts") {
         accounts.queried = true;
         if ('error' in response) {
-            ssoLog('could not get accounts: ', response.error);
+            ssoLog('could not get accounts: ' + response.error);
             return;
         }
         accounts.registered = response.message.accounts;
     } else if (response.command == "acquireTokenSilently") {
         if ('error' in response) {
-            ssoLog('could not acquire token silently: ', response.error);
+            ssoLog('could not acquire token silently: ' + response.error);
             return;
         }
         graph_api_token = response.message.brokerTokenResponse;
@@ -161,7 +161,7 @@ port.onMessage.addListener((response) => {
         }
     }
     else {
-        ssoLog('unknown command: ', response.command);
+        ssoLog('unknown command: ' + response.command);
     }
 });
 
