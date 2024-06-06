@@ -115,21 +115,15 @@ class SsoMib:
     @staticmethod
     def _get_auth_parameters(account, scopes):
         return {
-            'accessTokenToRenew': '',
             'account': account,
             'additionalQueryParametersForAuthorization': {},
             'authority': 'https://login.microsoftonline.com/common',
             'authorizationType': 8,  # OAUTH2
             'clientId': EDGE_BROWSER_CLIENT_ID,
-            'decodedClaims': '',
-            'enrollmentId': '',
-            'password': '',
-            'popParams': None,
             'redirectUri': 'https://login.microsoftonline.com'
                            '/common/oauth2/nativeclient',
             'requestedScopes': scopes,
             'username': account['username'],
-            'uxContextHandle': -1
         }
 
     def get_accounts(self):
