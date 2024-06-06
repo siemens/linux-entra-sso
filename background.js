@@ -20,7 +20,8 @@ let accounts = {
     queried: false
 };
 let graph_api_token = null;
-load_accounts();
+let state_active = true;
+let broker_online = false;
 
 /*
  * Helpers to wait for a value to become available
@@ -58,9 +59,13 @@ async function load_accounts() {
             'Authorization': 'Bearer ' + graph_api_token.accessToken
         }
       });
-    browser.action.setIcon({
-        'path': URL.createObjectURL(await response.blob())
-    });
+    if (response.ok) {
+        browser.action.setIcon({
+            'path': URL.createObjectURL(await response.blob())
+        });
+    } else {
+        ssoLog('Warning: Could not get profile picture.');
+    }
     browser.action.setTitle({
         title: 'EntraID SSO: ' + accounts.active.username}
     );
@@ -72,9 +77,10 @@ function logout() {
     browser.action.setIcon({
         'path': 'icons/sso-mib.svg'
     });
-    browser.action.setTitle({
-        title: 'EntraID SSO disabled. Click to enable.'
-    });
+    let title = 'EntraID SSO disabled. Click to enable.'
+    if (state_active)
+        title = 'EntraID SSO disabled (waiting for broker).'
+    browser.action.setTitle({title: title});
 }
 
 async function get_or_request_prt(ssoUrl) {
@@ -139,7 +145,7 @@ async function on_before_send_headers(e) {
     if (accept === undefined || !accept.value.includes('text/html')) {
         return { requestHeaders: e.requestHeaders };
     }
-    if (accounts.active === null) {
+    if (!broker_online || accounts.active === null) {
         return { requestHeaders: e.requestHeaders };
     }
     let prt = await get_or_request_prt(e.url);
@@ -180,6 +186,17 @@ port.onMessage.addListener((response) => {
             return;
         }
         graph_api_token = response.message.brokerTokenResponse;
+    } else if (response.command == "brokerStateChanged") {
+        if (!state_active) return;
+        if (response.message == 'online') {
+            ssoLog('connection to broker restored');
+            broker_online = true;
+            load_accounts();
+        } else {
+            ssoLog('lost connection to broker');
+            broker_online = false;
+            logout();
+        }
     }
     else {
         ssoLog('unknown command: ', response.command);
@@ -187,8 +204,10 @@ port.onMessage.addListener((response) => {
 });
 
 browser.action.onClicked.addListener(() => {
-    if (accounts.active === null)
+    state_active = !state_active;
+    if (state_active && broker_online){
         load_accounts();
-    else
+    } else {
         logout();
+    }
 });

@@ -12,6 +12,7 @@ import sys
 import json
 import struct
 import uuid
+from threading import Thread, Lock
 from gi.repository import GLib
 from pydbus import SessionBus
 
@@ -170,31 +171,45 @@ class SsoMib:
 
 
 def run_as_plugin():
+    iomutex = Lock()
+
     def respond(command, message):
         NativeMessaging.send_message(
             NativeMessaging.encode_message(
                 {"command": command, "message": message}))
 
+    def notify_state_change(online):
+        with iomutex:
+            respond("brokerStateChanged", 'online' if online else 'offline')
+
+    def run_dbus_monitor():
+        # inform other side about initial state
+        notify_state_change(ssomib.broker_online)
+        loop = GLib.MainLoop()
+        loop.run()
+
     print("Running as browser plugin.", file=sys.stderr)
     print("For interactive mode, start with --interactive", file=sys.stderr)
     ssomib = SsoMib(daemon=True)
-    loop = GLib.MainLoop()
+    ssomib.on_broker_state_changed(notify_state_change)
+    monitor = Thread(target=run_dbus_monitor)
+    monitor.start()
     while True:
         received_message = NativeMessaging.get_message()
-        cmd = received_message['command']
-        loop.get_context().iteration(False)
-        if cmd == "acquirePrtSsoCookie":
-            account = received_message['account']
-            sso_url = received_message['ssoUrl'] or SSO_URL_DEFAULT
-            token = ssomib.acquire_prt_sso_cookie(account, sso_url)
-            respond(cmd, token)
-        elif cmd == "acquireTokenSilently":
-            account = received_message['account']
-            scopes = received_message.get('scopes') or ssomib.GRAPH_SCOPES
-            token = ssomib.acquire_token_silently(account, scopes)
-            respond(cmd, token)
-        elif cmd == "getAccounts":
-            respond(cmd, ssomib.get_accounts())
+        with iomutex:
+            cmd = received_message['command']
+            if cmd == "acquirePrtSsoCookie":
+                account = received_message['account']
+                sso_url = received_message['ssoUrl'] or SSO_URL_DEFAULT
+                token = ssomib.acquire_prt_sso_cookie(account, sso_url)
+                respond(cmd, token)
+            elif cmd == "acquireTokenSilently":
+                account = received_message['account']
+                scopes = received_message.get('scopes') or ssomib.GRAPH_SCOPES
+                token = ssomib.acquire_token_silently(account, scopes)
+                respond(cmd, token)
+            elif cmd == "getAccounts":
+                respond(cmd, ssomib.get_accounts())
 
 
 def run_interactive():
