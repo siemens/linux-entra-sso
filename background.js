@@ -7,9 +7,22 @@ function ssoLog(message) {
     console.log('[EntraID SSO] ' + message)
 }
 
+function ssoLogError(message) {
+    console.error('[EntraID SSO] ' + message)
+}
+
 ssoLog('started sso-mib')
 
 let port = browser.runtime.connectNative("sso_mib");
+
+port.onDisconnect.addListener(() => {
+    if (browser.runtime.lastError) {
+        ssoLogError("Error in native application connection:", browser.runtime.lastError);
+    } else {
+        ssoLogError("Native application connection closed.");
+    }
+});
+
 let prt_sso_cookie = {
     data: {},
     hasData: false
