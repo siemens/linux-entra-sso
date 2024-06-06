@@ -103,43 +103,7 @@ async function get_or_request_prt(ssoUrl) {
     return data;
 }
 
-/*
- * This function set a key-value pair in HTTP header "Cookie",
- *   and returns the value of HTTP header after modification.
- * If key already exists, it modify the value.
- * If key doesn't exist, it add the key-value pair.
- * If value is undefined, it delete the key-value pair from cookies.
- *
- * Assuming that, the same key SHOULD NOT appear twice in cookies.
- * Also assuming that, all cookies doesn't contains semicolon.
- *   (99.9% websites are following these rules)
- *
- * Example:
- *   cookie_keyvalues_set("msg=good; user=recolic; password=test", "user", "p")
- *     => "msg=good; user=p; password=test"
- *   cookie_keyvalues_set("msg=good; user=recolic; password=test", "time", "night")
- *     => "msg=good; user=recolic; password=test;time=night"
- *
- * Recolic K <root@recolic.net>
- * License: MPL2.0
- */
-function cookie_keyvalues_set(original_cookies, key, value) {
-    let new_element = " " + key + "=" + value; // not used if value is undefined.
-    let cookies_ar = original_cookies.split(";").filter(e => e.trim().length > 0);
-    let selected_cookie_index = cookies_ar.findIndex(kv => kv.trim().startsWith(key+"="));
-    if ((selected_cookie_index == -1) && (value != undefined)) {
-        cookies_ar.push(new_element);
-    } else {
-        if (value === undefined)
-            cookies_ar.splice(selected_cookie_index, 1);
-        else
-            cookies_ar.splice(selected_cookie_index, 1, new_element);
-    }
-    return cookies_ar.join(";");
-}
-
 async function on_before_send_headers(e) {
-    let header_cookie = e.requestHeaders.find(header => header.name.toLowerCase() === "cookie");
     // filter out requests that are not part of the OAuth2.0 flow
     accept = e.requestHeaders.find(header => header.name.toLowerCase() === "accept")
     if (accept === undefined || !accept.value.includes('text/html')) {
@@ -152,14 +116,9 @@ async function on_before_send_headers(e) {
     if ('error' in prt) {
         return { requestHeaders: e.requestHeaders };
     }
-    ssoLog('inject PRT SSO cookie into request headers');
-    let new_cookie = cookie_keyvalues_set(header_cookie === undefined ? "" : header_cookie.value, prt.cookieName, prt.cookieContent);
-    // no cookies at all
-    if (header_cookie === undefined) {
-        e.requestHeaders.push({"name": "Cookie", "value": new_cookie});
-    } else {
-        header_cookie.value = new_cookie;
-    }
+    // ms-oapxbc OAuth2 protocol extension
+    ssoLog('inject PRT SSO into request headers');
+    e.requestHeaders.push({"name": prt.cookieName, "value": prt.cookieContent})
     return { requestHeaders: e.requestHeaders };
 }
 
