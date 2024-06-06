@@ -24,6 +24,8 @@ The extension requires pydbus as a runtime dependency. On a Debian system please
 sudo apt install python3-pydbus
 ```
 
+**Note:** If you are using a python version manager such as asdf you must install the python packages manually: `pip install PyGObject pydbus`
+
 ## Installation
 
 The extension is not yet signed by Mozilla and hence can only be added
