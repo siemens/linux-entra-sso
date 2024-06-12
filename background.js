@@ -3,26 +3,6 @@
  * SPDX-FileCopyrightText: Copyright 2024 Siemens AG
  */
 
-function ssoLog(message) {
-    console.log('[EntraID SSO] ' + message)
-}
-
-function ssoLogError(message) {
-    console.error('[EntraID SSO] ' + message)
-}
-
-ssoLog('started sso-mib')
-
-let port = browser.runtime.connectNative("sso_mib");
-
-port.onDisconnect.addListener(() => {
-    if (browser.runtime.lastError) {
-        ssoLogError("Error in native application connection:", browser.runtime.lastError);
-    } else {
-        ssoLogError("Native application connection closed.");
-    }
-});
-
 let prt_sso_cookie = {
     data: {},
     hasData: false
@@ -32,9 +12,19 @@ let accounts = {
     active: null,
     queried: false
 };
+let initialized = false;
 let graph_api_token = null;
 let state_active = true;
 let broker_online = false;
+let port = null;
+
+function ssoLog(message) {
+    console.log('[EntraID SSO] ' + message)
+}
+
+function ssoLogError(message) {
+    console.error('[EntraID SSO] ' + message)
+}
 
 /*
  * Helpers to wait for a value to become available
@@ -135,13 +125,7 @@ async function on_before_send_headers(e) {
     return { requestHeaders: e.requestHeaders };
 }
 
-browser.webRequest.onBeforeSendHeaders.addListener(
-    on_before_send_headers,
-    { urls: ["https://login.microsoftonline.com/*"] },
-    ["blocking", "requestHeaders"]
-);
-
-port.onMessage.addListener((response) => {
+async function on_message(response) {
     if (response.command == "acquirePrtSsoCookie") {
         prt_sso_cookie.data = response.message;
         prt_sso_cookie.hasData = true;
@@ -176,16 +160,49 @@ port.onMessage.addListener((response) => {
     else {
         ssoLog('unknown command: ' + response.command);
     }
-});
+}
 
-browser.action.onClicked.addListener(() => {
-    state_active = !state_active;
-    if (state_active && broker_online) {
-        load_accounts();
-    } else {
-        logout();
+async function on_startup() {
+    ssoLog('start sso-mib');
+    if (initialized) {
+        ssoLog('sso-mib already initialized');
+        return;
     }
+
+    port =  browser.runtime.connectNative("sso_mib");
+    browser.action.disable();
+    logout();
+
+    port.onDisconnect.addListener(() => {
+        if (browser.runtime.lastError) {
+            ssoLogError("Error in native application connection:" +
+                browser.runtime.lastError);
+        } else {
+            ssoLogError("Native application connection closed.");
+        }
+    });
+
+    port.onMessage.addListener(on_message);
+
+    browser.webRequest.onBeforeSendHeaders.addListener(
+        on_before_send_headers,
+        { urls: ["https://login.microsoftonline.com/*"] },
+        ["blocking", "requestHeaders"]
+    );
+
+    browser.action.onClicked.addListener(() => {
+        state_active = !state_active;
+        if (state_active && broker_online) {
+            load_accounts();
+        } else {
+            logout();
+        }
+    });
+    initialized = true;
+}
+
+browser.runtime.onStartup.addListener(() => {
+    on_startup();
 });
 
-browser.action.disable();
-logout();
+on_startup();
