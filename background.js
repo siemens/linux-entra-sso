@@ -175,10 +175,10 @@ async function on_startup() {
 
     port.onDisconnect.addListener(() => {
         if (browser.runtime.lastError) {
-            ssoLogError("Error in native application connection:" +
+            ssoLogError('Error in native application connection:' +
                 browser.runtime.lastError);
         } else {
-            ssoLogError("Native application connection closed.");
+            ssoLogError('Native application connection closed.');
         }
     });
 
