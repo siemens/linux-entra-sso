@@ -1,0 +1,33 @@
+{
+    "description": "SSO via microsoft-identity-broker",
+    "manifest_version": 3,
+    "name": "EntraID SSO",
+    "version": "0.4.1",
+    "icons": {
+        "48": "icons/sso-mib.svg"
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "sso-mib@example.com",
+            "strict_min_version": "109.0"
+        }
+    },
+    "action": {
+        "default_icon": "icons/sso-mib.svg",
+        "default_title": "EntraID SSO",
+        "default_area": "navbar"
+    },
+    "background": {
+        "scripts": [
+            "background.js"
+        ]
+    },
+    "permissions": [
+        "nativeMessaging",
+        "webRequest",
+        "webRequestBlocking"
+    ],
+    "host_permissions": [
+        "https://login.microsoftonline.com/*"
+    ]
+}

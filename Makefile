@@ -24,20 +24,34 @@ PACKAGE_NAME=sso-mib
 RELEASE_TAG=$(shell git describe --match "v[0-9].[0-9]*" --dirty)
 ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG).xpi
 
-PACKAGE_FILES= \
+COMMON_FILES= \
 	LICENSES/MPL-2.0.txt \
 	background.js \
-	manifest.json \
-	manifest.json.license \
 	icons/sso-mib.svg
+
+MANIFEST_FILES= \
+	platform/firefox/manifest.json \
+	platform/firefox/manifest.json.license \
+	platform/chrome/manifest.json \
+	platform/chrome/manifest.json.license
+
+PACKAGE_FILES= \
+	$(COMMON_FILES) \
+	manifest.json \
+	manifest.json.license
 
 UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
 
-all package: clean $(PACKAGE_FILES)
-	zip -r $(ARCHIVE_NAME) $(PACKAGE_FILES)
+all package: clean $(COMMON_FILES) $(MANIFEST_FILES)
+	mkdir -p build
+	cp -rf platform/firefox platform/chrome build/
+	for P in firefox chrome; do \
+		cp -rf icons LICENSES background.js build/$$P/; \
+		cd build/$$P && zip -r $(ARCHIVE_NAME) $(PACKAGE_FILES) && cd ../../; \
+	done
 
 clean:
-	rm -f $(ARCHIVE_NAME)
+	rm -rf build
 
 release:
 	${Q}if [ -z "$(VERSION)" ]; then		\
@@ -48,8 +62,8 @@ release:
 		echo "Working directory is dirty!";	\
 		exit 1;					\
 	fi
-	${Q}sed -i $(UPDATE_VERSION) manifest.json
-	git commit -s manifest.json -m "Bump version number"
+	${Q}sed -i $(UPDATE_VERSION) platform/*/manifest.json
+	git commit -s platform/firefox/manifest.json platform/chrome/manifest.json -m "Bump version number"
 	git tag -as v$(VERSION) -m "Release v$(VERSION)"
 
 local-install:
