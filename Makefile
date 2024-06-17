@@ -42,6 +42,8 @@ PACKAGE_FILES= \
 
 UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
 
+CHROME_EXT_ID=$(shell $(CURDIR)/platform/chrome/get-ext-id.py $(CURDIR)/build/chrome/)
+
 all package: clean $(COMMON_FILES) $(MANIFEST_FILES)
 	for P in firefox chrome; do \
 		mkdir -p build/$$P; \
@@ -79,6 +81,9 @@ local-install-chrome:
 	install -m 0644 platform/chrome/sso_mib.json ~/.config/chromium/NativeMessagingHosts
 	sed -i 's|/usr/local/lib/chrome/|'$(HOME)'/.config/google-chrome/|' ~/.config/google-chrome/NativeMessagingHosts/sso_mib.json
 	sed -i 's|/usr/local/lib/chrome/|'$(HOME)'/.config/google-chrome/|' ~/.config/chromium/NativeMessagingHosts/sso_mib.json
+	# compute extension id and and grant permission
+	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/google-chrome/NativeMessagingHosts/sso_mib.json
+	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/chromium/NativeMessagingHosts/sso_mib.json
 	install -m 0755 sso-mib.py ~/.config/google-chrome
 
 local-uninstall-firefox:
