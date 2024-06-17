@@ -61,10 +61,14 @@ async function load_accounts() {
             'Content-Type': 'image/jpeg',
             'Authorization': 'Bearer ' + graph_api_token.accessToken
         }
-      });
+    });
     if (response.ok) {
-        browser.action.setIcon({
-            'path': URL.createObjectURL(await response.blob())
+        let avatar = await createImageBitmap(await response.blob());
+        let canvas = new OffscreenCanvas(48, 48);
+        let ctx = canvas.getContext('2d');
+        ctx.drawImage(avatar, 0, 0);
+        chrome.action.setIcon({
+            'imageData': ctx.getImageData(0, 0, 48, 48)
         });
     } else {
         ssoLog('Warning: Could not get profile picture.');
