@@ -8,7 +8,7 @@ SPDX-License-Identifier: MPL-2.0
 This browser plugin uses a locally running microsoft identity broker
 to authenticate the current user on Microsoft Entra ID. By that, also sites
 behind conditional access policies can be accessed. The plugin is written
-for Firefox but provides a limited support for Google Chrome (not Chromium) as well.
+for Firefox but provides a limited support for Google Chrome (and Chromium) as well.
 
 ## Pre-conditions
 

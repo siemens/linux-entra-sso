@@ -74,8 +74,11 @@ local-install-firefox:
 
 local-install-chrome:
 	install -d ~/.config/google-chrome/NativeMessagingHosts
+	install -d ~/.config/chromium/NativeMessagingHosts
 	install -m 0644 platform/chrome/sso_mib.json ~/.config/google-chrome/NativeMessagingHosts
+	install -m 0644 platform/chrome/sso_mib.json ~/.config/chromium/NativeMessagingHosts
 	sed -i 's|/usr/local/lib/chrome/|'$(HOME)'/.config/google-chrome/|' ~/.config/google-chrome/NativeMessagingHosts/sso_mib.json
+	sed -i 's|/usr/local/lib/chrome/|'$(HOME)'/.config/google-chrome/|' ~/.config/chromium/NativeMessagingHosts/sso_mib.json
 	install -m 0755 sso-mib.py ~/.config/google-chrome
 
 local-uninstall-firefox:
@@ -83,5 +86,6 @@ local-uninstall-firefox:
 
 local-uninstall-chrome:
 	rm -f ~/.config/google-chrome/NativeMessagingHosts/sso_mib.json ~/.config/google-chrome/sso-mib.py
+	rm -f ~/.config/chromium/NativeMessagingHosts/sso_mib.json
 
 .PHONY: clean release local-install-firefox local-install-chrome local-uninstall-firefox local-uninstall-chrome
