@@ -66,7 +66,12 @@ async function load_accounts() {
         let avatar = await createImageBitmap(await response.blob());
         let canvas = new OffscreenCanvas(48, 48);
         let ctx = canvas.getContext('2d');
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(24, 24, 24, 0, Math.PI * 2, false);
+        ctx.clip();
         ctx.drawImage(avatar, 0, 0);
+        ctx.restore();
         chrome.action.setIcon({
             'imageData': ctx.getImageData(0, 0, 48, 48)
         });
