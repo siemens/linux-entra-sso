@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: MPL-2.0
  * SPDX-FileCopyrightText: Copyright 2024 Siemens AG
  */
+let CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
 
 let prt_sso_cookie = {
     data: {},
@@ -24,6 +25,10 @@ function ssoLog(message) {
 
 function ssoLogError(message) {
     console.error('[EntraID SSO] ' + message)
+}
+
+function isFirefox() {
+    return typeof browser !== "undefined";
 }
 
 /*
@@ -78,7 +83,7 @@ async function load_accounts() {
     } else {
         ssoLog('Warning: Could not get profile picture.');
     }
-    browser.action.setTitle({
+    chrome.action.setTitle({
         title: 'EntraID SSO: ' + accounts.active.username}
     );
 }
@@ -86,13 +91,22 @@ async function load_accounts() {
 function logout() {
     accounts.active = null;
     accounts.queried = false;
-    browser.action.setIcon({
-        'path': 'icons/sso-mib.svg'
-    });
+    if (isFirefox()) {
+        chrome.action.setIcon({
+            'path': 'icons/sso-mib.svg'
+        });
+    } else {
+        chrome.action.setIcon({
+            'path': {
+                '48': 'icons/sso-mib_48.png',
+                '128': 'icons/sso-mib_128.png'
+            }
+        });
+    }
     let title = 'EntraID SSO disabled. Click to enable.'
     if (state_active)
         title = 'EntraID SSO disabled (waiting for broker).'
-    browser.action.setTitle({title: title});
+    chrome.action.setTitle({title: title});
 }
 
 async function get_or_request_prt(ssoUrl) {
@@ -108,7 +122,7 @@ async function get_or_request_prt(ssoUrl) {
         return false;
     })
     prt_sso_cookie.hasData = false;
-    data = prt_sso_cookie.data
+    const data = prt_sso_cookie.data
     if ('error' in data) {
         ssoLog('could not acquire PRT SSO cookie: ' + data.error);
     }
@@ -134,6 +148,39 @@ async function on_before_send_headers(e) {
     return { requestHeaders: e.requestHeaders };
 }
 
+async function update_net_rules(e) {
+    ssoLog('update network rules');
+    const SSO_URL = 'https://login.microsoftonline.com';
+    let prt = await get_or_request_prt(SSO_URL);
+    if ('error' in prt) {
+        ssoLogError('could not acquire PRT SSO cookie: ' + prt.error);
+        return;
+    }
+    const newRules = [
+        {
+            id: 1,
+            priority: 1,
+            condition: {
+                urlFilter: SSO_URL + '/*',
+                resourceTypes: ['main_frame']
+            },
+            action: {
+                type: 'modifyHeaders',
+                requestHeaders: [{ header: prt.cookieName, operation: 'set', value: prt.cookieContent }]
+            }
+        }
+    ];
+    const oldRules = await chrome.declarativeNetRequest.getSessionRules();
+    const oldRuleIds = oldRules.map(rule => rule.id);
+    
+    // Use the arrays to update the dynamic rules
+    await chrome.declarativeNetRequest.updateSessionRules({
+      removeRuleIds: oldRuleIds,
+      addRules: newRules
+    });
+    ssoLog('network rules updated');
+}
+
 async function on_message(response) {
     if (response.command == "acquirePrtSsoCookie") {
         prt_sso_cookie.data = response.message;
@@ -157,12 +204,15 @@ async function on_message(response) {
         if (response.message == 'online') {
             ssoLog('connection to broker restored');
             broker_online = true;
-            browser.action.enable();
-            load_accounts();
+            chrome.action.enable();
+            await load_accounts();
+            if (!isFirefox()) {
+                update_net_rules();
+            }
         } else {
             ssoLog('lost connection to broker');
             broker_online = false;
-            browser.action.disable();
+            chrome.action.disable();
             logout();
         }
     }
@@ -178,14 +228,14 @@ async function on_startup() {
         return;
     }
 
-    port =  browser.runtime.connectNative("sso_mib");
-    browser.action.disable();
+    port =  chrome.runtime.connectNative("sso_mib");
+    chrome.action.disable();
     logout();
 
     port.onDisconnect.addListener(() => {
-        if (browser.runtime.lastError) {
+        if (chrome.runtime.lastError) {
             ssoLogError('Error in native application connection:' +
-                browser.runtime.lastError);
+                chrome.runtime.lastError);
         } else {
             ssoLogError('Native application connection closed.');
         }
@@ -193,13 +243,24 @@ async function on_startup() {
 
     port.onMessage.addListener(on_message);
 
-    browser.webRequest.onBeforeSendHeaders.addListener(
-        on_before_send_headers,
-        { urls: ["https://login.microsoftonline.com/*"] },
-        ["blocking", "requestHeaders"]
-    );
+    if (isFirefox()) {
+        browser.webRequest.onBeforeSendHeaders.addListener(
+            on_before_send_headers,
+            { urls: ["https://login.microsoftonline.com/*"] },
+            ["blocking", "requestHeaders"]
+        );
+    } else {
+        await chrome.alarms.create('prt-sso-refresh', {
+            periodInMinutes: CHROME_PRT_SSO_REFRESH_INTERVAL_MIN
+          });
+        chrome.alarms.onAlarm.addListener((alarm) => {
+            if (broker_online) {
+                update_net_rules(alarm);
+            }
+        });
+    }
 
-    browser.action.onClicked.addListener(() => {
+    chrome.action.onClicked.addListener(() => {
         state_active = !state_active;
         if (state_active && broker_online) {
             load_accounts();
@@ -210,7 +271,7 @@ async function on_startup() {
     initialized = true;
 }
 
-browser.runtime.onStartup.addListener(() => {
+chrome.runtime.onStartup.addListener(() => {
     on_startup();
 });
 

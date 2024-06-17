@@ -1,0 +1,9 @@
+{
+    "name": "sso_mib",
+    "description": "Single Sign On via Microsoft Identity Broker",
+    "path": "/usr/local/lib/chrome/sso-mib.py",
+    "type": "stdio",
+    "allowed_origins": [
+        "chrome-extension://aeomfecbjoakdbigffcmmpfimpjlohgo/"
+    ]
+}

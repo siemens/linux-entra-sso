@@ -7,7 +7,8 @@ SPDX-License-Identifier: MPL-2.0
 
 This browser plugin uses a locally running microsoft identity broker
 to authenticate the current user on Microsoft Entra ID. By that, also sites
-behind conditional access policies can be accessed.
+behind conditional access policies can be accessed. The plugin is written
+for Firefox but provides a limited support for Google Chrome (not Chromium) as well.
 
 ## Pre-conditions
 
@@ -32,10 +33,10 @@ The extension is not yet signed by Mozilla and hence can only be added
 as temporary extension. For that, perform the following steps:
 
 1. clone this repository
-2. run `make` to build the extension `sso-mib-*.xpi`
-3. run `make local-install` to install the native messaging app in the user's `.mozilla` folder
-4. Permit unsigned extensions is Firefox by setting `xpinstall.signatures.required` to `false`
-5. Install the extension in Firefox from the local `sso-mib-*.xpi` file
+2. run `make` to build the extension (For Firefox, `build/<platform>/sso-mib-*.xpi` is generated)
+3. run `make local-install-<firefox|chrome>` to install the native messaging app in the user's `.mozilla` (or Chrome) folder
+4. Permit unsigned extensions is Firefox by setting `xpinstall.signatures.required` to `false` (Firefox only)
+5. Install the extension in the Browser from the local `sso-mib-*.xpi` file (Firefox). On Chrome, use `load unpacked` and point to `build/chrome`
 6. Enable "Access your data for https://login.microsoftonline.com" under the extension's permissions
 
 ## Usage
@@ -53,6 +54,13 @@ from the locally running device identity broker and inject that into the OAuth2 
 This extension will not work on the snap version of Firefox.
 The extension executes a script `sso-mib.py` on the host that communicates via DBus with the `microsoft-identity-broker` service.
 As the SNAP executes Firefox inside a container, the communication with DBus will not work. Please use the `firefox-esr` Debian package instead.
+
+### Expired Tokens on Chrome
+
+Due to not having the WebRequestsBlocking API on Chrome, the plugin needs to use a different mechanism to inject the token.
+While in Firefox the token is requested on-demand when hitting the SSO login URL, in Chrome the token is requested periodically.
+Then, a declarativeNetRequest API rule is setup to inject the token. As the lifetime of the tokens is limited and cannot be checked,
+outdated tokens might be injected. Further, a generic SSO URL must be used when requesting the token, instead of the actual one.
 
 ## License
 

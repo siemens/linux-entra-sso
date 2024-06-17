@@ -43,12 +43,12 @@ PACKAGE_FILES= \
 UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
 
 all package: clean $(COMMON_FILES) $(MANIFEST_FILES)
-	mkdir -p build
-	cp -rf platform/firefox platform/chrome build/
 	for P in firefox chrome; do \
+		mkdir -p build/$$P; \
+		cp platform/$$P/manifest* build/$$P; \
 		cp -rf icons LICENSES background.js build/$$P/; \
-		cd build/$$P && zip -r $(ARCHIVE_NAME) $(PACKAGE_FILES) && cd ../../; \
 	done
+	cd build/firefox && zip -r $(ARCHIVE_NAME) $(PACKAGE_FILES) && cd ../../;
 
 clean:
 	rm -rf build
@@ -66,13 +66,22 @@ release:
 	git commit -s platform/firefox/manifest.json platform/chrome/manifest.json -m "Bump version number"
 	git tag -as v$(VERSION) -m "Release v$(VERSION)"
 
-local-install:
+local-install-firefox:
 	install -d ~/.mozilla/native-messaging-hosts
-	install -m 0644 sso_mib.json ~/.mozilla/native-messaging-hosts
+	install -m 0644 platform/firefox/sso_mib.json ~/.mozilla/native-messaging-hosts
 	sed -i 's|/usr/local/lib/mozilla/|'$(HOME)'/.mozilla/|' ~/.mozilla/native-messaging-hosts/sso_mib.json
 	install -m 0755 sso-mib.py ~/.mozilla
 
-local-uninstall:
+local-install-chrome:
+	install -d ~/.config/google-chrome/NativeMessagingHosts
+	install -m 0644 platform/chrome/sso_mib.json ~/.config/google-chrome/NativeMessagingHosts
+	sed -i 's|/usr/local/lib/chrome/|'$(HOME)'/.config/google-chrome/|' ~/.config/google-chrome/NativeMessagingHosts/sso_mib.json
+	install -m 0755 sso-mib.py ~/.config/google-chrome
+
+local-uninstall-firefox:
 	rm -f ~/.mozilla/native-messaging-hosts/sso_mib.json ~/.mozilla/sso-mib.py
 
-.PHONY: clean release local-install local-uninstall
+local-uninstall-chrome:
+	rm -f ~/.config/google-chrome/NativeMessagingHosts/sso_mib.json ~/.config/google-chrome/sso-mib.py
+
+.PHONY: clean release local-install-firefox local-install-chrome local-uninstall-firefox local-uninstall-chrome

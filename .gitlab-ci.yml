@@ -34,4 +34,4 @@ build-xpi:
     - make package
   artifacts:
     paths:
-      - "sso-mib*.xpi"
+      - build/firefox/sso-mib*.xpi
