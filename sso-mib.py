@@ -74,7 +74,7 @@ class SsoMib:
             self._monitor_bus()
 
     def _check_broker_online(self):
-        dbus = self._bus.get('org.freedesktop.DBus', '/')
+        dbus = self._bus.get('org.freedesktop.DBus', '/org/freedesktop/DBus')
         if dbus.NameHasOwner(self.BROKER_NAME):
             self._instantiate_broker()
             self.broker_online = True
