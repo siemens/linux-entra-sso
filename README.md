@@ -3,12 +3,11 @@ SPDX-FileCopyrightText: Copyright 2024 Siemens AG
 SPDX-License-Identifier: MPL-2.0
 -->
 
-# Single Sign On via Microsoft Identity Broker
+# Single Sign On via Microsoft Identity Broker on Linux
 
-This browser plugin uses a locally running microsoft identity broker
-to authenticate the current user on Microsoft Entra ID. By that, also sites
-behind conditional access policies can be accessed. The plugin is written
-for Firefox but provides a limited support for Google Chrome (and Chromium) as well.
+This browser plugin uses a locally running microsoft identity broker to authenticate the current user on Microsoft Entra ID on Linux devices.
+By that, also sites behind conditional access policies can be accessed.
+The plugin is written for Firefox but provides a limited support for Google Chrome (and Chromium) as well.
 
 ## Pre-conditions
 
