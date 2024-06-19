@@ -62,6 +62,13 @@ While in Firefox the token is requested on-demand when hitting the SSO login URL
 Then, a declarativeNetRequest API rule is setup to inject the token. As the lifetime of the tokens is limited and cannot be checked,
 outdated tokens might be injected. Further, a generic SSO URL must be used when requesting the token, instead of the actual one.
 
+## Troubleshooting
+
+In case the extension is not working, check the following:
+
+- run host component in interactive mode: `python3 ./sso-mib.py --interactive acquirePrtSsoCookie`
+- check if SSO is working in the Edge browser
+
 ## License
 
 This project is licensed according to the terms of the Mozilla Public
