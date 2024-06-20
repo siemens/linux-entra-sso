@@ -1,18 +1,18 @@
 {
-    "description": "SSO via microsoft-identity-broker",
+    "description": "Entra ID SSO via Microsoft Identity Broker",
     "manifest_version": 3,
-    "name": "EntraID SSO",
+    "name": "Linux Entra SSO",
     "version": "0.5",
     "icons": {
-        "48": "icons/sso-mib_48.png",
-        "128": "icons/sso-mib_128.png"
+        "48": "icons/linux-entra-sso_48.png",
+        "128": "icons/linux-entra-sso_128.png"
     },
     "action": {
         "default_icon": {
-            "48": "icons/sso-mib_48.png",
-            "128": "icons/sso-mib_128.png"
+            "48": "icons/linux-entra-sso_48.png",
+            "128": "icons/linux-entra-sso_128.png"
         },
-        "default_title": "EntraID SSO",
+        "default_title": "Linux Entra SSO",
         "default_area": "navbar"
     },
     "background": {

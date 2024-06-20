@@ -20,11 +20,11 @@ let broker_online = false;
 let port = null;
 
 function ssoLog(message) {
-    console.log('[EntraID SSO] ' + message)
+    console.log('[Linux Entra SSO] ' + message)
 }
 
 function ssoLogError(message) {
-    console.error('[EntraID SSO] ' + message)
+    console.error('[Linux Entra SSO] ' + message)
 }
 
 function isFirefox() {
@@ -93,13 +93,13 @@ function logout() {
     accounts.queried = false;
     if (isFirefox()) {
         chrome.action.setIcon({
-            'path': 'icons/sso-mib.svg'
+            'path': 'icons/linux-entra-sso.svg'
         });
     } else {
         chrome.action.setIcon({
             'path': {
-                '48': 'icons/sso-mib_48.png',
-                '128': 'icons/sso-mib_128.png'
+                '48': 'icons/linux-entra-sso_48.png',
+                '128': 'icons/linux-entra-sso_128.png'
             }
         });
     }
@@ -222,13 +222,13 @@ async function on_message(response) {
 }
 
 async function on_startup() {
-    ssoLog('start sso-mib');
+    ssoLog('start linux-entra-sso');
     if (initialized) {
-        ssoLog('sso-mib already initialized');
+        ssoLog('linux-entra-sso already initialized');
         return;
     }
 
-    port =  chrome.runtime.connectNative("sso_mib");
+    port =  chrome.runtime.connectNative("linux_entra_sso");
     chrome.action.disable();
     logout();
 

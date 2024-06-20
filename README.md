@@ -3,11 +3,11 @@ SPDX-FileCopyrightText: Copyright 2024 Siemens AG
 SPDX-License-Identifier: MPL-2.0
 -->
 
-# Single Sign On via Microsoft Identity Broker on Linux
+# Entra ID SSO via Microsoft Identity Broker on Linux
 
-This browser plugin uses a locally running microsoft identity broker to authenticate the current user on Microsoft Entra ID on Linux devices.
+This browser plugin uses a locally running Microsoft Identity Broker to authenticate the current user on Microsoft Entra ID on Linux devices.
 By that, also sites behind conditional access policies can be accessed.
-The plugin is written for Firefox but provides a limited support for Google Chrome (and Chromium) as well.
+The plugin is written for Firefox but provides a limited support for Google Chrome (and Chromium).
 
 ## Pre-conditions
 
@@ -32,10 +32,10 @@ The extension is not yet signed by Mozilla and hence can only be added
 as temporary extension. For that, perform the following steps:
 
 1. clone this repository
-2. run `make` to build the extension (For Firefox, `build/<platform>/sso-mib-*.xpi` is generated)
+2. run `make` to build the extension (For Firefox, `build/<platform>/linux-entra-sso-*.xpi` is generated)
 3. run `make local-install-<firefox|chrome>` to install the native messaging app in the user's `.mozilla` (or Chrome) folder
 4. Permit unsigned extensions is Firefox by setting `xpinstall.signatures.required` to `false` (Firefox only)
-5. Install the extension in the Browser from the local `sso-mib-*.xpi` file (Firefox). On Chrome, use `load unpacked` and point to `build/chrome`
+5. Install the extension in the Browser from the local `linux-entra-sso-*.xpi` file (Firefox). On Chrome, use `load unpacked` and point to `build/chrome`
 6. Enable "Access your data for https://login.microsoftonline.com" under the extension's permissions
 
 ## Usage
@@ -51,7 +51,7 @@ from the locally running device identity broker and inject that into the OAuth2 
 ### SNAP version not supported
 
 This extension will not work on the snap version of Firefox.
-The extension executes a script `sso-mib.py` on the host that communicates via DBus with the `microsoft-identity-broker` service.
+The extension executes a script `linux-entra-sso.py` on the host that communicates via DBus with the `microsoft-identity-broker` service.
 As the SNAP executes Firefox inside a container, the communication with DBus will not work. Please use the `firefox-esr` Debian package instead.
 
 ### Expired Tokens on Chrome
@@ -65,7 +65,7 @@ outdated tokens might be injected. Further, a generic SSO URL must be used when 
 
 In case the extension is not working, check the following:
 
-- run host component in interactive mode: `python3 ./sso-mib.py --interactive acquirePrtSsoCookie`
+- run host component in interactive mode: `python3 ./linux-entra-sso.py --interactive acquirePrtSsoCookie`
 - check if SSO is working in the Edge browser
 
 ## License

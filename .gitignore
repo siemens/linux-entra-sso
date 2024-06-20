@@ -2,6 +2,6 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-sso-mib*.xpi
+Linux-Entra-SSO*.xpi
 __pycache__/
 build

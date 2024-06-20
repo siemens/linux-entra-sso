@@ -19,7 +19,7 @@ else
 	Q = @
 endif
 
-PACKAGE_NAME=sso-mib
+PACKAGE_NAME=Linux-Entra-SSO
 
 RELEASE_TAG=$(shell git describe --match "v[0-9].[0-9]*" --dirty)
 ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG).xpi
@@ -27,7 +27,7 @@ ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG).xpi
 COMMON_FILES= \
 	LICENSES/MPL-2.0.txt \
 	background.js \
-	icons/sso-mib.svg
+	icons/linux-entra-sso.svg
 
 MANIFEST_FILES= \
 	platform/firefox/manifest.json \
@@ -70,27 +70,27 @@ release:
 
 local-install-firefox:
 	install -d ~/.mozilla/native-messaging-hosts
-	install -m 0644 platform/firefox/sso_mib.json ~/.mozilla/native-messaging-hosts
-	sed -i 's|/usr/local/lib/mozilla/|'$(HOME)'/.mozilla/|' ~/.mozilla/native-messaging-hosts/sso_mib.json
-	install -m 0755 sso-mib.py ~/.mozilla
+	install -m 0644 platform/firefox/linux_entra_sso.json ~/.mozilla/native-messaging-hosts
+	sed -i 's|/usr/local/lib/mozilla/|'$(HOME)'/.mozilla/|' ~/.mozilla/native-messaging-hosts/linux_entra_sso.json
+	install -m 0755 linux-entra-sso.py ~/.mozilla
 
 local-install-chrome:
 	install -d ~/.config/google-chrome/NativeMessagingHosts
 	install -d ~/.config/chromium/NativeMessagingHosts
-	install -m 0644 platform/chrome/sso_mib.json ~/.config/google-chrome/NativeMessagingHosts
-	install -m 0644 platform/chrome/sso_mib.json ~/.config/chromium/NativeMessagingHosts
-	sed -i 's|/usr/local/lib/chrome/|'$(HOME)'/.config/google-chrome/|' ~/.config/google-chrome/NativeMessagingHosts/sso_mib.json
-	sed -i 's|/usr/local/lib/chrome/|'$(HOME)'/.config/google-chrome/|' ~/.config/chromium/NativeMessagingHosts/sso_mib.json
+	install -m 0644 platform/chrome/linux_entra_sso.json ~/.config/google-chrome/NativeMessagingHosts
+	install -m 0644 platform/chrome/linux_entra_sso.json ~/.config/chromium/NativeMessagingHosts
+	sed -i 's|/usr/local/lib/chrome/|'$(HOME)'/.config/google-chrome/|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
+	sed -i 's|/usr/local/lib/chrome/|'$(HOME)'/.config/google-chrome/|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
 	# compute extension id and and grant permission
-	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/google-chrome/NativeMessagingHosts/sso_mib.json
-	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/chromium/NativeMessagingHosts/sso_mib.json
-	install -m 0755 sso-mib.py ~/.config/google-chrome
+	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
+	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
+	install -m 0755 linux-entra-sso.py ~/.config/google-chrome
 
 local-uninstall-firefox:
-	rm -f ~/.mozilla/native-messaging-hosts/sso_mib.json ~/.mozilla/sso-mib.py
+	rm -f ~/.mozilla/native-messaging-hosts/linux_entra_sso.json ~/.mozilla/linux-entra-sso.py
 
 local-uninstall-chrome:
-	rm -f ~/.config/google-chrome/NativeMessagingHosts/sso_mib.json ~/.config/google-chrome/sso-mib.py
-	rm -f ~/.config/chromium/NativeMessagingHosts/sso_mib.json
+	rm -f ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json ~/.config/google-chrome/linux-entra-sso.py
+	rm -f ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
 
 .PHONY: clean release local-install-firefox local-install-chrome local-uninstall-firefox local-uninstall-chrome

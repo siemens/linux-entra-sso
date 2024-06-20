@@ -1,0 +1,9 @@
+{
+    "name": "linux_entra_sso",
+    "description": "Entra ID SSO via Microsoft Identity Broker",
+    "path": "/usr/local/lib/chrome/linux-entra-sso.py",
+    "type": "stdio",
+    "allowed_origins": [
+        "chrome-extension://{extension_id}/"
+    ]
+}

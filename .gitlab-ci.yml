@@ -23,7 +23,7 @@ reuse-and-codestyle:
   script:
     - reuse lint
     - flake8
-    - pylint sso-mib.py
+    - pylint linux-entra-sso.py
 
 build-xpi:
   stage: build
@@ -34,4 +34,4 @@ build-xpi:
     - make package
   artifacts:
     paths:
-      - build/firefox/sso-mib*.xpi
+      - build/firefox/Linux-Entra-SSO*.xpi
