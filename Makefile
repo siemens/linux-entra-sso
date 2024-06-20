@@ -1,12 +1,12 @@
 #
-# Firefox Intune Plugin
+# Entra ID SSO via Microsoft Identity Broker on Linux
 #
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) Jan Kiszka, 2020-2024
 # SPDX-FileCopyrightText: Copyright (c) Siemens AG, 2024
 #
 # Authors:
-#  Jan Kiszka <jan.kiszka@siemens.de>
+#  Jan Kiszka <jan.kiszka@siemens.com>
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
