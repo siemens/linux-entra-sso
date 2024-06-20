@@ -22,6 +22,9 @@ from pydbus import SessionBus
 # value can be used, if no real value is provided.
 SSO_URL_DEFAULT = "https://login.microsoftonline.com/"
 EDGE_BROWSER_CLIENT_ID = "d7b530a4-7680-4c23-a8bf-c52c121d2e87"
+# dbus start service reply codes
+START_REPLY_SUCCESS = 1
+START_REPLY_ALREADY_RUNNING = 2
 
 
 class NativeMessaging:
@@ -75,7 +78,8 @@ class SsoMib:
 
     def _check_broker_online(self):
         dbus = self._bus.get('org.freedesktop.DBus', '/org/freedesktop/DBus')
-        if dbus.NameHasOwner(self.BROKER_NAME):
+        if dbus.StartServiceByName(self.BROKER_NAME, 0) in \
+                [START_REPLY_ALREADY_RUNNING, START_REPLY_SUCCESS]:
             self._instantiate_broker()
             self.broker_online = True
         else:
