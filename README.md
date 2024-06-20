@@ -72,7 +72,3 @@ In case the extension is not working, check the following:
 
 This project is licensed according to the terms of the Mozilla Public
 License, v. 2.0. A copy of the license is provided in `LICENSES/MPL-2.0.txt`.
-
-## Maintainers
-
-- Felix Moessbauer <felix.moessbauer@siemens.com>
