@@ -1,0 +1,62 @@
+name: build browser extension
+
+on:
+  push:
+      branches:
+        - main
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to checkout the repository
+permissions:
+  contents: read
+
+jobs:
+  reuse-and-codestyle:
+    runs-on: ubuntu-latest
+    env:
+      GIT_DEPTH: "0"
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+    
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13' 
+
+      - name: install dependencies 
+        run: |
+          sudo apt update && sudo apt install -y python3-gi flake8 pylint python3-pydbus
+          pip3 install --break-system-packages fsfe-reuse
+          git clean -f -d
+    
+      - name: execute linters
+        run: |
+          reuse lint
+          flake8
+          pylint linux-entra-sso.py
+
+  build-xpi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+      
+      - name: install dependencies
+        run: |
+          sudo apt update && sudo apt install -y make git zip
+    
+      - run: make package
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firefox-xpi
+          path: |
+            build/**/*.xpi
+    
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chrome-zip
+          path: |
+            build/chrome/
+
+          
