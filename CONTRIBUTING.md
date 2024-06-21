@@ -18,6 +18,7 @@ steps.
     - check with your employer when not working on your own!
 - post follow-up version(s) if feedback requires this
 - send reminder if nothing happened after about a week
+- when adding new files, add a license header (see existing files) [**required**]
 
 Developer's Certificate of Origin 1.1
 -------------------------------------
