@@ -1,0 +1,13 @@
+{
+    "addons": {
+      "linux-entra-sso@example.com": {
+        "updates": [
+          {
+            "version": "0.6.1",
+            "update_link": "https://github.com/siemens/linux-entra-sso/releases/download/v0.6.1/linux_entra_sso-0.6.1.xpi",
+            "update_hash": "sha256:edb6d8b754d4c2390517815ed72f5a96f1394f322a555cf54f477ca5190562c1"
+          }
+        ]
+      }
+    }
+  }

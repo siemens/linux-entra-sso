@@ -28,10 +28,9 @@ sudo apt install python3-pydbus
 
 ## Installation
 
-### Firefox: via addons.mozilla.org
+### Firefox: Signed Version from Github Releases
 
-You can get a signed version of the browser extension from AMO (the Mozilla addons marketplace):
-[Linux Entra SSO](https://addons.mozilla.org/en-US/firefox/addon/linux-entra-sso/).
+You can get a signed version of the browser extension from our Github releases.
 As this only covers the browser part, the host tooling still needs to be installed manually:
 
 1. clone this repository
