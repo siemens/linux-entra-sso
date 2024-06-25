@@ -7,6 +7,7 @@
 #
 # Authors:
 #  Jan Kiszka <jan.kiszka@siemens.com>
+#  Felix Moessbauer <felix.moessbauer@siemens.com>
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -22,35 +23,57 @@ endif
 PACKAGE_NAME=Linux-Entra-SSO
 
 RELEASE_TAG=$(shell git describe --match "v[0-9].[0-9]*" --dirty)
-ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG).xpi
+ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG)
 
-COMMON_FILES= \
+COMMON_INPUT_FILES= \
 	LICENSES/MPL-2.0.txt \
-	background.js \
-	icons/linux-entra-sso.svg
+	background.js
 
-MANIFEST_FILES= \
+CHROME_INPUT_FILES= \
+	$(COMMON_INPUT_FILES) \
+	platform/chrome/manifest.json \
+	platform/chrome/manifest.json.license \
+	icons/linux-entra-sso_48.png \
+	icons/linux-entra-sso_48.png.license \
+	icons/linux-entra-sso_128.png \
+	icons/linux-entra-sso_128.png.license
+
+FIREFOX_INPUT_FILES= \
+	$(COMMON_INPUT_FILES) \
 	platform/firefox/manifest.json \
 	platform/firefox/manifest.json.license \
-	platform/chrome/manifest.json \
-	platform/chrome/manifest.json.license
+	icons/linux-entra-sso.svg
 
-PACKAGE_FILES= \
-	$(COMMON_FILES) \
+# common files for all platforms (relative to build directory)
+CHROME_PACKAGE_FILES= \
+	$(COMMON_INPUT_FILES) \
 	manifest.json \
-	manifest.json.license
+	manifest.json.license \
+	icons/linux-entra-sso_48.png \
+	icons/linux-entra-sso_48.png.license \
+	icons/linux-entra-sso_128.png \
+	icons/linux-entra-sso_128.png.license
+
+FIREFOX_PACKAGE_FILES= \
+	$(COMMON_INPUT_FILES) \
+	manifest.json \
+	manifest.json.license \
+	icons/linux-entra-sso.svg
 
 UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
 
 CHROME_EXT_ID=$(shell $(CURDIR)/platform/chrome/get-ext-id.py $(CURDIR)/build/chrome/)
 
-all package: clean $(COMMON_FILES) $(MANIFEST_FILES)
+all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES)
 	for P in firefox chrome; do \
-		mkdir -p build/$$P; \
+		mkdir -p build/$$P/icons; \
 		cp platform/$$P/manifest* build/$$P; \
-		cp -rf icons LICENSES background.js build/$$P/; \
+		cp -rf LICENSES background.js build/$$P/; \
 	done
-	cd build/firefox && zip -r $(ARCHIVE_NAME) $(PACKAGE_FILES) && cd ../../;
+	cp icons/*.svg build/firefox/icons/
+	cp icons/*.png* build/chrome/icons/
+	cd build/firefox && zip -r ../$(ARCHIVE_NAME).firefox.xpi $(FIREFOX_PACKAGE_FILES) && cd ../../;
+	cd build/chrome && zip -r ../$(ARCHIVE_NAME).chrome.zip $(CHROME_PACKAGE_FILES) && cd ../../;
 
 clean:
 	rm -rf build
