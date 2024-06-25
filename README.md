@@ -48,7 +48,8 @@ To build the extension and install the host parts, perform the following steps:
 1. clone this repository
 2. run `make local-install-<firefox|chrome>` to install the native messaging app in the user's `.mozilla` (or Chrome) folder
 3. run `make` to build the extension (For Firefox, `build/<platform>/linux-entra-sso-*.xpi` is generated)
-4. Permit unsigned extensions is Firefox by setting `xpinstall.signatures.required` to `false` (Firefox only)
+4. Firefox only: Permit unsigned extensions in Firefox by setting `xpinstall.signatures.required` to `false`
+4. Chrome only: In extension menu, enable `Developer mode`.
 5. Install the extension in the Browser from the local `linux-entra-sso-*.xpi` file (Firefox). On Chrome, use `load unpacked` and point to `build/chrome`
 6. Enable "Access your data for https://login.microsoftonline.com" under the extension's permissions
 
