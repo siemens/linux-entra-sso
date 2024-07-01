@@ -226,6 +226,8 @@ function on_startup() {
         ssoLog('linux-entra-sso already initialized');
         return;
     }
+    initialized = true;
+    ssoLog('start linux-entra-sso');
 
     port =  chrome.runtime.connectNative("linux_entra_sso");
     chrome.action.disable();
@@ -267,7 +269,6 @@ function on_startup() {
             logout();
         }
     });
-    initialized = true;
 }
 
 // use this API to prevent the extension from being disabled
