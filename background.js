@@ -221,12 +221,13 @@ async function on_message(response) {
     }
 }
 
-async function on_startup() {
-    ssoLog('start linux-entra-sso');
+function on_startup() {
     if (initialized) {
         ssoLog('linux-entra-sso already initialized');
         return;
     }
+    initialized = true;
+    ssoLog('start linux-entra-sso');
 
     port =  chrome.runtime.connectNative("linux_entra_sso");
     chrome.action.disable();
@@ -250,7 +251,7 @@ async function on_startup() {
             ["blocking", "requestHeaders"]
         );
     } else {
-        await chrome.alarms.create('prt-sso-refresh', {
+        chrome.alarms.create('prt-sso-refresh', {
             periodInMinutes: CHROME_PRT_SSO_REFRESH_INTERVAL_MIN
           });
         chrome.alarms.onAlarm.addListener((alarm) => {
@@ -268,11 +269,9 @@ async function on_startup() {
             logout();
         }
     });
-    initialized = true;
 }
 
-chrome.runtime.onStartup.addListener(() => {
-    on_startup();
-});
+// use this API to prevent the extension from being disabled
+chrome.runtime.onStartup.addListener(on_startup);
 
 on_startup();

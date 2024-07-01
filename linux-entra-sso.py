@@ -12,6 +12,8 @@ import sys
 import json
 import struct
 import uuid
+import ctypes
+from signal import SIGINT
 from threading import Thread, Lock
 from gi.repository import GLib
 from pydbus import SessionBus
@@ -25,6 +27,8 @@ EDGE_BROWSER_CLIENT_ID = "d7b530a4-7680-4c23-a8bf-c52c121d2e87"
 # dbus start service reply codes
 START_REPLY_SUCCESS = 1
 START_REPLY_ALREADY_RUNNING = 2
+# prctl constants
+PR_SET_PDEATHSIG = 1
 
 
 class NativeMessaging:
@@ -186,8 +190,17 @@ def run_as_plugin():
         loop = GLib.MainLoop()
         loop.run()
 
+    def register_terminate_with_parent():
+        libc = ctypes.CDLL("libc.so.6")
+        libc.prctl(PR_SET_PDEATHSIG, SIGINT, 0, 0, 0)
+
     print("Running as browser plugin.", file=sys.stderr)
     print("For interactive mode, start with --interactive", file=sys.stderr)
+
+    # on chrome and chromium, the parent process does not reliably
+    # terminate the plugin process when the parent process is killed.
+    register_terminate_with_parent()
+
     ssomib = SsoMib(daemon=True)
     ssomib.on_broker_state_changed(notify_state_change)
     monitor = Thread(target=run_dbus_monitor)
