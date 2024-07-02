@@ -1,0 +1,58 @@
+# SPDX-FileCopyrightText: Copyright 2024 Siemens AG
+#
+# SPDX-License-Identifier: MPL-2.0
+
+name: release browser extension
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# Sets permissions of the GITHUB_TOKEN to checkout the repository
+permissions:
+  contents: write
+
+env:
+  WEB_EXT_VERS: 8.2.0
+
+jobs:
+  release-xpi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: install dependencies
+        run: |
+          sudo apt update && sudo apt install -y make git zip
+
+      - run: make package
+
+      - name: sign Firefox extension by Mozilla
+        run: |
+          npx web-ext@${{ env.WEB_EXT_VERS }} sign \
+            --channel unlisted \
+            --approval-timeout 900000 \
+            --api-key ${{ secrets.AMO_API_KEY }} \
+            --api-secret ${{ secrets.AMO_API_SECRET }} \
+            --source-dir build/firefox \
+            --artifacts-dir build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firefox-signed-xpi
+          path: |
+            build/linux_entra_sso-*.xpi
+
+      - name: create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/linux_entra_sso-*.xpi
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            Release of version ${{ github.ref_name }}
+          tag: ${{ github.ref_name }}
+          draft: false
+          prerelease: true
