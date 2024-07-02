@@ -12,6 +12,9 @@ on:
 permissions:
   contents: read
 
+env:
+  WEB_EXT_VERS: 8.2.0
+
 jobs:
   reuse-and-codestyle:
     runs-on: ubuntu-latest
@@ -48,6 +51,10 @@ jobs:
           sudo apt update && sudo apt install -y make git zip
 
       - run: make package
+
+      - name: "web-ext lint"
+        run: |
+          npx web-ext@${{ env.WEB_EXT_VERS }} lint --source-dir build/firefox --self-hosted
 
       - uses: actions/upload-artifact@v4
         with:
