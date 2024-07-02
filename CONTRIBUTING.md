@@ -53,3 +53,12 @@ following:
             personal information I submit with it, including my sign-off) is
             maintained indefinitely and may be redistributed consistent with
             this project or the open source license(s) involved.
+
+## Maintainers: Create Releases
+
+The creation of public releases is a partially automated process:
+
+1. update code and create release tags: `VERSION=<x.x.x> make release`
+2. push to GitHub: `git push origin main && git push origin v<x.x.x>`
+3. wait for release action to finish (public release is created)
+4. add release-notes to public release
