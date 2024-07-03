@@ -46,7 +46,7 @@ jobs:
             build/linux_entra_sso-*.xpi
 
       - name: create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@a74c6b72af54cfa997e81df42d94703d6313a2d0 # v2.0.6
         with:
           files: |
             build/linux_entra_sso-*.xpi
@@ -68,7 +68,7 @@ jobs:
             > .pages/firefox/updates.json.tmp && mv .pages/firefox/updates.json.tmp .pages/firefox/updates.json
 
       - name: commit update manifest for Firefox
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5058a842 # v5.0.1
         with:
           commit_message: "chore: release Firefox update manifest"
           commit_user_name: "${{ github.actor }} [bot]"
