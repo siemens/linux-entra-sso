@@ -58,10 +58,12 @@ async function load_accounts() {
     ssoLog('active account: ' + accounts.active.username);
 
     // load profile picture and set it as icon
-    graph_api_token = null;
-    port.postMessage({'command': 'acquireTokenSilently', 'account': accounts.active});
-    await waitFor(() => {return graph_api_token !== null; });
-    ssoLog('API token acquired');
+    if (!graph_api_token || graph_api_token.expiresOn < (Date.now() + 60000)) {
+        graph_api_token = null;
+        port.postMessage({'command': 'acquireTokenSilently', 'account': accounts.active});
+        await waitFor(() => {return graph_api_token !== null; });
+        ssoLog('API token acquired');
+    }
     const response = await fetch('https://graph.microsoft.com/v1.0/me/photos/48x48/$value', {
         headers: {
             'Content-Type': 'image/jpeg',
