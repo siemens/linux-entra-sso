@@ -58,6 +58,7 @@ async function load_accounts() {
     ssoLog('active account: ' + accounts.active.username);
 
     // load profile picture and set it as icon
+    graph_api_token = null;
     port.postMessage({'command': 'acquireTokenSilently', 'account': accounts.active});
     await waitFor(() => {return graph_api_token !== null; });
     ssoLog('API token acquired');
