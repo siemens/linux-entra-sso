@@ -53,6 +53,24 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: |
             Release of version ${{ github.ref_name }}
-          tag: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
           draft: false
           prerelease: true
+
+      - name: create update manifest for Firefox
+        run: |
+          VERSION=$(echo ${{ github.ref_name }} | cut -c 2-)
+          DIGEST="sha256:$(sha256sum build/linux_entra_sso-${VERSION}.xpi | cut -d ' ' -f 1)"
+          LINK="https://github.com/siemens/linux-entra-sso/releases/download/v${VERSION}/linux_entra_sso-${VERSION}.xpi"
+          jq --arg version "${VERSION}" --arg digest "${DIGEST}" --arg link "${LINK}" \
+            '."addons"."linux-entra-sso@example.com"."updates" += [{"version":$version, "update_link":$link, "update_hash":$digest}]' \
+            .pages/firefox/updates.json \
+            > .pages/firefox/updates.json.tmp && mv .pages/firefox/updates.json.tmp .pages/firefox/updates.json
+
+      - name: commit update manifest for Firefox
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: release Firefox update manifest"
+          commit_user_name: "${{ github.actor }} [bot]"
+          branch: main
+          file_pattern: '.pages/firefox/updates.json'
