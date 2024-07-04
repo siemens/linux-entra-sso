@@ -7,6 +7,7 @@ name: release browser extension
 on:
   push:
     tags:
+      - 'v*.*'
       - 'v*.*.*'
 
 # Sets permissions of the GITHUB_TOKEN to checkout the repository
