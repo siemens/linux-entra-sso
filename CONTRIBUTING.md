@@ -62,3 +62,5 @@ The creation of public releases is a partially automated process:
 2. push to GitHub: `git push origin main && git push origin v<x.x.x>`
 3. wait for release action to finish (public release is created)
 4. add release-notes to public release
+5. manually inspect signed xpi (double check)
+6. merge auto-created MR to enroll Firefox update manifest
