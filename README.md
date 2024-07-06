@@ -37,6 +37,15 @@ As this only covers the browser part, the host tooling still needs to be install
 2. run `make local-install-firefox`
 3. Enable "Access your data for https://login.microsoftonline.com" under the extension's permissions
 
+### Chrome: Signed Version from Chrome Web Store
+
+You can get a signed version of the browser extension from the Chrome Web Store.
+As this only covers the browser part, the host tooling still needs to be installed manually:
+
+1. clone this repository
+2. run `make local-install-chrome`
+3. Install the [linux-entra-sso](https://chrome.google.com/webstore/detail/jlnfnnolkbjieggibinobhkjdfbpcohn) Chrome extension from the Chrome Web Store
+
 ### Development Version and Other Browsers
 
 If you want to execute unsigned versions of the extension (e.g. test builds) on Firefox, you have to use either Firefox ESR,
