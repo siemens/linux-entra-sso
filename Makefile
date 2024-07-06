@@ -109,6 +109,8 @@ local-install-chrome:
 	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
 	install -m 0755 linux-entra-sso.py ~/.config/google-chrome
 
+local-install: local-install-firefox local-install-chrome
+
 local-uninstall-firefox:
 	rm -f ~/.mozilla/native-messaging-hosts/linux_entra_sso.json ~/.mozilla/linux-entra-sso.py
 
@@ -116,4 +118,6 @@ local-uninstall-chrome:
 	rm -f ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json ~/.config/google-chrome/linux-entra-sso.py
 	rm -f ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
 
-.PHONY: clean release local-install-firefox local-install-chrome local-uninstall-firefox local-uninstall-chrome
+local-uninstall: local-uninstall-firefox local-uninstall-chrome
+
+.PHONY: clean release local-install-firefox local-install-chrome local-install local-uninstall-firefox local-uninstall-chrome local-uninstall
