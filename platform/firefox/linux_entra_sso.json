@@ -1,7 +1,7 @@
 {
     "name": "linux_entra_sso",
     "description": "Entra ID SSO via Microsoft Identity Broker",
-    "path": "/usr/local/lib/mozilla/linux-entra-sso.py",
+    "path": "/usr/local/lib/linux-entra-sso/linux-entra-sso.py",
     "type": "stdio",
     "allowed_extensions": [
         "linux-entra-sso@example.com"
