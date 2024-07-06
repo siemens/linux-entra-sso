@@ -94,7 +94,7 @@ release:
 local-install-firefox:
 	install -d ~/.mozilla/native-messaging-hosts
 	install -m 0644 platform/firefox/linux_entra_sso.json ~/.mozilla/native-messaging-hosts
-	sed -i 's|/usr/local/lib/mozilla/|'$(HOME)'/.mozilla/|' ~/.mozilla/native-messaging-hosts/linux_entra_sso.json
+	sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.mozilla/|' ~/.mozilla/native-messaging-hosts/linux_entra_sso.json
 	install -m 0755 linux-entra-sso.py ~/.mozilla
 
 local-install-chrome:
@@ -102,14 +102,36 @@ local-install-chrome:
 	install -d ~/.config/chromium/NativeMessagingHosts
 	install -m 0644 platform/chrome/linux_entra_sso.json ~/.config/google-chrome/NativeMessagingHosts
 	install -m 0644 platform/chrome/linux_entra_sso.json ~/.config/chromium/NativeMessagingHosts
-	sed -i 's|/usr/local/lib/chrome/|'$(HOME)'/.config/google-chrome/|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
-	sed -i 's|/usr/local/lib/chrome/|'$(HOME)'/.config/google-chrome/|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
+	sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.config/google-chrome/|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
+	sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.config/google-chrome/|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
 	# compute extension id and and grant permission
 	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
 	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
 	install -m 0755 linux-entra-sso.py ~/.config/google-chrome
 
 local-install: local-install-firefox local-install-chrome
+
+install:
+	# Host application
+	install -d $(DESTDIR)/usr/local/lib/linux-entra-sso
+	install -m 0755 linux-entra-sso.py $(DESTDIR)/usr/local/lib/linux-entra-sso
+	# Firefox
+	install -d $(DESTDIR)/usr/lib/mozilla/native-messaging-hosts
+	install -m 0644 platform/firefox/linux_entra_sso.json $(DESTDIR)/usr/lib/mozilla/native-messaging-hosts
+	# Chrome
+	install -d $(DESTDIR)/etc/opt/chrome/native-messaging-hosts
+	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/etc/opt/chrome/native-messaging-hosts
+	sed -i '/{extension_id}/d' $(DESTDIR)/etc/opt/chrome/native-messaging-hosts/linux_entra_sso.json
+	# Chromium
+	install -d $(DESTDIR)/etc/chromium/native-messaging-hosts
+	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/etc/chromium/native-messaging-hosts
+	sed -i '/{extension_id}/d' $(DESTDIR)/etc/chromium/native-messaging-hosts/linux_entra_sso.json
+
+uninstall:
+	rm -rf $(DESTDIR)/usr/local/lib/linux-entra-sso
+	rm -f  $(DESTDIR)/usr/lib/mozilla/native-messaging-hosts/linux_entra_sso.json
+	rm -f  $(DESTDIR)/etc/opt/chrome/native-messaging-hosts/linux_entra_sso.json
+	rm -f  $(DESTDIR)/etc/chromium/native-messaging-hosts/linux_entra_sso.json
 
 local-uninstall-firefox:
 	rm -f ~/.mozilla/native-messaging-hosts/linux_entra_sso.json ~/.mozilla/linux-entra-sso.py
@@ -120,4 +142,4 @@ local-uninstall-chrome:
 
 local-uninstall: local-uninstall-firefox local-uninstall-chrome
 
-.PHONY: clean release local-install-firefox local-install-chrome local-install local-uninstall-firefox local-uninstall-chrome local-uninstall
+.PHONY: clean release local-install-firefox local-install-chrome local-install install local-uninstall-firefox local-uninstall-chrome local-uninstall uninstall

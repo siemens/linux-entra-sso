@@ -62,6 +62,12 @@ To build the extension and install the host parts, perform the following steps:
 5. Install the extension in the Browser from the local `linux-entra-sso-*.xpi` file (Firefox). On Chrome, use `load unpacked` and point to `build/chrome`
 6. Enable "Access your data for https://login.microsoftonline.com" under the extension's permissions
 
+### Global Installation of Host Components
+
+Linux distributions can ship the host components by packaging the output of `make install` (`DESTDIR` is supported).
+This makes the host parts available to all users, but will only work with the signed versions of the extension.
+Note, that the users still need to manually install the browser extension from the respective stores.
+
 ## Usage
 
 No configuration is required. However, you might need to clear all cookies on
