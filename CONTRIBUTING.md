@@ -64,9 +64,3 @@ The creation of public releases is a partially automated process:
 4. add release-notes to public release
 5. manually inspect signed xpi (double check)
 6. merge auto-created MR to enroll Firefox update manifest
-
-Further, the extension needs to be manually updated on the Chrome Web Store:
-
-1. Login on the [Chrome Web Store Developer Console](https://chrome.google.com/webstore/devconsole/)
-2. Select `Linux Entra SSO` extension
-3. Go to `Package` and click `Upload New Package` (upload the `.zip` file)
