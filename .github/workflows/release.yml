@@ -19,7 +19,7 @@ env:
   WEB_EXT_VERS: 8.2.0
 
 jobs:
-  release-xpi:
+  release-extension:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository
@@ -88,3 +88,13 @@ jobs:
           signoff: true
           body: |
             Publish update manifest for Firefox extension, version ${{ github.ref_name }}.
+
+      - name: release Chrome extension on CWS
+        uses: mnao305/chrome-extension-upload@4008e29e13c144d0f6725462cbd49b7c291b4928 # v5.0.0
+        with:
+          file-path: build/Linux-Entra-SSO-*chrome.zip
+          glob: true
+          extension-id: jlnfnnolkbjieggibinobhkjdfbpcohn
+          client-id: ${{ secrets.CWS_CLIENT_ID }}
+          client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CWS_REFRESH_TOKEN }}
