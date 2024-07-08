@@ -63,6 +63,7 @@ FIREFOX_PACKAGE_FILES= \
 UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
 
 CHROME_EXT_ID=$(shell $(CURDIR)/platform/chrome/get-ext-id.py $(CURDIR)/build/chrome/)
+CHROME_EXT_ID_SIGNED=jlnfnnolkbjieggibinobhkjdfbpcohn
 
 all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES)
 	for P in firefox chrome; do \
@@ -122,6 +123,8 @@ install:
 	install -d $(DESTDIR)/etc/opt/chrome/native-messaging-hosts
 	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/etc/opt/chrome/native-messaging-hosts
 	sed -i '/{extension_id}/d' $(DESTDIR)/etc/opt/chrome/native-messaging-hosts/linux_entra_sso.json
+	install -d $(DESTDIR)/usr/share/google-chrome/extensions
+	install -m 0644 platform/chrome/extension.json $(DESTDIR)/usr/share/google-chrome/extensions/$(CHROME_EXT_ID_SIGNED).json
 	# Chromium
 	install -d $(DESTDIR)/etc/chromium/native-messaging-hosts
 	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/etc/chromium/native-messaging-hosts
@@ -132,6 +135,7 @@ uninstall:
 	rm -f  $(DESTDIR)/usr/lib/mozilla/native-messaging-hosts/linux_entra_sso.json
 	rm -f  $(DESTDIR)/etc/opt/chrome/native-messaging-hosts/linux_entra_sso.json
 	rm -f  $(DESTDIR)/etc/chromium/native-messaging-hosts/linux_entra_sso.json
+	rm -f  $(DESTDIR)/usr/share/google-chrome/extensions/$(CHROME_EXT_ID_SIGNED).json
 
 local-uninstall-firefox:
 	rm -f ~/.mozilla/native-messaging-hosts/linux_entra_sso.json ~/.mozilla/linux-entra-sso.py

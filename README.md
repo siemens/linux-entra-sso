@@ -66,7 +66,8 @@ To build the extension and install the host parts, perform the following steps:
 
 Linux distributions can ship the host components by packaging the output of `make install` (`DESTDIR` is supported).
 This makes the host parts available to all users, but will only work with the signed versions of the extension.
-Note, that the users still need to manually install the browser extension from the respective stores.
+On Chrome, the extension is registered to be auto-installed when starting the browser.
+On Firefox and Chromium, the users still need to manually install the browser extension from the respective stores.
 
 ## Usage
 
