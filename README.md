@@ -35,7 +35,8 @@ As this only covers the browser part, the host tooling still needs to be install
 
 1. clone this repository
 2. run `make local-install-firefox`
-3. Enable "Access your data for https://login.microsoftonline.com" under the extension's permissions
+3. Get the `linux_entra_sso-<version>.xpi` file from the [project's releases page](https://github.com/siemens/linux-entra-sso/releases)
+4. Enable "Access your data for https://login.microsoftonline.com" under the extension's permissions
 
 ### Chrome: Signed Version from Chrome Web Store
 
