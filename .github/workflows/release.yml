@@ -14,6 +14,8 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
+  attestations: write
 
 env:
   WEB_EXT_VERS: 8.2.0
@@ -52,6 +54,11 @@ jobs:
           name: firefox-signed-xpi
           path: |
             build/linux_entra_sso-*.xpi
+
+      - name: attest Firefox extension build
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: build/linux_entra_sso-*.xpi
 
       - name: create release
         uses: softprops/action-gh-release@a74c6b72af54cfa997e81df42d94703d6313a2d0 # v2.0.6
