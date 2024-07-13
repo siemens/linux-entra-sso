@@ -14,6 +14,15 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
+prefix ?= /usr/local
+exec_prefix ?= $(prefix)
+libexecdir ?= $(exec_prefix)/libexec
+# do not prefix with $(prefix) as these dirs are defined by the browsers
+firefox_nm_dir ?= /usr/lib/mozilla/native-messaging-hosts
+chrome_nm_dir ?= /etc/opt/chrome/native-messaging-hosts
+chrome_ext_dir ?= /usr/share/google-chrome/extensions
+chromium_nm_dir ?= /etc/chromium/native-messaging-hosts
+
 ifeq ($(V),1)
 	Q =
 else
@@ -114,28 +123,31 @@ local-install: local-install-firefox local-install-chrome
 
 install:
 	# Host application
-	install -d $(DESTDIR)/usr/local/lib/linux-entra-sso
-	install -m 0755 linux-entra-sso.py $(DESTDIR)/usr/local/lib/linux-entra-sso
+	install -d $(DESTDIR)/$(libexecdir)/linux-entra-sso
+	install -m 0755 linux-entra-sso.py $(DESTDIR)/$(libexecdir)/linux-entra-sso
 	# Firefox
-	install -d $(DESTDIR)/usr/lib/mozilla/native-messaging-hosts
-	install -m 0644 platform/firefox/linux_entra_sso.json $(DESTDIR)/usr/lib/mozilla/native-messaging-hosts
+	install -d $(DESTDIR)/$(firefox_nm_dir)
+	install -m 0644 platform/firefox/linux_entra_sso.json $(DESTDIR)/$(firefox_nm_dir)
+	sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(firefox_nm_dir)/linux_entra_sso.json
 	# Chrome
-	install -d $(DESTDIR)/etc/opt/chrome/native-messaging-hosts
-	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/etc/opt/chrome/native-messaging-hosts
-	sed -i '/{extension_id}/d' $(DESTDIR)/etc/opt/chrome/native-messaging-hosts/linux_entra_sso.json
-	install -d $(DESTDIR)/usr/share/google-chrome/extensions
-	install -m 0644 platform/chrome/extension.json $(DESTDIR)/usr/share/google-chrome/extensions/$(CHROME_EXT_ID_SIGNED).json
+	install -d $(DESTDIR)/$(chrome_nm_dir)
+	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/$(chrome_nm_dir)
+	sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(chrome_nm_dir)/linux_entra_sso.json
+	sed -i '/{extension_id}/d' $(DESTDIR)/$(chrome_nm_dir)/linux_entra_sso.json
+	install -d $(DESTDIR)/$(chrome_ext_dir)
+	install -m 0644 platform/chrome/extension.json $(DESTDIR)/$(chrome_ext_dir)/$(CHROME_EXT_ID_SIGNED).json
 	# Chromium
-	install -d $(DESTDIR)/etc/chromium/native-messaging-hosts
-	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/etc/chromium/native-messaging-hosts
-	sed -i '/{extension_id}/d' $(DESTDIR)/etc/chromium/native-messaging-hosts/linux_entra_sso.json
+	install -d $(DESTDIR)/$(chromium_nm_dir)
+	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/$(chromium_nm_dir)
+	sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(chromium_nm_dir)/linux_entra_sso.json
+	sed -i '/{extension_id}/d' $(DESTDIR)/$(chrome_nm_dir)/linux_entra_sso.json
 
 uninstall:
-	rm -rf $(DESTDIR)/usr/local/lib/linux-entra-sso
-	rm -f  $(DESTDIR)/usr/lib/mozilla/native-messaging-hosts/linux_entra_sso.json
-	rm -f  $(DESTDIR)/etc/opt/chrome/native-messaging-hosts/linux_entra_sso.json
-	rm -f  $(DESTDIR)/etc/chromium/native-messaging-hosts/linux_entra_sso.json
-	rm -f  $(DESTDIR)/usr/share/google-chrome/extensions/$(CHROME_EXT_ID_SIGNED).json
+	rm -rf $(DESTDIR)/$(libexecdir)/linux-entra-sso
+	rm -f  $(DESTDIR)/$(firefox_nm_dir)/linux_entra_sso.json
+	rm -f  $(DESTDIR)/$(chrome_nm_dir)/linux_entra_sso.json
+	rm -f  $(DESTDIR)/$(chromium_nm_dir)/linux_entra_sso.json
+	rm -f  $(DESTDIR)/$(chrome_ext_dir)/$(CHROME_EXT_ID_SIGNED).json
 
 local-uninstall-firefox:
 	rm -f ~/.mozilla/native-messaging-hosts/linux_entra_sso.json ~/.mozilla/linux-entra-sso.py

@@ -70,6 +70,10 @@ This makes the host parts available to all users, but will only work with the si
 On Chrome, the extension is registered to be auto-installed when starting the browser.
 On Firefox and Chromium, the users still need to manually install the browser extension from the respective stores.
 
+**Note:** The native messaging dirs vary across Linux distributions.
+The variables `(firefox|chrome|chromium)_nm_dir` and `chrome_ext_dir` need to be set accordingly.
+The provided defaults work on a Debian system. For details, have a look at the Makefile.
+
 ## Usage
 
 No configuration is required. However, you might need to clear all cookies on
