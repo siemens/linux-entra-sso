@@ -85,7 +85,7 @@ all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES)
 	cd build/firefox && zip -r ../$(ARCHIVE_NAME).firefox.xpi $(FIREFOX_PACKAGE_FILES) && cd ../../;
 	cd build/chrome && zip -r ../$(ARCHIVE_NAME).chrome.zip $(CHROME_PACKAGE_FILES) && cd ../../;
 
-clean:
+clean: deb_clean
 	rm -rf build
 
 release:
@@ -158,32 +158,33 @@ local-uninstall-chrome:
 
 local-uninstall: local-uninstall-firefox local-uninstall-chrome
 
-PV = $(shell echo $(RELEASE_TAG) | sed -e s:^v::)
-PN = linux-entra-sso
-DESCRIPTION = Native app for Entra ID SSO via Microsoft Identity Broker
+DEBIAN_PV = $(shell echo $(RELEASE_TAG) | sed -e s:^v::)
+DEBIAN_PN = linux-entra-sso
+DEBIAN_DESCRIPTION = Entra ID SSO via Microsoft Identity Broker on Linux
 DEBIAN_DESTDIR := $(CURDIR)/debuild.d
-DEBARCH = all
-USR_BIN_DIR = /usr/bin
-DEB_USR_BIN_DIR = $(DEBIAN_DESTDIR)$(USR_BIN_DIR)
-PKG_DIR = $(CURDIR)/pkgs
-PKG_FILE = $(PKG_DIR)/$(PN)_$(PV)_$(DEBARCH).deb
+DEBIAN_ARCH = all
+DEBIAN_PKG_DIR = $(CURDIR)/pkgs
+DEBIAN_PKG_FILE = $(DEBIAN_PKG_DIR)/$(DEBIAN_PN)_$(DEBIAN_PV)_$(DEBIAN_ARCH).deb
 
 deb:
-	$(MAKE) install DESTDIR=$(DEBIAN_DESTDIR)
+	$(MAKE) install DESTDIR=$(DEBIAN_DESTDIR) prefix=/usr
+	install --mode 644 -D --target-directory=$(DEBIAN_DESTDIR)/usr/share/doc/$(DEBIAN_PN) README.md CONTRIBUTING.md MAINTAINERS.md PRIVACY.md LICENSES/MPL-2.0.txt
 	install --mode 755 --directory $(DEBIAN_DESTDIR)/DEBIAN
 	{ \
-		echo Package: $(PN); \
-		echo Architecture: $(DEBARCH); \
+		echo Package: $(DEBIAN_PN); \
+		echo Architecture: $(DEBIAN_ARCH); \
 		echo Section: admin; \
 		echo Priority: optional; \
 		echo 'Maintainer: Dr. Johann Pfefferl <johann.pfefferl@siemens.com>'; \
 		echo Installed-Size: `du --summarize $(DEBIAN_DESTDIR) | cut --fields=1`; \
 		echo 'Depends: python3-pydbus'; \
-		echo Version: $(PV); \
-		echo Description: $(DESCRIPTION); \
+		echo Version: $(DEBIAN_PV); \
+		echo Description: $(DEBIAN_DESCRIPTION); \
 	} > $(DEBIAN_DESTDIR)/DEBIAN/control
-	install --mode 775 --directory $(PKG_DIR)
-	dpkg-deb --deb-format=2.0 --root-owner-group --build $(DEBIAN_DESTDIR) $(PKG_DIR)
-	@echo Package is in directory $(PKG_DIR)
+	install --mode 775 --directory $(DEBIAN_PKG_DIR)
+	dpkg-deb --deb-format=2.0 --root-owner-group --build $(DEBIAN_DESTDIR) $(DEBIAN_PKG_DIR)
+	@echo Package can be found here: $(DEBIAN_PKG_FILE)
 
-.PHONY: clean release local-install-firefox local-install-chrome local-install install local-uninstall-firefox local-uninstall-chrome local-uninstall uninstall deb
+deb_clean:
+	rm -rf $(DEBIAN_PKG_DIR) $(DEBIAN_DESTDIR)
+.PHONY: clean release local-install-firefox local-install-chrome local-install install local-uninstall-firefox local-uninstall-chrome local-uninstall uninstall deb deb_clean
