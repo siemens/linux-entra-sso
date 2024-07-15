@@ -74,6 +74,15 @@ UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
 CHROME_EXT_ID=$(shell $(CURDIR)/platform/chrome/get-ext-id.py $(CURDIR)/build/chrome/)
 CHROME_EXT_ID_SIGNED=jlnfnnolkbjieggibinobhkjdfbpcohn
 
+# debian package related vars
+DEBIAN_PV = $(shell echo $(RELEASE_TAG) | sed -e s:^v::)
+DEBIAN_PN = linux-entra-sso
+DEBIAN_DESCRIPTION = Entra ID SSO via Microsoft Identity Broker on Linux
+DEBIAN_DESTDIR := $(CURDIR)/debuild.d
+DEBIAN_ARCH = all
+DEBIAN_PKG_DIR = $(CURDIR)/pkgs
+DEBIAN_PKG_FILE = $(DEBIAN_PKG_DIR)/$(DEBIAN_PN)_$(DEBIAN_PV)_$(DEBIAN_ARCH).deb
+
 all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES)
 	for P in firefox chrome; do \
 		mkdir -p build/$$P/icons; \
@@ -85,7 +94,29 @@ all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES)
 	cd build/firefox && zip -r ../$(ARCHIVE_NAME).firefox.xpi $(FIREFOX_PACKAGE_FILES) && cd ../../;
 	cd build/chrome && zip -r ../$(ARCHIVE_NAME).chrome.zip $(CHROME_PACKAGE_FILES) && cd ../../;
 
-clean:
+deb:
+	$(MAKE) install DESTDIR=$(DEBIAN_DESTDIR) prefix=/usr
+	install --mode 644 -D --target-directory=$(DEBIAN_DESTDIR)/usr/share/doc/$(DEBIAN_PN) README.md CONTRIBUTING.md MAINTAINERS.md PRIVACY.md LICENSES/MPL-2.0.txt
+	install --mode 755 --directory $(DEBIAN_DESTDIR)/DEBIAN
+	{ \
+		echo Package: $(DEBIAN_PN); \
+		echo Architecture: $(DEBIAN_ARCH); \
+		echo Section: admin; \
+		echo Priority: optional; \
+		echo 'Maintainer: Dr. Johann Pfefferl <johann.pfefferl@siemens.com>'; \
+		echo Installed-Size: `du --summarize $(DEBIAN_DESTDIR) | cut --fields=1`; \
+		echo 'Depends: python3-pydbus'; \
+		echo Version: $(DEBIAN_PV); \
+		echo Description: $(DEBIAN_DESCRIPTION); \
+	} > $(DEBIAN_DESTDIR)/DEBIAN/control
+	install --mode 775 --directory $(DEBIAN_PKG_DIR)
+	dpkg-deb --deb-format=2.0 --root-owner-group --build $(DEBIAN_DESTDIR) $(DEBIAN_PKG_DIR)
+	@echo Package can be found here: $(DEBIAN_PKG_FILE)
+
+deb_clean:
+	rm -rf $(DEBIAN_PKG_DIR) $(DEBIAN_DESTDIR)
+
+clean: deb_clean
 	rm -rf build
 
 release:
@@ -158,4 +189,4 @@ local-uninstall-chrome:
 
 local-uninstall: local-uninstall-firefox local-uninstall-chrome
 
-.PHONY: clean release local-install-firefox local-install-chrome local-install install local-uninstall-firefox local-uninstall-chrome local-uninstall uninstall
+.PHONY: clean release local-install-firefox local-install-chrome local-install install local-uninstall-firefox local-uninstall-chrome local-uninstall uninstall deb deb_clean
