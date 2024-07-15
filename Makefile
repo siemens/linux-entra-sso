@@ -158,4 +158,32 @@ local-uninstall-chrome:
 
 local-uninstall: local-uninstall-firefox local-uninstall-chrome
 
-.PHONY: clean release local-install-firefox local-install-chrome local-install install local-uninstall-firefox local-uninstall-chrome local-uninstall uninstall
+PV = $(shell echo $(RELEASE_TAG) | sed -e s:^v::)
+PN = linux-entra-sso
+DESCRIPTION = Native app for Entra ID SSO via Microsoft Identity Broker
+DEBIAN_DESTDIR := $(CURDIR)/debuild.d
+DEBARCH = all
+USR_BIN_DIR = /usr/bin
+DEB_USR_BIN_DIR = $(DEBIAN_DESTDIR)$(USR_BIN_DIR)
+PKG_DIR = $(CURDIR)/pkgs
+PKG_FILE = $(PKG_DIR)/$(PN)_$(PV)_$(DEBARCH).deb
+
+deb:
+	$(MAKE) install DESTDIR=$(DEBIAN_DESTDIR)
+	install --mode 755 --directory $(DEBIAN_DESTDIR)/DEBIAN
+	{ \
+		echo Package: $(PN); \
+		echo Architecture: $(DEBARCH); \
+		echo Section: admin; \
+		echo Priority: optional; \
+		echo 'Maintainer: Dr. Johann Pfefferl <johann.pfefferl@siemens.com>'; \
+		echo Installed-Size: `du --summarize $(DEBIAN_DESTDIR) | cut --fields=1`; \
+		echo 'Depends: python3-pydbus'; \
+		echo Version: $(PV); \
+		echo Description: $(DESCRIPTION); \
+	} > $(DEBIAN_DESTDIR)/DEBIAN/control
+	install --mode 775 --directory $(PKG_DIR)
+	dpkg-deb --deb-format=2.0 --root-owner-group --build $(DEBIAN_DESTDIR) $(PKG_DIR)
+	@echo Package is in directory $(PKG_DIR)
+
+.PHONY: clean release local-install-firefox local-install-chrome local-install install local-uninstall-firefox local-uninstall-chrome local-uninstall uninstall deb
