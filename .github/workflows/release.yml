@@ -48,13 +48,15 @@ jobs:
             --source-dir build/firefox \
             --artifacts-dir build
 
-      - uses: actions/upload-artifact@v4
+      - name: upload firefox extension
+        uses: actions/upload-artifact@v4
         with:
           name: firefox-signed-xpi
           path: |
             build/linux_entra_sso-*.xpi
 
-      - uses: actions/upload-artifact@v4
+      - name: upload debian package
+        uses: actions/upload-artifact@v4
         with:
           name: debian-package
           path: |

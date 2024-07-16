@@ -58,19 +58,22 @@ jobs:
         run: |
           npx web-ext@${{ env.WEB_EXT_VERS }} lint --source-dir build/firefox --self-hosted
 
-      - uses: actions/upload-artifact@v4
+      - name: upload firefox extension
+        uses: actions/upload-artifact@v4
         with:
           name: firefox-xpi
           path: |
             build/**/*.xpi
 
-      - uses: actions/upload-artifact@v4
+      - name: upload chrome extension zip
+        uses: actions/upload-artifact@v4
         with:
           name: chrome-zip
           path: |
             build/chrome/
 
-      - uses: actions/upload-artifact@v4
+      - name: upload debian package
+        uses: actions/upload-artifact@v4
         with:
           name: debian-package
           path: |
