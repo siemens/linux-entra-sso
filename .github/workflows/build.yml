@@ -30,7 +30,7 @@ jobs:
 
       - name: install dependencies
         run: |
-          sudo apt update && sudo apt install -y python3-gi flake8 pylint python3-pydbus
+          sudo apt-get update && sudo apt-get install -y python3-gi flake8 pylint python3-pydbus
           pip3 install --break-system-packages fsfe-reuse
           git clean -f -d
 
