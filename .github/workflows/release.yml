@@ -37,7 +37,7 @@ jobs:
         run: |
           sudo apt update && sudo apt install -y make git zip
 
-      - run: make package
+      - run: make package deb
 
       - name: sign Firefox extension by Mozilla
         run: |
@@ -55,16 +55,25 @@ jobs:
           path: |
             build/linux_entra_sso-*.xpi
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debian-package
+          path: |
+            pkgs/linux-entra-sso_*.deb
+
       - name: attest Firefox extension build
         uses: actions/attest-build-provenance@v1
         with:
-          subject-path: build/linux_entra_sso-*.xpi
+          subject-path: |
+            build/linux_entra_sso-*.xpi
+            pkgs/linux-entra-sso_*.deb
 
       - name: create release
         uses: softprops/action-gh-release@a74c6b72af54cfa997e81df42d94703d6313a2d0 # v2.0.6
         with:
           files: |
             build/linux_entra_sso-*.xpi
+            pkgs/linux-entra-sso_*.deb
           token: ${{ secrets.GITHUB_TOKEN }}
           body: |
             Release of version ${{ github.ref_name }}
