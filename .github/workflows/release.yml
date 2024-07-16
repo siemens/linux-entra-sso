@@ -26,8 +26,6 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: get git committer
         run: |
@@ -37,7 +35,8 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y make git zip
 
-      - run: make package deb
+      - name: build packages
+        run: RELEASE_TAG=${{ github.ref_name }} make package deb
 
       - name: sign Firefox extension by Mozilla
         run: |
