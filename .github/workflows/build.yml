@@ -52,7 +52,7 @@ jobs:
         run: |
           sudo apt update && sudo apt install -y make git zip
 
-      - run: make package
+      - run: make package deb
 
       - name: "web-ext lint"
         run: |
@@ -70,7 +70,15 @@ jobs:
           path: |
             build/chrome/
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debian-package
+          path: |
+            pkgs/linux-entra-sso_*.deb
+
       - name: attest extension artifacts
         uses: actions/attest-build-provenance@v1
         with:
-          subject-path: 'build/Linux-Entra-SSO-v*'
+          subject-path: |
+            build/Linux-Entra-SSO-v*
+            pkgs/linux-entra-sso_*.deb
