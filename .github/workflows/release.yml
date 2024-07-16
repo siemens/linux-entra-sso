@@ -35,7 +35,7 @@ jobs:
 
       - name: install dependencies
         run: |
-          sudo apt update && sudo apt install -y make git zip
+          sudo apt-get update && sudo apt-get install -y make git zip
 
       - run: make package deb
 
