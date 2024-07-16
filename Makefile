@@ -171,7 +171,7 @@ install:
 	install -d $(DESTDIR)/$(chromium_nm_dir)
 	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/$(chromium_nm_dir)
 	sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(chromium_nm_dir)/linux_entra_sso.json
-	sed -i '/{extension_id}/d' $(DESTDIR)/$(chrome_nm_dir)/linux_entra_sso.json
+	sed -i '/{extension_id}/d' $(DESTDIR)/$(chromium_nm_dir)/linux_entra_sso.json
 
 uninstall:
 	rm -rf $(DESTDIR)/$(libexecdir)/linux-entra-sso
