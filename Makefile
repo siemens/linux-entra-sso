@@ -31,7 +31,7 @@ endif
 
 PACKAGE_NAME=Linux-Entra-SSO
 
-RELEASE_TAG=$(shell git describe --match "v[0-9].[0-9]*" --dirty)
+RELEASE_TAG ?= $(shell git describe --match "v[0-9].[0-9]*" --dirty)
 ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG)
 
 COMMON_INPUT_FILES= \
