@@ -82,7 +82,8 @@ class SsoMib:
 
     def _check_broker_online(self):
         dbus = self._bus.get('org.freedesktop.DBus', '/org/freedesktop/DBus')
-        if dbus.StartServiceByName(self.BROKER_NAME, 0) in \
+        if dbus.NameHasOwner(self.BROKER_NAME) \
+            or dbus.StartServiceByName(self.BROKER_NAME, 0) in \
                 [START_REPLY_ALREADY_RUNNING, START_REPLY_SUCCESS]:
             self._instantiate_broker()
             self.broker_online = True
