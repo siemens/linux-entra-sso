@@ -17,7 +17,7 @@ let initialized = false;
 let graph_api_token = null;
 let state_active = true;
 let broker_online = false;
-let port = null;
+let port_native = null;
 
 function ssoLog(message) {
     console.log('[Linux Entra SSO] ' + message)
@@ -43,7 +43,7 @@ async function waitFor(f) {
 };
 
 async function load_accounts() {
-    port.postMessage({'command': 'getAccounts'});
+    port_native.postMessage({'command': 'getAccounts'});
     await waitFor(() => {
         if (accounts.queried) {
             return true;
@@ -60,7 +60,7 @@ async function load_accounts() {
     // load profile picture and set it as icon
     if (!graph_api_token || graph_api_token.expiresOn < (Date.now() + 60000)) {
         graph_api_token = null;
-        port.postMessage({'command': 'acquireTokenSilently', 'account': accounts.active});
+        port_native.postMessage({'command': 'acquireTokenSilently', 'account': accounts.active});
         await waitFor(() => {return graph_api_token !== null; });
         ssoLog('API token acquired');
     }
@@ -114,7 +114,7 @@ function logout() {
 
 async function get_or_request_prt(ssoUrl) {
     ssoLog('request new PrtSsoCookie from broker for ssoUrl: ' + ssoUrl);
-    port.postMessage({
+    port_native.postMessage({
         'command': 'acquirePrtSsoCookie',
         'account': accounts.active,
         'ssoUrl': ssoUrl})
@@ -184,7 +184,7 @@ async function update_net_rules(e) {
     ssoLog('network rules updated');
 }
 
-async function on_message(response) {
+async function on_message_native(response) {
     if (response.command == "acquirePrtSsoCookie") {
         prt_sso_cookie.data = response.message;
         prt_sso_cookie.hasData = true;
@@ -232,11 +232,11 @@ function on_startup() {
     initialized = true;
     ssoLog('start linux-entra-sso');
 
-    port =  chrome.runtime.connectNative("linux_entra_sso");
+    port_native =  chrome.runtime.connectNative("linux_entra_sso");
     chrome.action.disable();
     logout();
 
-    port.onDisconnect.addListener(() => {
+    port_native.onDisconnect.addListener(() => {
         if (chrome.runtime.lastError) {
             ssoLogError('Error in native application connection:' +
                 chrome.runtime.lastError);
@@ -245,7 +245,7 @@ function on_startup() {
         }
     });
 
-    port.onMessage.addListener(on_message);
+    port_native.onMessage.addListener(on_message_native);
 
     if (isFirefox()) {
         browser.webRequest.onBeforeSendHeaders.addListener(
