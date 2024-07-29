@@ -1,0 +1,82 @@
+/*
+ * SPDX-License-Identifier: MPL-2.0
+ * SPDX-FileCopyrightText: Copyright 2024 Siemens AG
+ */
+
+html,
+body {
+  width: 320px;
+  padding: 0;
+  margin: 0;
+}
+
+.entity {
+  padding: 10px;
+  margin: 10px;
+  border-radius: 15px;
+  color: #707070;
+  cursor: pointer;
+}
+
+body.pending .entity {
+  cursor: wait;
+}
+
+.entity:hover {
+  background-color: #e0e0e0;
+}
+
+.entity.active {
+  background-color: #e0e0e0;
+  color: #000;
+  cursor: default;
+}
+
+.entity .avatar {
+  display: inline-block;
+  margin-right: 10px;
+}
+
+.entity .info {
+  display: inline-block;
+  vertical-align: top;
+  max-width: 200px;
+  overflow: hidden;
+}
+.entity .info .email 
+{
+  font-size: 0.8em;
+}
+
+.entity .avatar img {
+    width: 48px;
+    height: 48px;
+}
+
+.hidden {
+    display:none !important;
+}
+
+.footer {
+  padding: 5px 5px 10px 5px;
+  border-top: 1px solid #e0e0e0;
+  font-size: 0.8em;
+  text-align: right;
+  min-height: 1em;
+  color: #707070;
+}
+
+.footer a,
+.footer a:visited {
+  color: #707070;
+}
+
+.footer .left {
+  display: block;
+  float: left;
+}
+
+.footer .right {
+  display: block;
+  float: right;
+}

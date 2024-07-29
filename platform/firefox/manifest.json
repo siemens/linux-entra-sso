@@ -14,6 +14,7 @@
         }
     },
     "action": {
+        "default_popup": "popup/menu.html",
         "default_icon": "icons/linux-entra-sso.svg",
         "default_title": "Linux Entra SSO",
         "default_area": "navbar"

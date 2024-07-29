@@ -36,7 +36,10 @@ ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG)
 
 COMMON_INPUT_FILES= \
 	LICENSES/MPL-2.0.txt \
-	background.js
+	background.js \
+	popup/menu.css \
+	popup/menu.js \
+	popup/menu.html
 
 CHROME_INPUT_FILES= \
 	$(COMMON_INPUT_FILES) \
@@ -45,13 +48,16 @@ CHROME_INPUT_FILES= \
 	icons/linux-entra-sso_48.png \
 	icons/linux-entra-sso_48.png.license \
 	icons/linux-entra-sso_128.png \
-	icons/linux-entra-sso_128.png.license
+	icons/linux-entra-sso_128.png.license \
+	icons/profile-outline_48.png \
+	icons/profile-outline_48.png.license
 
 FIREFOX_INPUT_FILES= \
 	$(COMMON_INPUT_FILES) \
 	platform/firefox/manifest.json \
 	platform/firefox/manifest.json.license \
-	icons/linux-entra-sso.svg
+	icons/linux-entra-sso.svg \
+	icons/profile-outline.svg
 
 # common files for all platforms (relative to build directory)
 CHROME_PACKAGE_FILES= \
@@ -61,13 +67,17 @@ CHROME_PACKAGE_FILES= \
 	icons/linux-entra-sso_48.png \
 	icons/linux-entra-sso_48.png.license \
 	icons/linux-entra-sso_128.png \
-	icons/linux-entra-sso_128.png.license
+	icons/linux-entra-sso_128.png.license \
+	icons/profile-outline_48.png \
+	icons/profile-outline_48.png.license \
+	popup/profile-outline.svg
 
 FIREFOX_PACKAGE_FILES= \
 	$(COMMON_INPUT_FILES) \
 	manifest.json \
 	manifest.json.license \
-	icons/linux-entra-sso.svg
+	icons/linux-entra-sso.svg \
+	popup/profile-outline.svg
 
 UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
 
@@ -85,12 +95,14 @@ DEBIAN_PKG_FILE = $(DEBIAN_PKG_DIR)/$(DEBIAN_PN)_$(DEBIAN_PV)_$(DEBIAN_ARCH).deb
 
 all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES)
 	for P in firefox chrome; do \
-		mkdir -p build/$$P/icons; \
+		mkdir -p build/$$P/icons build/$$P/popup; \
 		cp platform/$$P/manifest* build/$$P; \
 		cp -rf LICENSES background.js build/$$P/; \
 	done
 	cp icons/*.svg build/firefox/icons/
-	cp icons/*.png* build/chrome/icons/
+	cp icons/*.png* icons/profile-outline.svg build/chrome/icons/
+	cp popup/menu.* icons/linux-entra-sso.svg icons/profile-outline.svg build/firefox/popup/
+	cp popup/menu.* icons/linux-entra-sso.svg icons/profile-outline.svg build/chrome/popup/
 	cd build/firefox && zip -r ../$(ARCHIVE_NAME).firefox.xpi $(FIREFOX_PACKAGE_FILES) && cd ../../;
 	cd build/chrome && zip -r ../$(ARCHIVE_NAME).chrome.zip $(CHROME_PACKAGE_FILES) && cd ../../;
 
