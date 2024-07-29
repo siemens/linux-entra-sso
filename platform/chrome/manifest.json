@@ -8,6 +8,7 @@
         "128": "icons/linux-entra-sso_128.png"
     },
     "action": {
+        "default_popup": "popup/menu.html",
         "default_icon": {
             "48": "icons/linux-entra-sso_48.png",
             "128": "icons/linux-entra-sso_128.png"

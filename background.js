@@ -18,6 +18,7 @@ let graph_api_token = null;
 let state_active = true;
 let broker_online = false;
 let port_native = null;
+let port_menu = null;
 
 function ssoLog(message) {
     console.log('[Linux Entra SSO] ' + message)
@@ -42,6 +43,17 @@ async function waitFor(f) {
     return f();
 };
 
+function notify_state_change() {
+    if (!port_menu)
+        return;
+    port_menu.postMessage({
+        'event': 'stateChanged',
+        'account': accounts.registered.length > 0 ? accounts.registered[0] : null,
+        'broker_online': broker_online,
+        'enabled': state_active
+    });
+}
+
 async function load_accounts() {
     port_native.postMessage({'command': 'getAccounts'});
     await waitFor(() => {
@@ -55,6 +67,7 @@ async function load_accounts() {
         return;
     }
     accounts.active = accounts.registered[0];
+    accounts.active.avatar = null;
     ssoLog('active account: ' + accounts.active.username);
 
     // load profile picture and set it as icon
@@ -83,12 +96,28 @@ async function load_accounts() {
         chrome.action.setIcon({
             'imageData': ctx.getImageData(0, 0, 48, 48)
         });
+        /* serialize image to data URL (ugly, but portable) */
+        let blob = await canvas.convertToBlob();
+        const dataUrl = await new Promise(r => {let a=new FileReader(); a.onload=r; a.readAsDataURL(blob)}).then(e => e.target.result);
+        accounts.active.avatar = dataUrl;
     } else {
         ssoLog('Warning: Could not get profile picture.');
+        if (isFirefox()) {
+            chrome.action.setIcon({
+                'path': 'icons/profile-outline.svg'
+            });
+        } else {
+            chrome.action.setIcon({
+                'path': {
+                    '48': 'icons/profile-outline_48.png'
+                }
+            });
+        }
     }
     chrome.action.setTitle({
         title: 'EntraID SSO: ' + accounts.active.username}
     );
+    notify_state_change();
 }
 
 function logout() {
@@ -110,6 +139,7 @@ function logout() {
     if (state_active)
         title = 'EntraID SSO disabled (waiting for broker).'
     chrome.action.setTitle({title: title});
+    notify_state_change();
 }
 
 async function get_or_request_prt(ssoUrl) {
@@ -224,6 +254,18 @@ async function on_message_native(response) {
     }
 }
 
+async function on_message_menu(request) {
+    if (request.command == "login") {
+        state_active = !state_active;
+        if (state_active && broker_online) {
+            load_accounts();
+        }
+    } else if (request.command == "logout") {
+        state_active = !state_active;
+        logout();
+    }
+}
+
 function on_startup() {
     if (initialized) {
         ssoLog('linux-entra-sso already initialized');
@@ -246,6 +288,11 @@ function on_startup() {
     });
 
     port_native.onMessage.addListener(on_message_native);
+    chrome.runtime.onConnect.addListener((port) => {
+        port_menu = port;
+        port_menu.onMessage.addListener(on_message_menu);
+        notify_state_change();
+    });
 
     if (isFirefox()) {
         browser.webRequest.onBeforeSendHeaders.addListener(
@@ -263,15 +310,6 @@ function on_startup() {
             }
         });
     }
-
-    chrome.action.onClicked.addListener(() => {
-        state_active = !state_active;
-        if (state_active && broker_online) {
-            load_accounts();
-        } else {
-            logout();
-        }
-    });
 }
 
 // use this API to prevent the extension from being disabled

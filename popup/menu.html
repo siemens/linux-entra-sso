@@ -1,0 +1,37 @@
+<!--
+SPDX-License-Identifier: MPL-2.0
+SPDX-FileCopyrightText: Copyright 2024 Siemens AG
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="menu.css" />
+  </head>
+  <body>
+    <div class="entity active" id="entity-me">
+      <div class="avatar">
+        <canvas id="me-avatar" width="48" height="48" class="hidden"></canvas>
+        <img id="me-avatar-fallback" src="profile-outline.svg" width="48", height="48", alt="Avatar"/>
+      </div>
+      <div class="info" id="entity-me">
+        <div id="me-name" class="name">No account registered</div>
+        <div id="me-email" class="email"></div>
+      </div>
+    </div>
+    <div class="entity" id="entity-guest">
+      <div class="avatar">
+        <img src="profile-outline.svg" alt="Avatar" />
+      </div>
+      <div class="info">
+        <div class="name">Guest</div>
+        <div class="email">(no device trust)</div>
+      </div>
+    </div>
+    <div class="footer">
+      <a href="https://github.com/siemens/linux-entra-sso" target="_blank" class="left">linux-entra-sso</a>
+      <span id="version" class="right"></span>
+    </div>
+    <script src="menu.js"></script>
+  </body>
+</html>

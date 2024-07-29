@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+SPDX-FileCopyrightText: Copyright 2021 YANDEX LLC
+SPDX-License-Identifier: MPL-2.0
+-->
+
+<svg
+   width="24"
+   height="24"
+   viewBox="0 0 24 24"
+   fill="none"
+   version="1.1"
+   id="svg239"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs243" />
+  <path
+     fill-rule="evenodd"
+     clip-rule="evenodd"
+     d="M12 14.35c-3.25 0-5-3.175-5-6.725C7 4.15 9 2 12 2s5 2.15 5 5.625c0 3.55-1.75 6.725-5 6.725zm0-2c1.74 0 3-1.849 3-4.725C15 5.246 13.878 4 12 4S9 5.246 9 7.625c0 2.876 1.26 4.725 3 4.725zm-7.06 9.648a1 1 0 0 0 1.058-.938C6.114 19.138 8.041 18 12.004 18c3.96 0 5.883 1.136 6 3.06A1 1 0 0 0 20 20.94c-.195-3.218-3.11-4.94-7.996-4.94-4.89 0-7.81 1.724-8.002 4.94a1 1 0 0 0 .938 1.058z"
+     fill="currentColor"
+     id="path237"
+     style="fill:#666666" />
+</svg>
