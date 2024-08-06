@@ -43,7 +43,63 @@ async function waitFor(f) {
     return f();
 };
 
+/*
+ * Update the UI according to the current state
+ */
+function update_ui() {
+    if (state_active && accounts.active) {
+        chrome.action.enable();
+        let imgdata = accounts.active.avatar_imgdata;
+        if (imgdata) {
+            chrome.action.setIcon({
+                'imageData': imgdata
+            });
+        } else {
+            if (isFirefox()) {
+                chrome.action.setIcon({
+                    'path': 'icons/profile-outline.svg'
+                });
+            } else {
+                chrome.action.setIcon({
+                    'path': {
+                        '48': 'icons/profile-outline_48.png'
+                    }
+                });
+            }
+        }
+        chrome.action.setTitle({
+            title: 'EntraID SSO: ' + accounts.active.username}
+        );
+        return;
+    }
+    /* inactive states */
+    if (isFirefox()) {
+        chrome.action.setIcon({
+            'path': 'icons/linux-entra-sso.svg'
+        });
+    } else {
+        chrome.action.setIcon({
+            'path': {
+                '48': 'icons/linux-entra-sso_48.png',
+                '128': 'icons/linux-entra-sso_128.png'
+            }
+        });
+    }
+    let title = 'EntraID SSO disabled. Click to enable.'
+    if (state_active)
+        title = 'EntraID SSO disabled (waiting for broker).'
+    if (accounts.registered.length == 0)
+        title = 'EntraID SSO disabled (no accounts registered).'
+    if (!broker_online)
+        chrome.action.disable();
+    chrome.action.setTitle({title: title});
+}
+
+/*
+ * Update the tray icon and notify the menu about a state change
+ */
 function notify_state_change() {
+    update_ui();
     if (!port_menu)
         return;
     port_menu.postMessage({
@@ -68,6 +124,7 @@ async function load_accounts() {
     }
     accounts.active = accounts.registered[0];
     accounts.active.avatar = null;
+    accounts.active.avatar_imgdata = null;
     ssoLog('active account: ' + accounts.active.username);
 
     // load profile picture and set it as icon
@@ -93,52 +150,20 @@ async function load_accounts() {
         ctx.clip();
         ctx.drawImage(avatar, 0, 0);
         ctx.restore();
-        chrome.action.setIcon({
-            'imageData': ctx.getImageData(0, 0, 48, 48)
-        });
+        accounts.active.avatar_imgdata = ctx.getImageData(0, 0, 48, 48);
         /* serialize image to data URL (ugly, but portable) */
         let blob = await canvas.convertToBlob();
         const dataUrl = await new Promise(r => {let a=new FileReader(); a.onload=r; a.readAsDataURL(blob)}).then(e => e.target.result);
         accounts.active.avatar = dataUrl;
     } else {
         ssoLog('Warning: Could not get profile picture.');
-        if (isFirefox()) {
-            chrome.action.setIcon({
-                'path': 'icons/profile-outline.svg'
-            });
-        } else {
-            chrome.action.setIcon({
-                'path': {
-                    '48': 'icons/profile-outline_48.png'
-                }
-            });
-        }
     }
-    chrome.action.setTitle({
-        title: 'EntraID SSO: ' + accounts.active.username}
-    );
     notify_state_change();
 }
 
 function logout() {
     accounts.active = null;
     accounts.queried = false;
-    if (isFirefox()) {
-        chrome.action.setIcon({
-            'path': 'icons/linux-entra-sso.svg'
-        });
-    } else {
-        chrome.action.setIcon({
-            'path': {
-                '48': 'icons/linux-entra-sso_48.png',
-                '128': 'icons/linux-entra-sso_128.png'
-            }
-        });
-    }
-    let title = 'EntraID SSO disabled. Click to enable.'
-    if (state_active)
-        title = 'EntraID SSO disabled (waiting for broker).'
-    chrome.action.setTitle({title: title});
     notify_state_change();
 }
 
@@ -168,7 +193,7 @@ async function on_before_send_headers(e) {
     if (accept === undefined || !accept.value.includes('text/html')) {
         return { requestHeaders: e.requestHeaders };
     }
-    if (!broker_online || accounts.active === null) {
+    if (!broker_online || !state_active || !accounts.active) {
         return { requestHeaders: e.requestHeaders };
     }
     let prt = await get_or_request_prt(e.url);
@@ -237,7 +262,6 @@ async function on_message_native(response) {
         if (response.message == 'online') {
             ssoLog('connection to broker restored');
             broker_online = true;
-            chrome.action.enable();
             await load_accounts();
             if (!isFirefox()) {
                 update_net_rules();
@@ -245,7 +269,6 @@ async function on_message_native(response) {
         } else {
             ssoLog('lost connection to broker');
             broker_online = false;
-            chrome.action.disable();
             logout();
         }
     }
@@ -255,15 +278,12 @@ async function on_message_native(response) {
 }
 
 async function on_message_menu(request) {
-    if (request.command == "login") {
-        state_active = !state_active;
-        if (state_active && broker_online) {
-            load_accounts();
-        }
-    } else if (request.command == "logout") {
-        state_active = !state_active;
-        logout();
+    if (request.command == "enable") {
+        state_active = true;
+    } else if (request.command == "disable") {
+        state_active = false;
     }
+    notify_state_change();
 }
 
 function on_startup() {
@@ -273,11 +293,9 @@ function on_startup() {
     }
     initialized = true;
     ssoLog('start linux-entra-sso');
+    notify_state_change();
 
     port_native =  chrome.runtime.connectNative("linux_entra_sso");
-    chrome.action.disable();
-    logout();
-
     port_native.onDisconnect.addListener(() => {
         if (chrome.runtime.lastError) {
             ssoLogError('Error in native application connection:' +
