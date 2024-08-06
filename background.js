@@ -44,6 +44,13 @@ async function waitFor(f) {
 };
 
 /*
+ * Check if all conditions for SSO are met
+ */
+function is_operational() {
+    return state_active && accounts.active && broker_online
+}
+
+/*
  * Update the UI according to the current state
  */
 function update_ui() {
@@ -95,11 +102,50 @@ function update_ui() {
     chrome.action.setTitle({title: title});
 }
 
+function update_handlers_firefox() {
+    if (!is_operational()) {
+        chrome.webRequest.onBeforeSendHeaders.removeListener(on_before_send_headers);
+        return;
+    }
+
+    chrome.webRequest.onBeforeSendHeaders.addListener(
+        on_before_send_headers,
+        { urls: ["https://login.microsoftonline.com/*"] },
+        ["blocking", "requestHeaders"]
+    );
+}
+
+function update_handlers_chrome() {
+    if (!is_operational()) {
+        chrome.alarms.clear('prt-sso-refresh');
+        clear_net_rules();
+        return;
+    }
+    chrome.alarms.create('prt-sso-refresh', {
+        periodInMinutes: CHROME_PRT_SSO_REFRESH_INTERVAL_MIN
+      });
+    chrome.alarms.onAlarm.addListener((alarm) => {
+        update_net_rules(alarm);
+    });
+    update_net_rules();
+}
+
+function update_handlers() {
+    ssoLog('update handlers');
+    if (isFirefox()) {
+        update_handlers_firefox();
+    } else {
+        update_handlers_chrome();
+    }
+}
+
 /*
- * Update the tray icon and notify the menu about a state change
+ * Update the tray icon, (un)register the handlers and notify
+ * the menu about a state change.
  */
 function notify_state_change() {
     update_ui();
+    update_handlers();
     if (!port_menu)
         return;
     port_menu.postMessage({
@@ -193,7 +239,7 @@ async function on_before_send_headers(e) {
     if (accept === undefined || !accept.value.includes('text/html')) {
         return { requestHeaders: e.requestHeaders };
     }
-    if (!broker_online || !state_active || !accounts.active) {
+    if (!is_operational()) {
         return { requestHeaders: e.requestHeaders };
     }
     let prt = await get_or_request_prt(e.url);
@@ -239,6 +285,15 @@ async function update_net_rules(e) {
     ssoLog('network rules updated');
 }
 
+async function clear_net_rules() {
+    ssoLog('clear network rules');
+    const oldRules = await chrome.declarativeNetRequest.getSessionRules();
+    const oldRuleIds = oldRules.map(rule => rule.id);
+    await chrome.declarativeNetRequest.updateSessionRules({
+        removeRuleIds: oldRuleIds
+    });
+}
+
 async function on_message_native(response) {
     if (response.command == "acquirePrtSsoCookie") {
         prt_sso_cookie.data = response.message;
@@ -263,9 +318,6 @@ async function on_message_native(response) {
             ssoLog('connection to broker restored');
             broker_online = true;
             await load_accounts();
-            if (!isFirefox()) {
-                update_net_rules();
-            }
         } else {
             ssoLog('lost connection to broker');
             broker_online = false;
@@ -311,23 +363,6 @@ function on_startup() {
         port_menu.onMessage.addListener(on_message_menu);
         notify_state_change();
     });
-
-    if (isFirefox()) {
-        browser.webRequest.onBeforeSendHeaders.addListener(
-            on_before_send_headers,
-            { urls: ["https://login.microsoftonline.com/*"] },
-            ["blocking", "requestHeaders"]
-        );
-    } else {
-        chrome.alarms.create('prt-sso-refresh', {
-            periodInMinutes: CHROME_PRT_SSO_REFRESH_INTERVAL_MIN
-          });
-        chrome.alarms.onAlarm.addListener((alarm) => {
-            if (broker_online) {
-                update_net_rules(alarm);
-            }
-        });
-    }
 }
 
 // use this API to prevent the extension from being disabled
