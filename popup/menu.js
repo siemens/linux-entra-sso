@@ -57,11 +57,11 @@ bg_port.onMessage.addListener(async (m) => {
 document.getElementById("entity-me").addEventListener("click", (event) => {
     if (active) return;
     if (!set_inflight(this)) return;
-    bg_port.postMessage({ command: "login"});
+    bg_port.postMessage({ command: "enable"});
 });
 document.getElementById("entity-guest").addEventListener("click", (event) => {
     if (!active) return;
     if (!set_inflight(this)) return;
-    bg_port.postMessage({ command: "logout"});
+    bg_port.postMessage({ command: "disable"});
 });
 document.getElementById("version").innerHTML = "v" + chrome.runtime.getManifest().version;
