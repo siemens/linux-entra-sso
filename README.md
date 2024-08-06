@@ -76,7 +76,10 @@ The provided defaults work on a Debian system. For details, have a look at the M
 
 ## Usage
 
-No configuration is required. However, you might need to clear all cookies on
+No configuration is required. The SSO is automatically enabled.
+If you want to disable the SSO for this session, click on the tray icon and select the guest account.
+
+However, you might need to clear all cookies on
 `login.microsoftonline.com`, in case you are already logged. The extension
 will automatically acquire a [PRT SSO Cookie](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-oapxbc/105e4d17-defd-4637-a520-173db2393a4b)
 from the locally running device identity broker and inject that into the OAuth2 login workflow for all Microsoft Entra ID enabled sites

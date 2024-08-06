@@ -13,6 +13,10 @@ let accounts = {
     active: null,
     queried: false
 };
+let host_versions = {
+    native: null,
+    broker: null
+};
 let initialized = false;
 let graph_api_token = null;
 let state_active = true;
@@ -152,7 +156,9 @@ function notify_state_change() {
         'event': 'stateChanged',
         'account': accounts.registered.length > 0 ? accounts.registered[0] : null,
         'broker_online': broker_online,
-        'enabled': state_active
+        'enabled': state_active,
+        "host_version": host_versions.native,
+        "broker_version": host_versions.broker
     });
 }
 
@@ -305,6 +311,10 @@ async function on_message_native(response) {
             return;
         }
         accounts.registered = response.message.accounts;
+    } else if (response.command == "getVersion") {
+        host_versions.native = response.message.native,
+        host_versions.broker = response.message.linuxBrokerVersion
+        notify_state_change();
     } else if (response.command == "acquireTokenSilently") {
         if ('error' in response) {
             ssoLog('could not acquire token silently: ' + response.error);
@@ -318,6 +328,7 @@ async function on_message_native(response) {
             ssoLog('connection to broker restored');
             broker_online = true;
             await load_accounts();
+            port_native.postMessage({'command': 'getVersion'});
         } else {
             ssoLog('lost connection to broker');
             broker_online = false;
