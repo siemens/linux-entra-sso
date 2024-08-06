@@ -51,6 +51,14 @@ bg_port.onMessage.addListener(async (m) => {
             document.getElementById("entity-guest").classList.add("active");
             active = false;
         }
+        if (m.host_version && m.broker_version) {
+            let pvers = chrome.runtime.getManifest().version;
+            let vstr = "v" + pvers;
+            if (m.host_version !== pvers) {
+                vstr += " (host v" + m.host_version + ")";
+            }
+            document.getElementById("version").innerHTML = vstr;
+        }
     }
 });
 
@@ -64,4 +72,3 @@ document.getElementById("entity-guest").addEventListener("click", (event) => {
     if (!set_inflight(this)) return;
     bg_port.postMessage({ command: "disable"});
 });
-document.getElementById("version").innerHTML = "v" + chrome.runtime.getManifest().version;

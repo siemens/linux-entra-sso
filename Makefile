@@ -32,6 +32,7 @@ endif
 PACKAGE_NAME=Linux-Entra-SSO
 
 RELEASE_TAG ?= $(shell git describe --match "v[0-9].[0-9]*" --dirty)
+WEBEXT_VERSION=$(shell echo $(RELEASE_TAG) | sed -e s:^v::)
 ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG)
 
 COMMON_INPUT_FILES= \
@@ -80,6 +81,7 @@ FIREFOX_PACKAGE_FILES= \
 	popup/profile-outline.svg
 
 UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
+UPDATE_VERSION_PY='s|0.0.0-dev|$(WEBEXT_VERSION)|g'
 
 CHROME_EXT_ID=$(shell $(CURDIR)/platform/chrome/get-ext-id.py $(CURDIR)/build/chrome/)
 CHROME_EXT_ID_SIGNED=jlnfnnolkbjieggibinobhkjdfbpcohn
@@ -149,6 +151,7 @@ local-install-firefox:
 	install -m 0644 platform/firefox/linux_entra_sso.json ~/.mozilla/native-messaging-hosts
 	sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.mozilla/|' ~/.mozilla/native-messaging-hosts/linux_entra_sso.json
 	install -m 0755 linux-entra-sso.py ~/.mozilla
+	${Q}sed -i $(UPDATE_VERSION_PY) ~/.mozilla/linux-entra-sso.py
 
 local-install-chrome:
 	install -d ~/.config/google-chrome/NativeMessagingHosts
@@ -161,6 +164,7 @@ local-install-chrome:
 	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
 	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
 	install -m 0755 linux-entra-sso.py ~/.config/google-chrome
+	${Q}sed -i $(UPDATE_VERSION_PY) ~/.config/google-chrome/linux-entra-sso.py
 
 local-install: local-install-firefox local-install-chrome
 
@@ -168,6 +172,7 @@ install:
 	# Host application
 	install -d $(DESTDIR)/$(libexecdir)/linux-entra-sso
 	install -m 0755 linux-entra-sso.py $(DESTDIR)/$(libexecdir)/linux-entra-sso
+	${Q}sed -i $(UPDATE_VERSION_PY) $(DESTDIR)/$(libexecdir)/linux-entra-sso/linux-entra-sso.py
 	# Firefox
 	install -d $(DESTDIR)/$(firefox_nm_dir)
 	install -m 0644 platform/firefox/linux_entra_sso.json $(DESTDIR)/$(firefox_nm_dir)

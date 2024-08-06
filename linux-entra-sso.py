@@ -18,6 +18,9 @@ from threading import Thread, Lock
 from gi.repository import GLib
 from pydbus import SessionBus
 
+# version is replaced on installation
+LINUX_ENTRA_SSO_VERSION = "0.0.0-dev"
+
 # the ssoUrl is a mandatory parameter when requesting a PRT SSO
 # Cookie, but the correct value is not checked as of 30.05.2024
 # by the authorization backend. By that, a static (fallback)
@@ -172,6 +175,17 @@ class SsoMib:
             '0.0', str(self.session_id), json.dumps(request)))
         return token
 
+    def get_broker_version(self):
+        if not self.broker_online:
+            return self.NO_BROKER
+        params = json.dumps({"msalCppVersion": LINUX_ENTRA_SSO_VERSION})
+        resp = json.loads(
+            self.broker.getLinuxBrokerVersion('0.0',
+                                              str(self.session_id),
+                                              params))
+        resp["native"] = LINUX_ENTRA_SSO_VERSION
+        return resp
+
 
 def run_as_plugin():
     iomutex = Lock()
@@ -222,6 +236,8 @@ def run_as_plugin():
                 respond(cmd, token)
             elif cmd == "getAccounts":
                 respond(cmd, ssomib.get_accounts())
+            elif cmd == "getVersion":
+                respond(cmd, ssomib.get_broker_version())
 
 
 def run_interactive():
@@ -233,6 +249,7 @@ def run_interactive():
     parser.add_argument("-s", "--ssoUrl", default=SSO_URL_DEFAULT,
                         help="ssoUrl part of SSO PRT cookie request")
     parser.add_argument("command", choices=["getAccounts",
+                                            "getVersion",
                                             "acquirePrtSsoCookie",
                                             "acquireTokenSilently",
                                             "monitor"])
@@ -251,6 +268,8 @@ def run_interactive():
     accounts = ssomib.get_accounts()
     if args.command == 'getAccounts':
         json.dump(accounts, indent=2, fp=sys.stdout)
+    elif args.command == 'getVersion':
+        json.dump(ssomib.get_broker_version(), indent=2, fp=sys.stdout)
     elif args.command == "acquirePrtSsoCookie":
         account = accounts['accounts'][args.account]
         cookie = ssomib.acquire_prt_sso_cookie(account, args.ssoUrl)
