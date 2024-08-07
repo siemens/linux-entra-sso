@@ -16,17 +16,10 @@ check this by running the `intune-portal` application and check if your user
 is logged in (after clicking `sign-in`).
 Also make sure to install the host components (see *Installation* below).
 
-## Dependencies
-
-The extension requires pydbus as a runtime dependency. On a Debian system please install `python3-pydbus`:
-
-```bash
-sudo apt install python3-pydbus
-```
-
-**Note:** If you are using a python version manager such as asdf you must install the python packages manually: `pip install PyGObject pydbus`
-
 ## Installation
+
+The extension requires pydbus as a runtime dependency. On a Debian system please install `python3-pydbus`.
+If you are using a python version manager such as `asdf` you must install the python packages manually: `pip install PyGObject pydbus`
 
 ### Firefox: Signed Version from Github Releases
 
@@ -36,7 +29,7 @@ As this only covers the browser part, the host tooling still needs to be install
 1. clone this repository
 2. run `make local-install-firefox`
 3. Get the `linux_entra_sso-<version>.xpi` file from the [project's releases page](https://github.com/siemens/linux-entra-sso/releases)
-4. Enable "Access your data for https://login.microsoftonline.com" under the extension's permissions
+4. Enable "Access your data for `https://login.microsoftonline.com`" under the extension's permissions
 
 ### Chrome: Signed Version from Chrome Web Store
 
@@ -61,7 +54,7 @@ To build the extension and install the host parts, perform the following steps:
 4. Firefox only: Permit unsigned extensions in Firefox by setting `xpinstall.signatures.required` to `false`
 4. Chrome only: In extension menu, enable `Developer mode`.
 5. Install the extension in the Browser from the local `linux-entra-sso-*.xpi` file (Firefox). On Chrome, use `load unpacked` and point to `build/chrome`
-6. Enable "Access your data for https://login.microsoftonline.com" under the extension's permissions
+6. Enable "Access your data for `https://login.microsoftonline.com`" under the extension's permissions
 
 ### Global Installation of Host Components
 
@@ -76,28 +69,28 @@ The provided defaults work on a Debian system. For details, have a look at the M
 
 ## Usage
 
-No configuration is required. The SSO is automatically enabled.
+**No configuration is required.** The SSO is automatically enabled.
 If you want to disable the SSO for this session, click on the tray icon and select the guest account.
+In case you are already logged in, you might need to clear all cookies on `login.microsoftonline.com`.
 
-However, you might need to clear all cookies on
-`login.microsoftonline.com`, in case you are already logged. The extension
-will automatically acquire a [PRT SSO Cookie](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-oapxbc/105e4d17-defd-4637-a520-173db2393a4b)
-from the locally running device identity broker and inject that into the OAuth2 login workflow for all Microsoft Entra ID enabled sites
-(the ones you log in via `login.microsoftonline.com`).
+### Technical Background
+
+When enabled, the extension acquires a [PRT SSO Cookie](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-oapxbc/105e4d17-defd-4637-a520-173db2393a4b)
+from the locally running `microsoft-identity-broker` service and inject that into the OAuth2 login flow on Microsoft Entra ID (`login.microsoftonline.com`).
 
 ## Known Limitations
 
 ### SNAP version not supported
 
 This extension will not work on the snap version of Firefox.
-The extension executes a script `linux-entra-sso.py` on the host that communicates via DBus with the `microsoft-identity-broker` service.
-As the SNAP executes Firefox inside a container, the communication with DBus will not work. Please use the `firefox-esr` Debian package instead.
+The extension executes a script `linux-entra-sso.py` on the host that communicates via D-Bus with the `microsoft-identity-broker` service.
+As the SNAP executes Firefox inside a container, the communication with D-Bus will not work. Please use the `firefox-esr` Debian package instead.
 
 ### Expired Tokens on Chrome
 
-Due to not having the WebRequestsBlocking API on Chrome, the extension needs to use a different mechanism to inject the token.
+Due to not having the `WebRequestsBlocking` API on Chrome, the extension needs to use a different mechanism to inject the token.
 While in Firefox the token is requested on-demand when hitting the SSO login URL, in Chrome the token is requested periodically.
-Then, a declarativeNetRequest API rule is setup to inject the token. As the lifetime of the tokens is limited and cannot be checked,
+Then, a `declarativeNetRequest` API rule is setup to inject the token. As the lifetime of the tokens is limited and cannot be checked,
 outdated tokens might be injected. Further, a generic SSO URL must be used when requesting the token, instead of the actual one.
 
 ## Troubleshooting
