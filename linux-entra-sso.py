@@ -187,7 +187,7 @@ class SsoMib:
         return resp
 
 
-def run_as_plugin():
+def run_as_native_messaging():
     iomutex = Lock()
 
     def respond(command, message):
@@ -209,11 +209,11 @@ def run_as_plugin():
         libc = ctypes.CDLL("libc.so.6")
         libc.prctl(PR_SET_PDEATHSIG, SIGINT, 0, 0, 0)
 
-    print("Running as browser plugin.", file=sys.stderr)
+    print("Running as native messaging instance.", file=sys.stderr)
     print("For interactive mode, start with --interactive", file=sys.stderr)
 
     # on chrome and chromium, the parent process does not reliably
-    # terminate the plugin process when the parent process is killed.
+    # terminate the process when the parent process is killed.
     register_terminate_with_parent()
 
     ssomib = SsoMib(daemon=True)
@@ -286,4 +286,4 @@ if __name__ == '__main__':
     if '--interactive' in sys.argv or '-i' in sys.argv:
         run_interactive()
     else:
-        run_as_plugin()
+        run_as_native_messaging()
