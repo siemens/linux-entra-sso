@@ -5,9 +5,9 @@ SPDX-License-Identifier: MPL-2.0
 
 # Entra ID SSO via Microsoft Identity Broker on Linux
 
-This browser plugin uses a locally running Microsoft Identity Broker to authenticate the current user on Microsoft Entra ID on Linux devices.
+This browser extension uses a locally running Microsoft Identity Broker to authenticate the current user on Microsoft Entra ID on Linux devices.
 By that, also sites behind conditional access policies can be accessed.
-The plugin is written for Firefox but provides a limited support for Google Chrome (and Chromium).
+The extension is written for Firefox but provides a limited support for Google Chrome (and Chromium).
 
 ## Pre-conditions
 
@@ -50,7 +50,7 @@ As this only covers the browser part, the host tooling still needs to be install
 ### Development Version and Other Browsers
 
 If you want to execute unsigned versions of the extension (e.g. test builds) on Firefox, you have to use either Firefox ESR,
-nightly or developer, as [standard Firefox does not allow installing unsigned plugins](https://support.mozilla.org/en-US/kb/add-on-signing-in-firefox#w_what-are-my-options-if-i-want-to-use-an-unsigned-add-on-advanced-users)
+nightly or developer, as [standard Firefox does not allow installing unsigned extensions](https://support.mozilla.org/en-US/kb/add-on-signing-in-firefox#w_what-are-my-options-if-i-want-to-use-an-unsigned-add-on-advanced-users)
 since version 48.
 
 To build the extension and install the host parts, perform the following steps:
@@ -95,7 +95,7 @@ As the SNAP executes Firefox inside a container, the communication with DBus wil
 
 ### Expired Tokens on Chrome
 
-Due to not having the WebRequestsBlocking API on Chrome, the plugin needs to use a different mechanism to inject the token.
+Due to not having the WebRequestsBlocking API on Chrome, the extension needs to use a different mechanism to inject the token.
 While in Firefox the token is requested on-demand when hitting the SSO login URL, in Chrome the token is requested periodically.
 Then, a declarativeNetRequest API rule is setup to inject the token. As the lifetime of the tokens is limited and cannot be checked,
 outdated tokens might be injected. Further, a generic SSO URL must be used when requesting the token, instead of the actual one.
