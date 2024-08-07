@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: Copyright 2024 Siemens AG
 SPDX-License-Identifier: MPL-2.0
 -->
 
-# Contributing to browser-intune-plugin
+# Contributing to linux-entra-sso
 
 Contributions are always welcome. This document explains the
 general requirements on contributions and the recommended preparation
