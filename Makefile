@@ -149,7 +149,7 @@ release:
 local-install-firefox:
 	install -d ~/.mozilla/native-messaging-hosts
 	install -m 0644 platform/firefox/linux_entra_sso.json ~/.mozilla/native-messaging-hosts
-	sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.mozilla/|' ~/.mozilla/native-messaging-hosts/linux_entra_sso.json
+	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.mozilla/|' ~/.mozilla/native-messaging-hosts/linux_entra_sso.json
 	install -m 0755 linux-entra-sso.py ~/.mozilla
 	${Q}sed -i $(UPDATE_VERSION_PY) ~/.mozilla/linux-entra-sso.py
 
@@ -158,11 +158,11 @@ local-install-chrome:
 	install -d ~/.config/chromium/NativeMessagingHosts
 	install -m 0644 platform/chrome/linux_entra_sso.json ~/.config/google-chrome/NativeMessagingHosts
 	install -m 0644 platform/chrome/linux_entra_sso.json ~/.config/chromium/NativeMessagingHosts
-	sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.config/google-chrome/|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
-	sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.config/google-chrome/|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
+	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.config/google-chrome/|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
+	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.config/google-chrome/|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
 	# compute extension id and and grant permission
-	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
-	sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
+	${Q}sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
+	${Q}sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
 	install -m 0755 linux-entra-sso.py ~/.config/google-chrome
 	${Q}sed -i $(UPDATE_VERSION_PY) ~/.config/google-chrome/linux-entra-sso.py
 
@@ -176,19 +176,19 @@ install:
 	# Firefox
 	install -d $(DESTDIR)/$(firefox_nm_dir)
 	install -m 0644 platform/firefox/linux_entra_sso.json $(DESTDIR)/$(firefox_nm_dir)
-	sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(firefox_nm_dir)/linux_entra_sso.json
+	${Q}sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(firefox_nm_dir)/linux_entra_sso.json
 	# Chrome
 	install -d $(DESTDIR)/$(chrome_nm_dir)
 	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/$(chrome_nm_dir)
-	sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(chrome_nm_dir)/linux_entra_sso.json
-	sed -i '/{extension_id}/d' $(DESTDIR)/$(chrome_nm_dir)/linux_entra_sso.json
+	${Q}sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(chrome_nm_dir)/linux_entra_sso.json
+	${Q}sed -i '/{extension_id}/d' $(DESTDIR)/$(chrome_nm_dir)/linux_entra_sso.json
 	install -d $(DESTDIR)/$(chrome_ext_dir)
 	install -m 0644 platform/chrome/extension.json $(DESTDIR)/$(chrome_ext_dir)/$(CHROME_EXT_ID_SIGNED).json
 	# Chromium
 	install -d $(DESTDIR)/$(chromium_nm_dir)
 	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/$(chromium_nm_dir)
-	sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(chromium_nm_dir)/linux_entra_sso.json
-	sed -i '/{extension_id}/d' $(DESTDIR)/$(chromium_nm_dir)/linux_entra_sso.json
+	${Q}sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(chromium_nm_dir)/linux_entra_sso.json
+	${Q}sed -i '/{extension_id}/d' $(DESTDIR)/$(chromium_nm_dir)/linux_entra_sso.json
 
 uninstall:
 	rm -rf $(DESTDIR)/$(libexecdir)/linux-entra-sso
