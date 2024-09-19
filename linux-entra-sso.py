@@ -13,9 +13,10 @@ import json
 import struct
 import uuid
 import ctypes
+import time
 from signal import SIGINT
 from threading import Thread, Lock
-from gi.repository import GLib
+from gi.repository import GLib, Gio
 from pydbus import SessionBus
 
 # version is replaced on installation
@@ -27,6 +28,7 @@ LINUX_ENTRA_SSO_VERSION = "0.0.0-dev"
 # value can be used, if no real value is provided.
 SSO_URL_DEFAULT = "https://login.microsoftonline.com/"
 EDGE_BROWSER_CLIENT_ID = "d7b530a4-7680-4c23-a8bf-c52c121d2e87"
+BROKER_START_TIMEOUT = 5
 # dbus start service reply codes
 START_REPLY_SUCCESS = 1
 START_REPLY_ALREADY_RUNNING = 2
@@ -68,7 +70,6 @@ class NativeMessaging:
 
 
 class SsoMib:
-    NO_BROKER = {'error': 'Broker not available'}
     BROKER_NAME = 'com.microsoft.identity.broker1'
     BROKER_PATH = '/com/microsoft/identity/broker1'
     GRAPH_SCOPES = ["https://graph.microsoft.com/.default"]
@@ -76,25 +77,28 @@ class SsoMib:
     def __init__(self, daemon=False):
         self._bus = SessionBus()
         self.broker = None
-        self.broker_online = False
         self.session_id = uuid.uuid4()
         self._state_changed_cb = None
-        self._check_broker_online()
         if daemon:
+            self._introspect_broker(fail_on_error=False)
             self._monitor_bus()
 
-    def _check_broker_online(self):
-        dbus = self._bus.get('org.freedesktop.DBus', '/org/freedesktop/DBus')
-        if dbus.NameHasOwner(self.BROKER_NAME) \
-            or dbus.StartServiceByName(self.BROKER_NAME, 0) in \
-                [START_REPLY_ALREADY_RUNNING, START_REPLY_SUCCESS]:
-            self._instantiate_broker()
-            self.broker_online = True
-        else:
-            self.broker_online = False
-
-    def _instantiate_broker(self):
-        self.broker = self._bus.get(self.BROKER_NAME, self.BROKER_PATH)
+    def _introspect_broker(self, fail_on_error=True):
+        timeout = time.time() + BROKER_START_TIMEOUT
+        while not self.broker and time.time() < timeout:
+            try:
+                self.broker = self._bus.get(self.BROKER_NAME, self.BROKER_PATH)
+                return
+            except GLib.Error as err:
+                # GDBus.Error:org.freedesktop.dbus.errors.UnknownObject:
+                # Introspecting on non-existant object
+                # See https://github.com/siemens/linux-entra-sso/issues/33
+                if err.matches(Gio.io_error_quark(),
+                               Gio.IOErrorEnum.DBUS_ERROR):
+                    time.sleep(0.1)
+                    continue
+            if fail_on_error:
+                raise RuntimeError("Could not start broker")
 
     def _monitor_bus(self):
         self._bus.subscribe(
@@ -108,13 +112,15 @@ class SsoMib:
             # pylint: disable=redefined-builtin,too-many-arguments
         _ = (sender, object, iface, signal)
         # params = (name, old_owner, new_owner)
-        if params[2]:
-            self._instantiate_broker()
-            self.broker_online = True
+        new_owner = params[2]
+        if new_owner:
+            self._introspect_broker()
         else:
-            self.broker_online = False
+            # we need to ensure that the next dbus call will
+            # wait until the broker is fully initialized again
+            self.broker = None
         if self._state_changed_cb:
-            self._state_changed_cb(self.broker_online)
+            self._state_changed_cb(new_owner)
 
     def on_broker_state_changed(self, callback):
         """
@@ -139,8 +145,7 @@ class SsoMib:
         }
 
     def get_accounts(self):
-        if not self.broker_online:
-            return self.NO_BROKER
+        self._introspect_broker()
         context = {
             'clientId': EDGE_BROWSER_CLIENT_ID,
             'redirectUri': str(self.session_id)
@@ -152,8 +157,7 @@ class SsoMib:
 
     def acquire_prt_sso_cookie(self, account, sso_url, scopes=GRAPH_SCOPES): \
             # pylint: disable=dangerous-default-value
-        if not self.broker_online:
-            return self.NO_BROKER
+        self._introspect_broker()
         request = {
             'account': account,
             'authParameters': SsoMib._get_auth_parameters(account, scopes),
@@ -165,8 +169,7 @@ class SsoMib:
 
     def acquire_token_silently(self, account, scopes=GRAPH_SCOPES): \
             # pylint: disable=dangerous-default-value
-        if not self.broker_online:
-            return self.NO_BROKER
+        self._introspect_broker()
         request = {
             'account': account,
             'authParameters': SsoMib._get_auth_parameters(account, scopes),
@@ -176,8 +179,7 @@ class SsoMib:
         return token
 
     def get_broker_version(self):
-        if not self.broker_online:
-            return self.NO_BROKER
+        self._introspect_broker()
         params = json.dumps({"msalCppVersion": LINUX_ENTRA_SSO_VERSION})
         resp = json.loads(
             self.broker.getLinuxBrokerVersion('0.0',
@@ -189,6 +191,7 @@ class SsoMib:
 
 def run_as_native_messaging():
     iomutex = Lock()
+    no_broker = {'error': 'Broker not available'}
 
     def respond(command, message):
         NativeMessaging.send_message(
@@ -199,9 +202,25 @@ def run_as_native_messaging():
         with iomutex:
             respond("brokerStateChanged", 'online' if online else 'offline')
 
+    def handle_command(cmd, received_message):
+        if cmd == "acquirePrtSsoCookie":
+            account = received_message['account']
+            sso_url = received_message['ssoUrl'] or SSO_URL_DEFAULT
+            token = ssomib.acquire_prt_sso_cookie(account, sso_url)
+            respond(cmd, token)
+        elif cmd == "acquireTokenSilently":
+            account = received_message['account']
+            scopes = received_message.get('scopes') or ssomib.GRAPH_SCOPES
+            token = ssomib.acquire_token_silently(account, scopes)
+            respond(cmd, token)
+        elif cmd == "getAccounts":
+            respond(cmd, ssomib.get_accounts())
+        elif cmd == "getVersion":
+            respond(cmd, ssomib.get_broker_version())
+
     def run_dbus_monitor():
         # inform other side about initial state
-        notify_state_change(ssomib.broker_online)
+        notify_state_change(bool(ssomib.broker))
         loop = GLib.MainLoop()
         loop.run()
 
@@ -224,20 +243,10 @@ def run_as_native_messaging():
         received_message = NativeMessaging.get_message()
         with iomutex:
             cmd = received_message['command']
-            if cmd == "acquirePrtSsoCookie":
-                account = received_message['account']
-                sso_url = received_message['ssoUrl'] or SSO_URL_DEFAULT
-                token = ssomib.acquire_prt_sso_cookie(account, sso_url)
-                respond(cmd, token)
-            elif cmd == "acquireTokenSilently":
-                account = received_message['account']
-                scopes = received_message.get('scopes') or ssomib.GRAPH_SCOPES
-                token = ssomib.acquire_token_silently(account, scopes)
-                respond(cmd, token)
-            elif cmd == "getAccounts":
-                respond(cmd, ssomib.get_accounts())
-            elif cmd == "getVersion":
-                respond(cmd, ssomib.get_broker_version())
+            try:
+                handle_command(cmd, received_message)
+            except Exception:  # pylint: disable=broad-except
+                respond(cmd, no_broker)
 
 
 def run_interactive():
