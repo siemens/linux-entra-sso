@@ -51,7 +51,7 @@ async function waitFor(f) {
  * Check if all conditions for SSO are met
  */
 function is_operational() {
-    return state_active && accounts.active && broker_online
+    return state_active && accounts.active
 }
 
 /*
@@ -327,12 +327,14 @@ async function on_message_native(response) {
         if (response.message == 'online') {
             ssoLog('connection to broker restored');
             broker_online = true;
-            await load_accounts();
-            port_native.postMessage({'command': 'getVersion'});
+            // only reload data if we did not see the broker before
+            if (host_versions.native === null) {
+                await load_accounts();
+                port_native.postMessage({'command': 'getVersion'});
+            }
         } else {
             ssoLog('lost connection to broker');
             broker_online = false;
-            logout();
         }
     }
     else {
