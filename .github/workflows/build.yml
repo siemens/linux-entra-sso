@@ -11,8 +11,6 @@ on:
 # Sets permissions of the GITHUB_TOKEN to checkout the repository
 permissions:
   contents: read
-  id-token: write
-  attestations: write
 
 env:
   WEB_EXT_VERS: 8.2.0
@@ -42,6 +40,9 @@ jobs:
 
   build-xpi:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      attestations: write
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
