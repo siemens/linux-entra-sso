@@ -167,7 +167,16 @@ local-install-chrome:
 	install -m 0755 linux-entra-sso.py ~/.config/google-chrome
 	${Q}sed -i $(UPDATE_VERSION_PY) ~/.config/google-chrome/linux-entra-sso.py
 
-local-install: local-install-firefox local-install-chrome
+local-install-brave:
+	install -d ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts
+	install -m 0644 platform/chrome/linux_entra_sso.json ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts
+	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.config/BraveSoftware/Brave-Browser/|' ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/linux_entra_sso.json
+	# compute extension id and and grant permission
+	${Q}sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/linux_entra_sso.json
+	install -m 0755 linux-entra-sso.py ~/.config/BraveSoftware/Brave-Browser
+	${Q}sed -i $(UPDATE_VERSION_PY) ~/.config/BraveSoftware/Brave-Browser/linux-entra-sso.py
+
+local-install: local-install-firefox local-install-chrome local-install-brave
 
 install:
 	${Q}[ -z "$(python3_bin)" ] && { echo "python3 not found. Please set 'python3_bin'."; exit 1; } || true
@@ -207,6 +216,12 @@ local-uninstall-chrome:
 	rm -f ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json ~/.config/google-chrome/linux-entra-sso.py
 	rm -f ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
 
-local-uninstall: local-uninstall-firefox local-uninstall-chrome
+local-uninstall-brave:
+	rm -f ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/linux_entra_sso.json ~/.config/BraveSoftware/Brave-Browser/linux-entra-sso.py
+	rm -f ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/linux-entra-sso.py
 
-.PHONY: clean release local-install-firefox local-install-chrome local-install install local-uninstall-firefox local-uninstall-chrome local-uninstall uninstall deb deb_clean
+local-uninstall: local-uninstall-firefox local-uninstall-chrome local-uninstall-brave
+
+.PHONY: clean release deb deb_clean
+.PHONY: local-install-firefox local-install-chrome local-install-brave local-install install 
+.PHONY: local-uninstall-firefox local-uninstall-chrome local-uninstall-brave local-uninstall uninstall 
