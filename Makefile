@@ -166,7 +166,16 @@ local-install-chrome:
 	install -m 0755 linux-entra-sso.py ~/.config/google-chrome
 	${Q}sed -i $(UPDATE_VERSION_PY) ~/.config/google-chrome/linux-entra-sso.py
 
-local-install: local-install-firefox local-install-chrome
+local-install-vivaldi:
+	install -d ~/.config/vivaldi/NativeMessagingHosts
+	install -m 0644 platform/chrome/linux_entra_sso.json ~/.config/vivaldi/NativeMessagingHosts
+	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.config/vivaldi/|' ~/.config/vivaldi/NativeMessagingHosts/linux_entra_sso.json
+	# compute extension id and and grant permission
+	${Q}sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/vivaldi/NativeMessagingHosts/linux_entra_sso.json
+	install -m 0755 linux-entra-sso.py ~/.config/vivaldi
+	${Q}sed -i $(UPDATE_VERSION_PY) ~/.config/vivaldi/linux-entra-sso.py
+
+local-install: local-install-firefox local-install-chrome local-install-vivaldi
 
 install:
 	# Host application
@@ -204,6 +213,9 @@ local-uninstall-chrome:
 	rm -f ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json ~/.config/google-chrome/linux-entra-sso.py
 	rm -f ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
 
-local-uninstall: local-uninstall-firefox local-uninstall-chrome
+local-uninstall-vivaldi:
+	rm -f ~/.config/vivaldi/NativeMessagingHosts/linux_entra_sso.json ~/.config/vivaldi/linux-entra-sso.py
 
-.PHONY: clean release local-install-firefox local-install-chrome local-install install local-uninstall-firefox local-uninstall-chrome local-uninstall uninstall deb deb_clean
+local-uninstall: local-uninstall-firefox local-uninstall-chrome local-uninstall-vivaldi
+
+.PHONY: clean release local-install-firefox local-install-chrome local-install-vivaldi local-install install local-uninstall-firefox local-uninstall-chrome local-uninstall-vivaldi local-uninstall uninstall deb deb_clean
