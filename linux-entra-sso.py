@@ -250,6 +250,15 @@ def run_as_native_messaging():
 
 
 def run_interactive():
+    def _get_account(accounts, idx):
+        try:
+            return accounts['accounts'][idx]
+        except IndexError:
+            json.dump({"error": f"invalid account index {idx}"},
+                      indent=2, fp=sys.stdout)
+            print()
+            sys.exit(1)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--interactive", action="store_true",
                         help="run in interactive mode")
@@ -275,16 +284,19 @@ def run_interactive():
         return
 
     accounts = ssomib.get_accounts()
+    if len(accounts['accounts']) == 0:
+        print("warning: no accounts registered.", file=sys.stderr)
+
     if args.command == 'getAccounts':
         json.dump(accounts, indent=2, fp=sys.stdout)
     elif args.command == 'getVersion':
         json.dump(ssomib.get_broker_version(), indent=2, fp=sys.stdout)
     elif args.command == "acquirePrtSsoCookie":
-        account = accounts['accounts'][args.account]
+        account = _get_account(accounts, args.account)
         cookie = ssomib.acquire_prt_sso_cookie(account, args.ssoUrl)
         json.dump(cookie, indent=2, fp=sys.stdout)
     elif args.command == "acquireTokenSilently":
-        account = accounts['accounts'][args.account]
+        account = _get_account(accounts, args.account)
         token = ssomib.acquire_token_silently(account)
         json.dump(token, indent=2, fp=sys.stdout)
     # add newline
