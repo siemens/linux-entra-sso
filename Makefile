@@ -22,6 +22,8 @@ firefox_nm_dir ?= /usr/lib/mozilla/native-messaging-hosts
 chrome_nm_dir ?= /etc/opt/chrome/native-messaging-hosts
 chrome_ext_dir ?= /usr/share/google-chrome/extensions
 chromium_nm_dir ?= /etc/chromium/native-messaging-hosts
+# python3 system interpreter for global installs
+python3_bin ?= $(shell which python3)
 
 ifeq ($(V),1)
 	Q =
@@ -82,6 +84,7 @@ FIREFOX_PACKAGE_FILES= \
 
 UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
 UPDATE_VERSION_PY='s|0.0.0-dev|$(WEBEXT_VERSION)|g'
+UPDATE_PYTHON_INTERPRETER='1,1s:^\#!.*:\#!$(python3_bin):'
 
 CHROME_EXT_ID=$(shell $(CURDIR)/platform/chrome/get-ext-id.py $(CURDIR)/build/chrome/)
 CHROME_EXT_ID_SIGNED=jlnfnnolkbjieggibinobhkjdfbpcohn
@@ -109,7 +112,7 @@ all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES)
 	cd build/chrome && zip -r ../$(ARCHIVE_NAME).chrome.zip $(CHROME_PACKAGE_FILES) && cd ../../;
 
 deb:
-	$(MAKE) install DESTDIR=$(DEBIAN_DESTDIR) prefix=/usr
+	$(MAKE) install DESTDIR=$(DEBIAN_DESTDIR) python3_bin=/usr/bin/python3 prefix=/usr
 	install --mode 644 -D --target-directory=$(DEBIAN_DESTDIR)/usr/share/doc/$(DEBIAN_PN) README.md CONTRIBUTING.md MAINTAINERS.md PRIVACY.md LICENSES/MPL-2.0.txt
 	install --mode 755 --directory $(DEBIAN_DESTDIR)/DEBIAN
 	{ \
@@ -169,10 +172,12 @@ local-install-chrome:
 local-install: local-install-firefox local-install-chrome
 
 install:
+	${Q}[ -z "$(python3_bin)" ] && { echo "python3 not found. Please set 'python3_bin'."; exit 1; } || true
 	# Host application
 	install -d $(DESTDIR)/$(libexecdir)/linux-entra-sso
 	install -m 0755 linux-entra-sso.py $(DESTDIR)/$(libexecdir)/linux-entra-sso
 	${Q}sed -i $(UPDATE_VERSION_PY) $(DESTDIR)/$(libexecdir)/linux-entra-sso/linux-entra-sso.py
+	${Q}sed -i $(UPDATE_PYTHON_INTERPRETER) $(DESTDIR)/$(libexecdir)/linux-entra-sso/linux-entra-sso.py
 	# Firefox
 	install -d $(DESTDIR)/$(firefox_nm_dir)
 	install -m 0644 platform/firefox/linux_entra_sso.json $(DESTDIR)/$(firefox_nm_dir)
