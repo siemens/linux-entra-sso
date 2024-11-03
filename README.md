@@ -65,7 +65,10 @@ On Firefox and Chromium, the users still need to manually install the browser ex
 
 **Note:** The native messaging dirs vary across Linux distributions.
 The variables `(firefox|chrome|chromium)_nm_dir` and `chrome_ext_dir` need to be set accordingly.
-The provided defaults work on a Debian system. For details, have a look at the Makefile.
+The Python interpreter (shebang) is resolved at install time to avoid depending on venvs at runtime.
+This can be changed by setting `python3_bin`.
+The provided defaults work on a Debian system.
+For details, have a look at the Makefile.
 
 ## Usage
 
