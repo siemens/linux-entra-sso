@@ -122,7 +122,7 @@ deb:
 		echo Priority: optional; \
 		echo 'Maintainer: Dr. Johann Pfefferl <johann.pfefferl@siemens.com>'; \
 		echo Installed-Size: `du --summarize $(DEBIAN_DESTDIR) | cut --fields=1`; \
-		echo 'Depends: python3-pydbus'; \
+		echo 'Depends: python3-pydbus, python3-gi'; \
 		echo Version: $(DEBIAN_PV); \
 		echo Description: $(DEBIAN_DESCRIPTION); \
 	} > $(DEBIAN_DESTDIR)/DEBIAN/control
