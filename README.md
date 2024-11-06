@@ -18,8 +18,11 @@ Also make sure to install the host components (see *Installation* below).
 
 ## Installation
 
-The extension requires pydbus as a runtime dependency. On a Debian system please install `python3-pydbus`.
-If you are using a python version manager such as `asdf` you must install the python packages manually: `pip install PyGObject pydbus`
+The extension requires [PyGObject](https://pygobject.gnome.org/) and [pydbus](https://github.com/LEW21/pydbus) as runtime dependencies.
+
+- On Debian: `sudo apt-get install python3-gi python3-pydbus`
+- On Arch Linux: `sudo pacman -S python-gobject python-pydbus`
+- If you are using a Python version manager such as `asdf` you must install the Python packages manually: `pip install PyGObject pydbus`
 
 ### Firefox: Signed Version from Github Releases
 
