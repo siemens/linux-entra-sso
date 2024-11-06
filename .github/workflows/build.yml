@@ -16,7 +16,7 @@ env:
   WEB_EXT_VERS: 8.2.0
 
 jobs:
-  reuse-and-codestyle:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository
@@ -38,10 +38,19 @@ jobs:
       - name: run ruff check
         run: ruff check --output-format=github .
 
-      - name: check code formatting
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: install ruff
+        run: pip3 install ruff
+
+      - name: check Python files using ruff
         run: ruff format --diff --check .
 
-      - name: run prettier
+      - name: check other files using prettier
         uses: creyD/prettier_action@v4.3
         with:
           dry: true
