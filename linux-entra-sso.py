@@ -2,11 +2,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright 2024 Siemens AG
 
-# pylint: disable=missing-docstring,invalid-name
-
-# Renable invalid-name check, it should only cover the module name
-# pylint: enable=invalid-name
-
 import argparse
 import sys
 import json
@@ -109,7 +104,7 @@ class SsoMib:
             signal_fired=self._broker_state_changed,
         )
 
-    def _broker_state_changed(self, sender, object, iface, signal, params):  # pylint: disable=redefined-builtin,too-many-arguments
+    def _broker_state_changed(self, sender, object, iface, signal, params):
         _ = (sender, object, iface, signal)
         # params = (name, old_owner, new_owner)
         new_owner = params[2]
@@ -153,7 +148,7 @@ class SsoMib:
         resp = self.broker.getAccounts("0.0", str(self.session_id), json.dumps(context))
         return json.loads(resp)
 
-    def acquire_prt_sso_cookie(self, account, sso_url, scopes=GRAPH_SCOPES):  # pylint: disable=dangerous-default-value
+    def acquire_prt_sso_cookie(self, account, sso_url, scopes=GRAPH_SCOPES):
         self._introspect_broker()
         request = {
             "account": account,
@@ -167,7 +162,7 @@ class SsoMib:
         )
         return token
 
-    def acquire_token_silently(self, account, scopes=GRAPH_SCOPES):  # pylint: disable=dangerous-default-value
+    def acquire_token_silently(self, account, scopes=GRAPH_SCOPES):
         self._introspect_broker()
         request = {
             "account": account,
@@ -246,7 +241,7 @@ def run_as_native_messaging():
             cmd = received_message["command"]
             try:
                 handle_command(cmd, received_message)
-            except Exception:  # pylint: disable=broad-except
+            except Exception:
                 respond(cmd, no_broker)
 
 
