@@ -16,7 +16,7 @@ env:
   WEB_EXT_VERS: 8.2.0
 
 jobs:
-  reuse-and-codestyle:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository
@@ -24,19 +24,37 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12.4'
+          python-version: '3.12'
 
       - name: install dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y python3-gi flake8 pylint python3-pydbus
-          pip3 install --break-system-packages fsfe-reuse
+          sudo apt-get update && sudo apt-get install -y python3-gi python3-pydbus
+          pip3 install --break-system-packages fsfe-reuse ruff
           git clean -f -d
 
-      - name: execute linters
-        run: |
-          reuse lint
-          flake8
-          pylint linux-entra-sso.py
+      - name: check reuse
+        run: reuse lint
+
+      - name: run ruff check
+        run: ruff check --output-format=github .
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: install ruff
+        run: pip3 install ruff
+
+      - name: check Python files using ruff
+        run: ruff format --diff --check .
+
+      - name: check other files using prettier
+        uses: creyD/prettier_action@v4.3
+        with:
+          dry: true
+          prettier_options: '--check **/*.{js,html,css}'
 
   build-xpi:
     runs-on: ubuntu-latest

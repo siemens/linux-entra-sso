@@ -10,8 +10,7 @@ let inflight = false;
 let active = false;
 
 function set_inflight() {
-    if (inflight)
-        return false;
+    if (inflight) return false;
     inflight = true;
     document.body.classList.add("pending");
     return true;
@@ -27,13 +26,16 @@ bg_port.onMessage.addListener(async (m) => {
         clear_inflight();
         if (m.account !== null) {
             document.getElementById("me-name").innerHTML = m.account.name;
-            document.getElementById("me-email").innerHTML = m.account.username
+            document.getElementById("me-email").innerHTML = m.account.username;
             const canvas = document.getElementById("me-avatar");
             const fallback = document.getElementById("me-avatar-fallback");
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext("2d");
             if (m.account.avatar !== null) {
                 let img = new Image();
-                await new Promise(r => img.onload=r, img.src=m.account.avatar);
+                await new Promise(
+                    (r) => (img.onload = r),
+                    (img.src = m.account.avatar),
+                );
                 ctx.drawImage(img, 0, 0);
                 canvas.classList.remove("hidden");
                 fallback.classList.add("hidden");
@@ -65,10 +67,10 @@ bg_port.onMessage.addListener(async (m) => {
 document.getElementById("entity-me").addEventListener("click", (event) => {
     if (active) return;
     if (!set_inflight(this)) return;
-    bg_port.postMessage({ command: "enable"});
+    bg_port.postMessage({ command: "enable" });
 });
 document.getElementById("entity-guest").addEventListener("click", (event) => {
     if (!active) return;
     if (!set_inflight(this)) return;
-    bg_port.postMessage({ command: "disable"});
+    bg_port.postMessage({ command: "disable" });
 });
