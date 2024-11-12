@@ -28,15 +28,24 @@ jobs:
 
       - name: install dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y python3-gi flake8 pylint python3-pydbus
+          sudo apt-get update && sudo apt-get install -y python3-gi flake8 pylint python3-pydbus black
           pip3 install --break-system-packages fsfe-reuse
           git clean -f -d
 
       - name: execute linters
         run: |
           reuse lint
-          flake8
+          flake8 --max-line-length=88
           pylint linux-entra-sso.py
+
+      - name: check Python code formatting
+        run: black --diff --check .
+
+      - name: run prettier
+        uses: creyD/prettier_action@v4.3
+        with:
+          dry: true
+          prettier_options: '--check **/*.{js,html,css}'
 
   build-xpi:
     runs-on: ubuntu-latest
