@@ -40,38 +40,39 @@ class NativeMessaging:
     @staticmethod
     def get_message():
         """
-            Read a message from stdin and decode it.
+        Read a message from stdin and decode it.
         """
         raw_length = sys.stdin.buffer.read(4)
         if not raw_length:
             sys.exit(0)
-        message_length = struct.unpack('@I', raw_length)[0]
-        message = sys.stdin.buffer.read(message_length).decode('utf-8')
+        message_length = struct.unpack("@I", raw_length)[0]
+        message = sys.stdin.buffer.read(message_length).decode("utf-8")
         return json.loads(message)
 
     @staticmethod
     def encode_message(message_content):
         """
-            Encode a message for transmission, given its content
+        Encode a message for transmission, given its content
         """
-        encoded_content = json.dumps(message_content, separators=(',', ':')) \
-            .encode('utf-8')
-        encoded_length = struct.pack('@I', len(encoded_content))
-        return {'length': encoded_length, 'content': encoded_content}
+        encoded_content = json.dumps(message_content, separators=(",", ":")).encode(
+            "utf-8"
+        )
+        encoded_length = struct.pack("@I", len(encoded_content))
+        return {"length": encoded_length, "content": encoded_content}
 
     @staticmethod
     def send_message(encoded_message):
         """
-            Send an encoded message to stdout
+        Send an encoded message to stdout
         """
-        sys.stdout.buffer.write(encoded_message['length'])
-        sys.stdout.buffer.write(encoded_message['content'])
+        sys.stdout.buffer.write(encoded_message["length"])
+        sys.stdout.buffer.write(encoded_message["content"])
         sys.stdout.buffer.flush()
 
 
 class SsoMib:
-    BROKER_NAME = 'com.microsoft.identity.broker1'
-    BROKER_PATH = '/com/microsoft/identity/broker1'
+    BROKER_NAME = "com.microsoft.identity.broker1"
+    BROKER_PATH = "/com/microsoft/identity/broker1"
     GRAPH_SCOPES = ["https://graph.microsoft.com/.default"]
 
     def __init__(self, daemon=False):
@@ -93,8 +94,7 @@ class SsoMib:
                 # GDBus.Error:org.freedesktop.dbus.errors.UnknownObject:
                 # Introspecting on non-existant object
                 # See https://github.com/siemens/linux-entra-sso/issues/33
-                if err.matches(Gio.io_error_quark(),
-                               Gio.IOErrorEnum.DBUS_ERROR):
+                if err.matches(Gio.io_error_quark(), Gio.IOErrorEnum.DBUS_ERROR):
                     time.sleep(0.1)
                     continue
             if fail_on_error:
@@ -106,10 +106,12 @@ class SsoMib:
             object="/org/freedesktop/DBus",
             signal="NameOwnerChanged",
             arg0=self.BROKER_NAME,
-            signal_fired=self._broker_state_changed)
+            signal_fired=self._broker_state_changed,
+        )
 
-    def _broker_state_changed(self, sender, object, iface, signal, params): \
-            # pylint: disable=redefined-builtin,too-many-arguments
+    def _broker_state_changed(
+        self, sender, object, iface, signal, params
+    ):  # pylint: disable=redefined-builtin,too-many-arguments
         _ = (sender, object, iface, signal)
         # params = (name, old_owner, new_owner)
         new_owner = params[2]
@@ -124,93 +126,98 @@ class SsoMib:
 
     def on_broker_state_changed(self, callback):
         """
-            Register a callback to be called when the broker state changes.
-            The callback should accept a single boolean argument, indicating
-            if the broker is online or not.
+        Register a callback to be called when the broker state changes.
+        The callback should accept a single boolean argument, indicating
+        if the broker is online or not.
         """
         self._state_changed_cb = callback
 
     @staticmethod
     def _get_auth_parameters(account, scopes):
         return {
-            'account': account,
-            'additionalQueryParametersForAuthorization': {},
-            'authority': 'https://login.microsoftonline.com/common',
-            'authorizationType': 8,  # OAUTH2
-            'clientId': EDGE_BROWSER_CLIENT_ID,
-            'redirectUri': 'https://login.microsoftonline.com'
-                           '/common/oauth2/nativeclient',
-            'requestedScopes': scopes,
-            'username': account['username'],
+            "account": account,
+            "additionalQueryParametersForAuthorization": {},
+            "authority": "https://login.microsoftonline.com/common",
+            "authorizationType": 8,  # OAUTH2
+            "clientId": EDGE_BROWSER_CLIENT_ID,
+            "redirectUri": "https://login.microsoftonline.com"
+            "/common/oauth2/nativeclient",
+            "requestedScopes": scopes,
+            "username": account["username"],
         }
 
     def get_accounts(self):
         self._introspect_broker()
         context = {
-            'clientId': EDGE_BROWSER_CLIENT_ID,
-            'redirectUri': str(self.session_id)
+            "clientId": EDGE_BROWSER_CLIENT_ID,
+            "redirectUri": str(self.session_id),
         }
-        resp = self.broker.getAccounts('0.0',
-                                       str(self.session_id),
-                                       json.dumps(context))
+        resp = self.broker.getAccounts("0.0", str(self.session_id), json.dumps(context))
         return json.loads(resp)
 
-    def acquire_prt_sso_cookie(self, account, sso_url, scopes=GRAPH_SCOPES): \
-            # pylint: disable=dangerous-default-value
+    def acquire_prt_sso_cookie(
+        self, account, sso_url, scopes=GRAPH_SCOPES
+    ):  # pylint: disable=dangerous-default-value
         self._introspect_broker()
         request = {
-            'account': account,
-            'authParameters': SsoMib._get_auth_parameters(account, scopes),
-            'ssoUrl': sso_url
+            "account": account,
+            "authParameters": SsoMib._get_auth_parameters(account, scopes),
+            "ssoUrl": sso_url,
         }
-        token = json.loads(self.broker.acquirePrtSsoCookie(
-            '0.0', str(self.session_id), json.dumps(request)))
+        token = json.loads(
+            self.broker.acquirePrtSsoCookie(
+                "0.0", str(self.session_id), json.dumps(request)
+            )
+        )
         return token
 
-    def acquire_token_silently(self, account, scopes=GRAPH_SCOPES): \
-            # pylint: disable=dangerous-default-value
+    def acquire_token_silently(
+        self, account, scopes=GRAPH_SCOPES
+    ):  # pylint: disable=dangerous-default-value
         self._introspect_broker()
         request = {
-            'account': account,
-            'authParameters': SsoMib._get_auth_parameters(account, scopes),
+            "account": account,
+            "authParameters": SsoMib._get_auth_parameters(account, scopes),
         }
-        token = json.loads(self.broker.acquireTokenSilently(
-            '0.0', str(self.session_id), json.dumps(request)))
+        token = json.loads(
+            self.broker.acquireTokenSilently(
+                "0.0", str(self.session_id), json.dumps(request)
+            )
+        )
         return token
 
     def get_broker_version(self):
         self._introspect_broker()
         params = json.dumps({"msalCppVersion": LINUX_ENTRA_SSO_VERSION})
         resp = json.loads(
-            self.broker.getLinuxBrokerVersion('0.0',
-                                              str(self.session_id),
-                                              params))
+            self.broker.getLinuxBrokerVersion("0.0", str(self.session_id), params)
+        )
         resp["native"] = LINUX_ENTRA_SSO_VERSION
         return resp
 
 
 def run_as_native_messaging():
     iomutex = Lock()
-    no_broker = {'error': 'Broker not available'}
+    no_broker = {"error": "Broker not available"}
 
     def respond(command, message):
         NativeMessaging.send_message(
-            NativeMessaging.encode_message(
-                {"command": command, "message": message}))
+            NativeMessaging.encode_message({"command": command, "message": message})
+        )
 
     def notify_state_change(online):
         with iomutex:
-            respond("brokerStateChanged", 'online' if online else 'offline')
+            respond("brokerStateChanged", "online" if online else "offline")
 
     def handle_command(cmd, received_message):
         if cmd == "acquirePrtSsoCookie":
-            account = received_message['account']
-            sso_url = received_message['ssoUrl'] or SSO_URL_DEFAULT
+            account = received_message["account"]
+            sso_url = received_message["ssoUrl"] or SSO_URL_DEFAULT
             token = ssomib.acquire_prt_sso_cookie(account, sso_url)
             respond(cmd, token)
         elif cmd == "acquireTokenSilently":
-            account = received_message['account']
-            scopes = received_message.get('scopes') or ssomib.GRAPH_SCOPES
+            account = received_message["account"]
+            scopes = received_message.get("scopes") or ssomib.GRAPH_SCOPES
             token = ssomib.acquire_token_silently(account, scopes)
             respond(cmd, token)
         elif cmd == "getAccounts":
@@ -242,7 +249,7 @@ def run_as_native_messaging():
     while True:
         received_message = NativeMessaging.get_message()
         with iomutex:
-            cmd = received_message['command']
+            cmd = received_message["command"]
             try:
                 handle_command(cmd, received_message)
             except Exception:  # pylint: disable=broad-except
@@ -252,25 +259,46 @@ def run_as_native_messaging():
 def run_interactive():
     def _get_account(accounts, idx):
         try:
-            return accounts['accounts'][idx]
+            return accounts["accounts"][idx]
         except IndexError:
-            json.dump({"error": f"invalid account index {idx}"},
-                      indent=2, fp=sys.stdout)
+            json.dump(
+                {"error": f"invalid account index {idx}"},
+                indent=2,
+                fp=sys.stdout,
+            )
             print()
             sys.exit(1)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--interactive", action="store_true",
-                        help="run in interactive mode")
-    parser.add_argument("-a", "--account", type=int, default=0,
-                        help="account index to use for operations")
-    parser.add_argument("-s", "--ssoUrl", default=SSO_URL_DEFAULT,
-                        help="ssoUrl part of SSO PRT cookie request")
-    parser.add_argument("command", choices=["getAccounts",
-                                            "getVersion",
-                                            "acquirePrtSsoCookie",
-                                            "acquireTokenSilently",
-                                            "monitor"])
+    parser.add_argument(
+        "-i",
+        "--interactive",
+        action="store_true",
+        help="run in interactive mode",
+    )
+    parser.add_argument(
+        "-a",
+        "--account",
+        type=int,
+        default=0,
+        help="account index to use for operations",
+    )
+    parser.add_argument(
+        "-s",
+        "--ssoUrl",
+        default=SSO_URL_DEFAULT,
+        help="ssoUrl part of SSO PRT cookie request",
+    )
+    parser.add_argument(
+        "command",
+        choices=[
+            "getAccounts",
+            "getVersion",
+            "acquirePrtSsoCookie",
+            "acquireTokenSilently",
+            "monitor",
+        ],
+    )
     args = parser.parse_args()
 
     monitor_mode = args.command == "monitor"
@@ -278,18 +306,20 @@ def run_interactive():
     if monitor_mode:
         print("Monitoring D-Bus for broker availability.")
         ssomib.on_broker_state_changed(
-            lambda online: print(f"{ssomib.BROKER_NAME} is now "
-                                 f"{'online' if online else 'offline'}."))
+            lambda online: print(
+                f"{ssomib.BROKER_NAME} is now " f"{'online' if online else 'offline'}."
+            )
+        )
         GLib.MainLoop().run()
         return
 
     accounts = ssomib.get_accounts()
-    if len(accounts['accounts']) == 0:
+    if len(accounts["accounts"]) == 0:
         print("warning: no accounts registered.", file=sys.stderr)
 
-    if args.command == 'getAccounts':
+    if args.command == "getAccounts":
         json.dump(accounts, indent=2, fp=sys.stdout)
-    elif args.command == 'getVersion':
+    elif args.command == "getVersion":
         json.dump(ssomib.get_broker_version(), indent=2, fp=sys.stdout)
     elif args.command == "acquirePrtSsoCookie":
         account = _get_account(accounts, args.account)
@@ -303,8 +333,8 @@ def run_interactive():
     print()
 
 
-if __name__ == '__main__':
-    if '--interactive' in sys.argv or '-i' in sys.argv:
+if __name__ == "__main__":
+    if "--interactive" in sys.argv or "-i" in sys.argv:
         run_interactive()
     else:
         run_as_native_messaging()
