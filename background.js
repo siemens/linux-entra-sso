@@ -188,6 +188,13 @@ async function load_accounts() {
         await waitFor(() => {
             return graph_api_token !== null;
         });
+        if ("error" in graph_api_token) {
+            ssoLog(
+                "couldn't aquire API token for avatar: " +
+                    graph_api_token.error,
+            );
+            return;
+        }
         ssoLog("API token acquired");
     }
     const response = await fetch(
@@ -337,7 +344,9 @@ async function on_message_native(response) {
         notify_state_change();
     } else if (response.command == "acquireTokenSilently") {
         if ("error" in response.message) {
-            ssoLog("could not acquire token silently: " + response.message.error);
+            graph_api_token = {
+                error: response.message.error,
+            };
             return;
         }
         graph_api_token = response.message.brokerTokenResponse;
