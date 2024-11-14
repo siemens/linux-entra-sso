@@ -326,8 +326,8 @@ async function on_message_native(response) {
         prt_sso_cookie.hasData = true;
     } else if (response.command == "getAccounts") {
         accounts.queried = true;
-        if ("error" in response) {
-            ssoLog("could not get accounts: " + response.error);
+        if ("error" in response.message) {
+            ssoLog("could not get accounts: " + response.message.error);
             return;
         }
         accounts.registered = response.message.accounts;
@@ -336,8 +336,8 @@ async function on_message_native(response) {
             (host_versions.broker = response.message.linuxBrokerVersion);
         notify_state_change();
     } else if (response.command == "acquireTokenSilently") {
-        if ("error" in response) {
-            ssoLog("could not acquire token silently: " + response.error);
+        if ("error" in response.message) {
+            ssoLog("could not acquire token silently: " + response.message.error);
             return;
         }
         graph_api_token = response.message.brokerTokenResponse;
