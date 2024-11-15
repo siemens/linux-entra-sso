@@ -198,7 +198,7 @@ class SsoMib:
 
 def run_as_native_messaging():
     iomutex = Lock()
-    no_broker = {"error": "Broker not available"}
+    processing_error = {"error": "Failure during request processing"}
 
     def respond(command, message):
         NativeMessaging.send_message(
@@ -253,7 +253,7 @@ def run_as_native_messaging():
             try:
                 handle_command(cmd, received_message)
             except Exception:  # pylint: disable=broad-except
-                respond(cmd, no_broker)
+                respond(cmd, processing_error)
 
 
 def run_interactive():
