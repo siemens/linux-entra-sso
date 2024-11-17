@@ -6,6 +6,9 @@ name: build browser extension
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to checkout the repository
