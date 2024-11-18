@@ -94,6 +94,7 @@ jobs:
 
       - name: attest extension artifacts
         uses: actions/attest-build-provenance@v1
+        if: github.event_name == 'push'
         with:
           subject-path: |
             build/Linux-Entra-SSO-v*
