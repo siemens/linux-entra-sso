@@ -44,7 +44,7 @@ async function sleep(ms) {
 }
 async function waitFor(f) {
     while (!f()) await sleep(200);
-    return f();
+    return true;
 }
 
 /*
