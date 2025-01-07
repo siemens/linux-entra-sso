@@ -43,7 +43,14 @@ async function sleep(ms) {
     return new Promise((r) => setTimeout(r, ms));
 }
 async function waitFor(f) {
-    while (!f()) await sleep(200);
+    let retries = 50;
+    while (!f() && --retries > 0) {
+        await sleep(200);
+    }
+    if (retries <= 0) {
+        ssoLogError("timeout while waiting for native messaging host");
+        return false;
+    }
     return true;
 }
 
@@ -163,13 +170,15 @@ function notify_state_change() {
 
 async function load_accounts() {
     port_native.postMessage({ command: "getAccounts" });
-    await waitFor(() => {
+    let success = await waitFor(() => {
         if (accounts.queried) {
             return true;
         }
         return false;
     });
-    if (accounts.registered.length == 0) {
+    if (!success) {
+        return;
+    } else if (accounts.registered.length == 0) {
         ssoLog("no accounts registered");
         return;
     }
@@ -185,10 +194,12 @@ async function load_accounts() {
             command: "acquireTokenSilently",
             account: accounts.active,
         });
-        await waitFor(() => {
+        let success = await waitFor(() => {
             return graph_api_token !== null;
         });
-        if ("error" in graph_api_token) {
+        if (!success) {
+            return;
+        } else if ("error" in graph_api_token) {
             ssoLog(
                 "couldn't aquire API token for avatar: " +
                     graph_api_token.error,
@@ -244,12 +255,15 @@ async function get_or_request_prt(ssoUrl) {
         account: accounts.active,
         ssoUrl: ssoUrl,
     });
-    await waitFor(() => {
+    let success = await waitFor(() => {
         if (prt_sso_cookie.hasData) {
             return true;
         }
         return false;
     });
+    if (!success) {
+        return { error: "timeout while waiting for native messaging host" };
+    }
     prt_sso_cookie.hasData = false;
     const data = prt_sso_cookie.data;
     if ("error" in data) {
