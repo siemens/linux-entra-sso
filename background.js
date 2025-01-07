@@ -65,7 +65,7 @@ function is_operational() {
  * Update the UI according to the current state
  */
 function update_ui() {
-    if (state_active && accounts.active) {
+    if (broker_online && state_active && accounts.active) {
         chrome.action.enable();
         let imgdata = accounts.active.avatar_imgdata;
         if (imgdata) {
@@ -373,10 +373,13 @@ async function on_message_native(response) {
             if (host_versions.native === null) {
                 await load_accounts();
                 port_native.postMessage({ command: "getVersion" });
+            } else {
+                update_ui();
             }
         } else {
             ssoLog("lost connection to broker");
             broker_online = false;
+            update_ui();
         }
     } else {
         ssoLog("unknown command: " + response.command);
