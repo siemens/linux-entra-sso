@@ -154,9 +154,9 @@ function update_handlers() {
  * Update the tray icon, (un)register the handlers and notify
  * the menu about a state change.
  */
-function notify_state_change() {
+function notify_state_change(ui_only = false) {
     update_ui();
-    if (broker_online) update_handlers();
+    if (!ui_only) update_handlers();
     if (port_menu === null) return;
     port_menu.postMessage({
         event: "stateChanged",
@@ -312,13 +312,6 @@ async function load_accounts() {
             48,
         );
     }
-    notify_state_change();
-}
-
-function logout() {
-    accounts.active = null;
-    accounts.queried = false;
-    notify_state_change();
 }
 
 async function get_or_request_prt(ssoUrl) {
@@ -426,9 +419,9 @@ async function on_message_native(response) {
         }
         accounts.registered = response.message.accounts;
     } else if (response.command == "getVersion") {
-        (host_versions.native = response.message.native),
-            (host_versions.broker = response.message.linuxBrokerVersion);
-        notify_state_change();
+        host_versions.native = response.message.native;
+        host_versions.broker = response.message.linuxBrokerVersion;
+        notify_state_change(true);
     } else if (response.command == "acquireTokenSilently") {
         if ("error" in response.message) {
             graph_api_token = {
@@ -438,22 +431,22 @@ async function on_message_native(response) {
         }
         graph_api_token = response.message.brokerTokenResponse;
     } else if (response.command == "brokerStateChanged") {
-        if (!state_active) return;
         if (response.message == "online") {
             ssoLog("connection to broker restored");
             broker_online = true;
             // only reload data if we did not see the broker before
-            if (host_versions.native === null) {
+            if (accounts.queried === false) {
                 await load_accounts();
-                port_native.postMessage({ command: "getVersion" });
-            } else {
                 notify_state_change();
+            }
+            if (host_versions.native === null) {
+                port_native.postMessage({ command: "getVersion" });
             }
         } else {
             ssoLog("lost connection to broker");
             broker_online = false;
-            notify_state_change();
         }
+        notify_state_change(true);
     } else {
         ssoLog("unknown command: " + response.command);
     }
@@ -475,7 +468,7 @@ function on_startup() {
     }
     initialized = true;
     ssoLog("start linux-entra-sso");
-    notify_state_change();
+    notify_state_change(true);
 
     port_native = chrome.runtime.connectNative("linux_entra_sso");
     port_native.onDisconnect.addListener(() => {
@@ -493,7 +486,7 @@ function on_startup() {
     chrome.runtime.onConnect.addListener((port) => {
         port_menu = port;
         port_menu.onMessage.addListener(on_message_menu);
-        notify_state_change();
+        notify_state_change(true);
         port_menu.onDisconnect.addListener(() => {
             port_menu = null;
         });
