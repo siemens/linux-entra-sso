@@ -67,26 +67,25 @@ function is_operational() {
 function update_ui() {
     if (state_active && accounts.active) {
         chrome.action.enable();
-        let imgdata = accounts.active.avatar_imgdata;
-        if (imgdata) {
-            chrome.action.setIcon({
-                imageData: imgdata,
-            });
-        } else {
-            if (isFirefox()) {
-                chrome.action.setIcon({
-                    path: "icons/profile-outline.svg",
-                });
-            } else {
-                chrome.action.setIcon({
-                    path: {
-                        48: "icons/profile-outline_48.png",
-                    },
-                });
-            }
+        let imgdata = {};
+        let icon_title = "EntraID SSO: " + accounts.active.username;
+        let color = null;
+        if (!broker_online) {
+            color = "#cc0000";
+            icon_title += " (offline)";
         }
+        for (const r of [16, 32, 48]) {
+            imgdata[r] = decorate_avatar(
+                accounts.active.avatar_imgdata,
+                color,
+                r,
+            );
+        }
+        chrome.action.setIcon({
+            imageData: imgdata,
+        });
         chrome.action.setTitle({
-            title: "EntraID SSO: " + accounts.active.username,
+            title: icon_title,
         });
         return;
     }
@@ -105,9 +104,10 @@ function update_ui() {
     }
     let title = "EntraID SSO disabled. Click to enable.";
     if (state_active) title = "EntraID SSO disabled (waiting for broker).";
-    if (accounts.registered.length == 0)
+    if (accounts.registered.length == 0) {
         title = "EntraID SSO disabled (no accounts registered).";
-    if (!broker_online) chrome.action.disable();
+        if (!broker_online) chrome.action.disable();
+    }
     chrome.action.setTitle({ title: title });
 }
 
@@ -156,8 +156,8 @@ function update_handlers() {
  */
 function notify_state_change() {
     update_ui();
-    update_handlers();
-    if (!port_menu) return;
+    if (broker_online) update_handlers();
+    if (port_menu === null) return;
     port_menu.postMessage({
         event: "stateChanged",
         account: accounts.registered.length > 0 ? accounts.registered[0] : null,
@@ -166,6 +166,71 @@ function notify_state_change() {
         host_version: host_versions.native,
         broker_version: host_versions.broker,
     });
+}
+
+function decorate_avatar(imgdata, color, width) {
+    const sWidth = imgdata.width;
+    const lineWidth = Math.min(2, width / 12);
+    let buffer = new OffscreenCanvas(sWidth, sWidth);
+    let ctx_buffer = buffer.getContext("2d");
+    ctx_buffer.putImageData(imgdata, 0, 0);
+
+    let canvas = new OffscreenCanvas(width, width);
+    let ctx = canvas.getContext("2d");
+    ctx.save();
+    const img_margin = color === null ? 0 : lineWidth + 1;
+    ctx.beginPath();
+    ctx.arc(
+        width / 2,
+        width / 2,
+        width / 2 - img_margin,
+        0,
+        Math.PI * 2,
+        false,
+    );
+    ctx.clip();
+    ctx.drawImage(
+        buffer,
+        0,
+        0,
+        sWidth,
+        sWidth,
+        img_margin,
+        img_margin,
+        width - img_margin * 2,
+        width - img_margin * 2,
+    );
+    ctx.restore();
+    if (color === null) {
+        return ctx.getImageData(0, 0, width, width);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    ctx.arc(
+        width / 2,
+        width / 2,
+        width / 2 - Math.min(1, lineWidth / 2),
+        0,
+        Math.PI * 2,
+        false,
+    );
+    ctx.stroke();
+    return ctx.getImageData(0, 0, width, width);
+}
+
+async function load_icon(path, width) {
+    const response = await fetch(chrome.runtime.getURL(path));
+    let imgBitmap = await createImageBitmap(await response.blob(), {
+        resizeWidth: width,
+        resizeHeight: width,
+    });
+    let canvas = new OffscreenCanvas(width, width);
+    let ctx = canvas.getContext("2d");
+    ctx.save();
+    ctx.drawImage(imgBitmap, 0, 0);
+    ctx.restore();
+    return ctx.getImageData(0, 0, width, width);
 }
 
 async function load_accounts() {
@@ -227,7 +292,6 @@ async function load_accounts() {
         ctx.clip();
         ctx.drawImage(avatar, 0, 0);
         ctx.restore();
-        accounts.active.avatar_imgdata = ctx.getImageData(0, 0, 48, 48);
         /* serialize image to data URL (ugly, but portable) */
         let blob = await canvas.convertToBlob();
         const dataUrl = await new Promise((r) => {
@@ -235,9 +299,18 @@ async function load_accounts() {
             a.onload = r;
             a.readAsDataURL(blob);
         }).then((e) => e.target.result);
+
+        /* store image data */
+        ctx.clearRect(0, 0, 48, 48);
+        ctx.drawImage(avatar, 0, 0, 48, 48);
+        accounts.active.avatar_imgdata = ctx.getImageData(0, 0, 48, 48);
         accounts.active.avatar = dataUrl;
     } else {
         ssoLog("Warning: Could not get profile picture.");
+        accounts.active.avatar_imgdata = await load_icon(
+            "icons/profile-outline_48.png",
+            48,
+        );
     }
     notify_state_change();
 }
@@ -373,10 +446,13 @@ async function on_message_native(response) {
             if (host_versions.native === null) {
                 await load_accounts();
                 port_native.postMessage({ command: "getVersion" });
+            } else {
+                notify_state_change();
             }
         } else {
             ssoLog("lost connection to broker");
             broker_online = false;
+            notify_state_change();
         }
     } else {
         ssoLog("unknown command: " + response.command);

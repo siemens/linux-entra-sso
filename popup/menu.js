@@ -44,7 +44,7 @@ bg_port.onMessage.addListener(async (m) => {
                 fallback.classList.remove("hidden");
             }
         }
-        if (m.enabled && m.broker_online) {
+        if (m.enabled) {
             document.getElementById("entity-me").classList.add("active");
             document.getElementById("entity-guest").classList.remove("active");
             active = true;
@@ -53,7 +53,13 @@ bg_port.onMessage.addListener(async (m) => {
             document.getElementById("entity-guest").classList.add("active");
             active = false;
         }
-        if (m.host_version && m.broker_version) {
+        let broker_state = m.broker_online
+            ? '<span style="color:green;">&#9210;</span> connected'
+            : '<span style="color:red;">&#9210;</span> disconnected';
+        document.getElementById("broker-state-value").innerHTML =
+            m.broker_version + " (" + broker_state + ")";
+
+        if (m.host_version) {
             let pvers = chrome.runtime.getManifest().version;
             let vstr = "v" + pvers;
             if (m.host_version !== pvers) {

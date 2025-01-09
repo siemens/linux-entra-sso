@@ -60,9 +60,12 @@ body.pending .entity {
     padding: 5px 5px 10px 5px;
     border-top: 1px solid #e0e0e0;
     font-size: 0.8em;
-    text-align: right;
     min-height: 1em;
     color: #707070;
+}
+
+.footer > div {
+    clear: both;
 }
 
 .footer a,
@@ -70,12 +73,6 @@ body.pending .entity {
     color: #707070;
 }
 
-.footer .left {
-    display: block;
-    float: left;
-}
-
 .footer .right {
-    display: block;
     float: right;
 }
