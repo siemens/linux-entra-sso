@@ -418,6 +418,9 @@ function on_startup() {
         port_menu = port;
         port_menu.onMessage.addListener(on_message_menu);
         notify_state_change();
+        port_menu.onDisconnect.addListener(() => {
+            port_menu = null;
+        });
     });
 }
 
