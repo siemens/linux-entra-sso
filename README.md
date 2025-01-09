@@ -106,6 +106,13 @@ In case the extension is not working, check the following:
 - run host component in interactive mode: `python3 ./linux-entra-sso.py --interactive acquirePrtSsoCookie`
 - check if SSO is working in the Edge browser
 
+# Code Integrity
+
+Since version `v0.4`, git release tags are signed with one of the following maintainer GPG keys:
+
+- `AF73F6EF5A53CFE304569F50E648A311F67A50FC` (Felix Moessbauer)
+- `004C647D7572CF7D72BDB4FB699D850A9F417BD8` (Jan Kiszka)
+
 ## License
 
 This project is licensed according to the terms of the Mozilla Public
