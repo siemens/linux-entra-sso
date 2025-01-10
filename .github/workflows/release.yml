@@ -22,7 +22,7 @@ jobs:
       pull-requests: write
       id-token: write
       attestations: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
