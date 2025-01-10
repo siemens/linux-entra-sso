@@ -198,7 +198,6 @@ class SsoMib:
 
 def run_as_native_messaging():
     iomutex = Lock()
-    processing_error = {"error": "Failure during request processing"}
 
     def respond(command, message):
         NativeMessaging.send_message(
@@ -252,8 +251,9 @@ def run_as_native_messaging():
             cmd = received_message["command"]
             try:
                 handle_command(cmd, received_message)
-            except Exception:  # pylint: disable=broad-except
-                respond(cmd, processing_error)
+            except Exception as exp:  # pylint: disable=broad-except
+                err = {"error": f"Failure during request processing: {str(exp)}"}
+                respond(cmd, err)
 
 
 def run_interactive():
