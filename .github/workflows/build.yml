@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 env:
-  WEB_EXT_VERS: 8.2.0
+  WEB_EXT_VERS: 8.3.0
 
 jobs:
   reuse-and-codestyle:
