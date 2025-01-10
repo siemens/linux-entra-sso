@@ -20,7 +20,7 @@ env:
 
 jobs:
   reuse-and-codestyle:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -51,7 +51,7 @@ jobs:
           prettier_options: '--check **/*.{js,html,css}'
 
   build-xpi:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       attestations: write
