@@ -93,7 +93,7 @@ jobs:
             > .pages/firefox/updates.json.tmp && mv .pages/firefox/updates.json.tmp .pages/firefox/updates.json
 
       - name: prepare PR for Firefox update manifest
-        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
+        uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7.0.6
         with:
           add-paths: '.pages/firefox/updates.json'
           commit-message: "chore: release Firefox update manifest"
