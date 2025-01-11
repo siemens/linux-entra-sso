@@ -234,6 +234,7 @@ async function load_icon(path, width) {
 }
 
 async function load_accounts() {
+    ssoLog("loading accounts");
     port_native.postMessage({ command: "getAccounts" });
     let success = await waitFor(() => {
         if (accounts.queried) {
@@ -242,6 +243,7 @@ async function load_accounts() {
         return false;
     });
     if (!success) {
+        accounts.queried = false;
         return;
     } else if (accounts.registered.length == 0) {
         ssoLog("no accounts registered");
