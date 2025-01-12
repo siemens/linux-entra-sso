@@ -15,7 +15,7 @@ import uuid
 import ctypes
 import time
 from signal import SIGINT
-from threading import Thread, Lock
+from threading import Thread, RLock
 from gi.repository import GLib, Gio
 from pydbus import SessionBus
 
@@ -80,6 +80,7 @@ class SsoMib:
         self.broker = None
         self.session_id = uuid.uuid4()
         self._state_changed_cb = None
+        self._last_state_reported = False
         if daemon:
             self._introspect_broker(fail_on_error=False)
             self._monitor_bus()
@@ -89,6 +90,7 @@ class SsoMib:
         while not self.broker and time.time() < timeout:
             try:
                 self.broker = self._bus.get(self.BROKER_NAME, self.BROKER_PATH)
+                self._report_state_change()
                 return
             except GLib.Error as err:
                 # GDBus.Error:org.freedesktop.dbus.errors.UnknownObject:
@@ -121,8 +123,13 @@ class SsoMib:
             # we need to ensure that the next dbus call will
             # wait until the broker is fully initialized again
             self.broker = None
-        if self._state_changed_cb:
-            self._state_changed_cb(new_owner)
+            self._report_state_change()
+
+    def _report_state_change(self):
+        current_state = bool(self.broker)
+        if self._state_changed_cb and self._last_state_reported != current_state:
+            self._state_changed_cb(current_state)
+        self._last_state_reported = current_state
 
     def on_broker_state_changed(self, callback):
         """
@@ -197,7 +204,7 @@ class SsoMib:
 
 
 def run_as_native_messaging():
-    iomutex = Lock()
+    iomutex = RLock()
 
     def respond(command, message):
         NativeMessaging.send_message(
