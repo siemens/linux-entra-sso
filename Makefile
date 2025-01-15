@@ -104,7 +104,7 @@ all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES)
 		cp platform/$$P/manifest* build/$$P; \
 		cp -rf LICENSES background.js build/$$P/; \
 	done
-	cp icons/*.svg build/firefox/icons/
+	cp icons/*.svg icons/profile-outline_48.* build/firefox/icons/
 	cp icons/*.png* icons/profile-outline.svg build/chrome/icons/
 	cp popup/menu.* icons/linux-entra-sso.svg icons/profile-outline.svg build/firefox/popup/
 	cp popup/menu.* icons/linux-entra-sso.svg icons/profile-outline.svg build/chrome/popup/
