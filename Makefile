@@ -40,6 +40,8 @@ ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG)
 COMMON_INPUT_FILES= \
 	LICENSES/MPL-2.0.txt \
 	background.js \
+	icons/profile-outline_48.png \
+	icons/profile-outline_48.png.license \
 	popup/menu.css \
 	popup/menu.js \
 	popup/menu.html
@@ -51,9 +53,7 @@ CHROME_INPUT_FILES= \
 	icons/linux-entra-sso_48.png \
 	icons/linux-entra-sso_48.png.license \
 	icons/linux-entra-sso_128.png \
-	icons/linux-entra-sso_128.png.license \
-	icons/profile-outline_48.png \
-	icons/profile-outline_48.png.license
+	icons/linux-entra-sso_128.png.license
 
 FIREFOX_INPUT_FILES= \
 	$(COMMON_INPUT_FILES) \
@@ -71,8 +71,6 @@ CHROME_PACKAGE_FILES= \
 	icons/linux-entra-sso_48.png.license \
 	icons/linux-entra-sso_128.png \
 	icons/linux-entra-sso_128.png.license \
-	icons/profile-outline_48.png \
-	icons/profile-outline_48.png.license \
 	popup/profile-outline.svg
 
 FIREFOX_PACKAGE_FILES= \
