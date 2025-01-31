@@ -251,7 +251,10 @@ async function load_accounts() {
     }
     accounts.active = accounts.registered[0];
     accounts.active.avatar = null;
-    accounts.active.avatar_imgdata = null;
+    accounts.active.avatar_imgdata = await load_icon(
+        "icons/profile-outline_48.png",
+        48,
+    );
     ssoLog("active account: " + accounts.active.username);
 
     // load profile picture and set it as icon
@@ -309,10 +312,6 @@ async function load_accounts() {
         accounts.active.avatar = dataUrl;
     } else {
         ssoLog("Warning: Could not get profile picture.");
-        accounts.active.avatar_imgdata = await load_icon(
-            "icons/profile-outline_48.png",
-            48,
-        );
     }
 }
 
