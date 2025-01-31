@@ -271,7 +271,7 @@ async function load_accounts() {
             return;
         } else if ("error" in graph_api_token) {
             ssoLog(
-                "couldn't aquire API token for avatar: " +
+                "couldn't acquire API token for avatar: " +
                     graph_api_token.error,
             );
             return;
