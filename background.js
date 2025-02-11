@@ -347,9 +347,6 @@ async function on_before_send_headers(e) {
     if (accept === undefined || !accept.value.includes("text/html")) {
         return { requestHeaders: e.requestHeaders };
     }
-    if (!is_operational()) {
-        return { requestHeaders: e.requestHeaders };
-    }
     let prt = await get_or_request_prt(e.url);
     if ("error" in prt) {
         return { requestHeaders: e.requestHeaders };
