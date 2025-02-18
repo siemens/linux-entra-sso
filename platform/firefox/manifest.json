@@ -27,7 +27,8 @@
     "permissions": [
         "nativeMessaging",
         "webRequest",
-        "webRequestBlocking"
+        "webRequestBlocking",
+        "storage"
     ],
     "host_permissions": [
         "https://login.microsoftonline.com/*"

@@ -23,7 +23,8 @@
     "permissions": [
         "alarms",
         "nativeMessaging",
-        "declarativeNetRequest"
+        "declarativeNetRequest",
+        "storage"
     ],
     "host_permissions": [
         "https://login.microsoftonline.com/*"

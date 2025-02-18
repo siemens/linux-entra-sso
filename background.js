@@ -65,11 +65,16 @@ function is_operational() {
  * Update the UI according to the current state
  */
 function update_ui() {
-    if (state_active && accounts.active) {
-        chrome.action.enable();
+    chrome.action.enable();
+    if (is_operational()) {
         let imgdata = {};
         let icon_title = "EntraID SSO: " + accounts.active.username;
         let color = null;
+        chrome.action.setTitle({
+            title: icon_title,
+        });
+        // we do not yet have the avatar image
+        if (!accounts.active.avatar_imgdata) return;
         if (!broker_online) {
             color = "#cc0000";
             icon_title += " (offline)";
@@ -83,9 +88,6 @@ function update_ui() {
         }
         chrome.action.setIcon({
             imageData: imgdata,
-        });
-        chrome.action.setTitle({
-            title: icon_title,
         });
         return;
     }
@@ -109,6 +111,21 @@ function update_ui() {
         if (!broker_online) chrome.action.disable();
     }
     chrome.action.setTitle({ title: title });
+}
+
+/*
+ * Store the current state in the local storage.
+ * To not leak account data in disabled state, we clear the account object.
+ */
+function update_storage() {
+    let default_account = { ...accounts.registered[0] };
+    // remove non serializable properties
+    delete default_account.avatar_imgdata;
+    let ssostate = {
+        state: state_active,
+        account: state_active ? default_account : null,
+    };
+    chrome.storage.local.set({ ssostate });
 }
 
 function update_handlers_firefox() {
@@ -313,6 +330,7 @@ async function load_accounts() {
     } else {
         ssoLog("Warning: Could not get profile picture.");
     }
+    update_storage();
 }
 
 async function get_or_request_prt(ssoUrl) {
@@ -456,6 +474,7 @@ async function on_message_menu(request) {
     } else if (request.command == "disable") {
         state_active = false;
     }
+    update_storage();
     notify_state_change();
 }
 
@@ -488,6 +507,20 @@ function on_startup() {
         port_menu.onDisconnect.addListener(() => {
             port_menu = null;
         });
+    });
+
+    chrome.storage.local.get("ssostate", (data) => {
+        if (data.ssostate) {
+            state_active = data.ssostate.state;
+            if (state_active) {
+                accounts.active = { ...data.ssostate.account };
+                ssoLog(
+                    "temporarily using last-known account: " +
+                        accounts.active.username,
+                );
+            }
+            notify_state_change();
+        }
     });
 }
 
