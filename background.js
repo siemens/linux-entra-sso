@@ -299,7 +299,7 @@ async function load_accounts() {
         "https://graph.microsoft.com/v1.0/me/photos/48x48/$value",
         {
             headers: {
-                "Content-Type": "image/jpeg",
+                Accept: "image/jpeg",
                 Authorization: "Bearer " + graph_api_token.accessToken,
             },
         },
