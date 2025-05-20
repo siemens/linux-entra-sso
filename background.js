@@ -491,8 +491,8 @@ function on_startup() {
     port_native.onDisconnect.addListener(() => {
         if (chrome.runtime.lastError) {
             ssoLogError(
-                "Error in native application connection:" +
-                    chrome.runtime.lastError,
+                "Error in native application connection: " +
+                    chrome.runtime.lastError.message,
             );
         } else {
             ssoLogError("Native application connection closed.");
