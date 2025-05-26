@@ -86,11 +86,14 @@ from the locally running `microsoft-identity-broker` service and inject that int
 
 ## Known Limitations
 
-### SNAP version not supported
+### Snap version of Firefox on Ubuntu
 
-This extension will not work on the snap version of Firefox.
-The extension executes a script `linux-entra-sso.py` on the host that communicates via D-Bus with the `microsoft-identity-broker` service.
-As the SNAP executes Firefox inside a container, the communication with D-Bus will not work. Please use the `firefox-esr` Debian package instead.
+Running the extension in a Snap Firefox on Ubuntu 22.04 or later is supported but requires the `xdg-desktop-portal` host package and at least Firefox 104.
+After installing the extension (both native and web extension part), restart the browser.
+When Firefox starts, a message should appear to allow Firefox to use the `WebExtension` backend.
+Once granted, the application should behave as on a native install.
+
+An alternative is to use the `firefox-esr` Debian package.
 
 ### Expired Tokens on Chrome
 
