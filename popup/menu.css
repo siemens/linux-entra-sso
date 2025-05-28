@@ -52,6 +52,13 @@ body.pending .entity {
     height: 48px;
 }
 
+#broker-state.connected .state-connected-icon {
+    color: green;
+}
+#broker-state.disconnected .state-connected-icon {
+    color: red;
+}
+
 .hidden {
     display: none !important;
 }
