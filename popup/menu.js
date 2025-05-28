@@ -25,8 +25,8 @@ bg_port.onMessage.addListener(async (m) => {
     if (m.event == "stateChanged") {
         clear_inflight();
         if (m.account !== null) {
-            document.getElementById("me-name").innerHTML = m.account.name;
-            document.getElementById("me-email").innerHTML = m.account.username;
+            document.getElementById("me-name").innerText = m.account.name;
+            document.getElementById("me-email").innerText = m.account.username;
             const canvas = document.getElementById("me-avatar");
             const fallback = document.getElementById("me-avatar-fallback");
             const ctx = canvas.getContext("2d");
@@ -53,11 +53,19 @@ bg_port.onMessage.addListener(async (m) => {
             document.getElementById("entity-guest").classList.add("active");
             active = false;
         }
-        let broker_state = m.broker_online
-            ? '<span style="color:green;">&#9210;</span> connected'
-            : '<span style="color:red;">&#9210;</span> disconnected';
-        document.getElementById("broker-state-value").innerHTML =
-            m.broker_version + " (" + broker_state + ")";
+        let broker_state_classes =
+            document.getElementById("broker-state").classList;
+        let broker_state_value = document.getElementById("broker-state-value");
+        if (m.broker_online) {
+            broker_state_classes.add("connected");
+            broker_state_classes.remove("disconnected");
+            broker_state_value.innerText = "connected";
+        } else {
+            broker_state_classes.remove("connected");
+            broker_state_classes.add("disconnected");
+            broker_state_value.innerText = "disconnected";
+        }
+        document.getElementById("broker-version").innerText = m.broker_version;
 
         if (m.host_version) {
             let pvers = chrome.runtime.getManifest().version;
@@ -65,7 +73,7 @@ bg_port.onMessage.addListener(async (m) => {
             if (m.host_version !== pvers) {
                 vstr += " (host v" + m.host_version + ")";
             }
-            document.getElementById("version").innerHTML = vstr;
+            document.getElementById("version").innerText = vstr;
         }
     }
 });
