@@ -24,24 +24,62 @@ The extension requires [PyGObject](https://pygobject.gnome.org/) and [pydbus](ht
 - On Arch Linux: `sudo pacman -S python-gobject python-pydbus`
 - If you are using a Python version manager such as `asdf` you must install the Python packages manually: `pip install PyGObject pydbus`
 
-### Firefox: Signed Version from Github Releases
+### Firefox: Signed Version from GitHub Releases
 
-You can get a signed version of the browser extension from our Github releases.
-As this only covers the browser part, the host tooling still needs to be installed manually:
+You can download a **signed version** of the browser extension directly from our [GitHub Releases](https://github.com/siemens/linux-entra-sso/releases).
 
-1. clone this repository
-2. run `make local-install-firefox`
-3. Get the `linux_entra_sso-<version>.xpi` file from the [project's releases page](https://github.com/siemens/linux-entra-sso/releases)
-4. Enable "Access your data for `https://login.microsoftonline.com`" under the extension's permissions
+> This package includes only the **browser extension**. The **host tooling** must still be installed manually.
 
-### Chrome: Signed Version from Chrome Web Store
+#### Installation Steps
 
-You can get a signed version of the browser extension from the Chrome Web Store.
-As this only covers the browser part, the host tooling still needs to be installed manually:
+1. Clone this repository:
 
-1. clone this repository
-2. run `make local-install-chrome`
-3. Install the [linux-entra-sso](https://chrome.google.com/webstore/detail/jlnfnnolkbjieggibinobhkjdfbpcohn) Chrome extension from the Chrome Web Store
+```bash
+$ git clone https://github.com/siemens/linux-entra-sso.git
+$ cd linux-entra-sso
+```
+
+2. Run the local install command:
+
+```bash
+$ make local-install-firefox
+```
+
+3. Download the extension file:
+
+Get the `linux_entra_sso-<version>.xpi` file from the [project's releases page](https://github.com/siemens/linux-entra-sso/releases).
+
+4. Enable required permissions:
+
+After installing the extension, enable the following permission:
+
+Access your data for `https://login.microsoftonline.com`
+
+### Chrome & Brave: Signed Extension from Chrome Web Store
+
+You can install the signed browser extension from the [Chrome Web Store](https://chrome.google.com/webstore/detail/jlnfnnolkbjieggibinobhkjdfbpcohn), which works for both **Google Chrome** and **Brave Browser**.
+
+> **Note:** This only installs the browser extension. You still need to install the host integration manually.
+
+#### Installation Steps:
+
+1. Clone this repository:
+
+```bash
+$ git@github.com:siemens/linux-entra-sso.git
+$ cd linux-entra-sso
+```
+
+2. Run the local install command:
+
+```bash
+$ make local-install-chrome # command for Chrome Browser
+$ make local-install-brave # command for Brave Browser
+```
+
+3. Install the extension file:
+
+-  [linux-entra-sso](https://chromewebstore.google.com/detail/linux-entra-sso/jlnfnnolkbjieggibinobhkjdfbpcohn)
 
 ### Development Version and Other Browsers
 
@@ -52,7 +90,7 @@ since version 48.
 To build the extension and install the host parts, perform the following steps:
 
 1. clone this repository
-2. run `make local-install-<firefox|chrome>` to install the native messaging app in the user's `.mozilla` (or Chrome) folder
+2. run `make local-install-<firefox|chrome|brave>` to install the native messaging app in the user's `.mozilla` (or Chrome) folder
 3. run `make` to build the extension (For Firefox, `build/<platform>/linux-entra-sso-*.xpi` is generated)
 4. Firefox only: Permit unsigned extensions in Firefox by setting `xpinstall.signatures.required` to `false`
 4. Chrome only: In extension menu, enable `Developer mode`.
