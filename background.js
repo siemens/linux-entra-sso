@@ -110,6 +110,9 @@ function update_ui() {
         title = "EntraID SSO disabled (no accounts registered).";
         if (!broker_online) chrome.action.disable();
     }
+    if (port_native === null) {
+        title = "EntraID SSO disabled (no connection to host application)";
+    }
     chrome.action.setTitle({ title: title });
 }
 
@@ -489,6 +492,7 @@ function on_startup() {
 
     port_native = chrome.runtime.connectNative("linux_entra_sso");
     port_native.onDisconnect.addListener(() => {
+        port_native = null;
         if (chrome.runtime.lastError) {
             ssoLogError(
                 "Error in native application connection: " +
@@ -497,6 +501,7 @@ function on_startup() {
         } else {
             ssoLogError("Native application connection closed.");
         }
+        notify_state_change(true);
     });
 
     port_native.onMessage.addListener(on_message_native);
