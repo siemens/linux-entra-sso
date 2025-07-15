@@ -4,6 +4,7 @@
  */
 
 import { ssoLog, ssoLogError, Deferred } from "./utils.js";
+import { Account } from "./account.js";
 
 /**
  * Queue to resolve promises, once the data arrives from the
@@ -81,7 +82,7 @@ export class Broker {
     async acquireTokenSilently(account) {
         this.#port_native.postMessage({
             command: "acquireTokenSilently",
-            account: account,
+            account: account.brokerObject(),
         });
         return this.#rpc_queue.register_handle("acquireTokenSilently");
     }
@@ -89,7 +90,7 @@ export class Broker {
     async acquirePrtSsoCookie(account, ssoUrl) {
         this.#port_native.postMessage({
             command: "acquirePrtSsoCookie",
-            account: account,
+            account: account.brokerObject(),
             ssoUrl: ssoUrl,
         });
         return this.#rpc_queue.register_handle("acquirePrtSsoCookie");
@@ -112,10 +113,11 @@ export class Broker {
                     ...response.message.error,
                 });
             } else {
-                this.#rpc_queue.resolve_handle(
-                    "getAccounts",
-                    response.message.accounts.slice(),
-                );
+                let _accounts = [];
+                for (const a of response.message.accounts) {
+                    _accounts.push(new Account(a));
+                }
+                this.#rpc_queue.resolve_handle("getAccounts", _accounts);
             }
         } else if (response.command == "getVersion") {
             this.#rpc_queue.resolve_handle("getVersion", {
