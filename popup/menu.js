@@ -25,8 +25,10 @@ bg_port.onMessage.addListener(async (m) => {
     if (m.event == "stateChanged") {
         clear_inflight();
         if (m.account !== null) {
-            document.getElementById("me-name").innerText = m.account.name;
-            document.getElementById("me-email").innerText = m.account.username;
+            document.getElementById("me-name").innerText =
+                m.account.broker_obj.name;
+            document.getElementById("me-email").innerText =
+                m.account.broker_obj.username;
             const canvas = document.getElementById("me-avatar");
             const fallback = document.getElementById("me-avatar-fallback");
             const ctx = canvas.getContext("2d");

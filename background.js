@@ -68,7 +68,7 @@ function update_ui() {
     chrome.action.enable();
     if (is_operational()) {
         let imgdata = {};
-        let icon_title = "EntraID SSO: " + accounts.active.username;
+        let icon_title = "EntraID SSO: " + accounts.active.broker_obj.username;
         let color = null;
         chrome.action.setTitle({
             title: icon_title,
@@ -122,11 +122,9 @@ function update_ui() {
  */
 function update_storage() {
     let default_account = { ...accounts.registered[0] };
-    // remove non serializable properties
-    delete default_account.avatar_imgdata;
     let ssostate = {
         state: state_active,
-        account: state_active ? default_account : null,
+        account: state_active ? default_account.broker_obj : null,
     };
     chrome.storage.local.set({ ssostate });
 }
@@ -275,14 +273,14 @@ async function load_accounts() {
         "icons/profile-outline_48.png",
         48,
     );
-    ssoLog("active account: " + accounts.active.username);
+    ssoLog("active account: " + accounts.active.broker_obj.username);
 
     // load profile picture and set it as icon
     if (!graph_api_token || graph_api_token.expiresOn < Date.now() + 60000) {
         graph_api_token = null;
         port_native.postMessage({
             command: "acquireTokenSilently",
-            account: accounts.active,
+            account: accounts.active.broker_obj,
         });
         let success = await waitFor(() => {
             return graph_api_token !== null;
@@ -340,7 +338,7 @@ async function get_or_request_prt(ssoUrl) {
     ssoLog("request new PrtSsoCookie from broker for ssoUrl: " + ssoUrl);
     port_native.postMessage({
         command: "acquirePrtSsoCookie",
-        account: accounts.active,
+        account: accounts.active.broker_obj,
         ssoUrl: ssoUrl,
     });
     let success = await waitFor(() => {
@@ -392,7 +390,7 @@ async function update_net_rules(e) {
             priority: 1,
             condition: {
                 urlFilter: SSO_URL + "/*",
-                resourceTypes: ["main_frame"],
+                resourceTypes: ["main_frame", "sub_frame"],
             },
             action: {
                 type: "modifyHeaders",
@@ -436,7 +434,13 @@ async function on_message_native(response) {
             ssoLog("could not get accounts: " + response.message.error);
             return;
         }
-        accounts.registered = response.message.accounts;
+        for (const a of response.message.accounts) {
+            accounts.registered.push({
+                broker_obj: a,
+                avatar: null,
+                avatar_imgdata: null,
+            });
+        }
     } else if (response.command == "getVersion") {
         host_versions.native = response.message.native;
         host_versions.broker = response.message.linuxBrokerVersion;
@@ -518,10 +522,10 @@ function on_startup() {
         if (data.ssostate) {
             state_active = data.ssostate.state;
             if (state_active) {
-                accounts.active = { ...data.ssostate.account };
+                accounts.active = { broker_obj: { ...data.ssostate.account } };
                 ssoLog(
                     "temporarily using last-known account: " +
-                        accounts.active.username,
+                        accounts.active.broker_obj.username,
                 );
             }
             notify_state_change();
