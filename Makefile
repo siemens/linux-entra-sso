@@ -39,6 +39,7 @@ ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG)
 
 COMMON_INPUT_FILES= \
 	LICENSES/MPL-2.0.txt \
+	src/account.js \
 	src/background.js \
 	src/broker.js \
 	src/platform-abstraction.js \
