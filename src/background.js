@@ -5,6 +5,7 @@
 
 import { create_platform } from "./platform.js";
 import { Broker } from "./broker.js";
+import { Account } from "./account.js";
 import { ssoLog } from "./utils.js";
 
 const PLATFORM = create_platform();
@@ -38,7 +39,7 @@ function update_ui() {
     chrome.action.enable();
     if (is_operational()) {
         let imgdata = {};
-        let icon_title = accounts.active.username;
+        let icon_title = accounts.active.username();
 
         // shorten the title a bit
         if (PLATFORM.browser == "Thunderbird")
@@ -86,12 +87,10 @@ function update_ui() {
  * To not leak account data in disabled state, we clear the account object.
  */
 function update_storage() {
-    let default_account = { ...accounts.registered[0] };
-    // remove non serializable properties
-    delete default_account.avatar_imgdata;
+    let default_account = accounts.registered[0];
     let ssostate = {
         state: state_active,
-        account: state_active ? default_account : null,
+        account: state_active ? default_account.brokerObject() : null,
     };
     chrome.storage.local.set({ ssostate });
 }
@@ -113,7 +112,10 @@ function notify_state_change(ui_only = false) {
     if (port_menu === null) return;
     port_menu.postMessage({
         event: "stateChanged",
-        account: accounts.registered.length > 0 ? accounts.registered[0] : null,
+        account:
+            accounts.registered.length > 0
+                ? accounts.registered[0].toMenuObject()
+                : null,
         broker_online: broker.isRunning(),
         enabled: state_active,
         host_version: host_versions.native,
@@ -200,7 +202,7 @@ async function load_accounts() {
         "/icons/profile-outline_48.png",
         48,
     );
-    ssoLog("active account: " + accounts.active.username);
+    ssoLog("active account: " + accounts.active.username());
 
     // load profile picture and set it as icon
     if (!graph_api_token || graph_api_token.expiresOn < Date.now() + 60000) {
@@ -301,10 +303,10 @@ function on_startup() {
         if (data.ssostate) {
             state_active = data.ssostate.state;
             if (state_active) {
-                accounts.active = { ...data.ssostate.account };
+                accounts.active = new Account(data.ssostate.account);
                 ssoLog(
                     "temporarily using last-known account: " +
-                        accounts.active.username,
+                        accounts.active.username(),
                 );
             }
             notify_state_change();
