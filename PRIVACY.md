@@ -32,5 +32,16 @@ URL. On Chrome and Chromium, the `PRT SSO Cookie` is requested periodically
 with a generic URL. The returned token is injected into all http requests
 hitting the Entra ID login URL.
 
+### Note on required and optional host permissions
+
+We utilize the `WebRequest` (Firefox) or `declarativeNetRequest` (Chrome) API to
+inject the `PRT SSO Cookie` into requests targeting the login provider. Since
+these APIs operate solely on permitted URLs, it's essential to list applications
+that perform automated token refreshes in the background (e.g., the Teams PWA).
+For privacy reasons, we request the user to enable applications on a case-by-case
+basis (via the UI or policy).
+
+## Privacy statement for Microsoft services
+
 The privacy statement for all Microsoft provided services is found on
 <https://privacy.microsoft.com/en-us/PrivacyStatement>.

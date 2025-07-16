@@ -3,6 +3,13 @@
  * SPDX-FileCopyrightText: Copyright 2024 Siemens AG
  */
 let CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
+const SSO_URL = "https://login.microsoftonline.com";
+/*
+ * The WebRequest API operates on allowed URLs only.
+ * To intercept a sub-resource request (e.g. from an iframe), the extension
+ * must have access to both the requested URL and its initiator.
+ */
+let WELL_KNOWN_APP_FILTERS = [SSO_URL + "/*"];
 
 let prt_sso_cookie = {
     data: {},
@@ -59,6 +66,16 @@ async function waitFor(f) {
  */
 function is_operational() {
     return state_active && accounts.active;
+}
+
+/*
+ * Read the host_permissions from the manifest.
+ * We import them lazy, as they only get relevant on token_refresh.
+ */
+async function load_host_permissions() {
+    chrome.permissions
+        .getAll()
+        .then((p) => (WELL_KNOWN_APP_FILTERS = p.origins));
 }
 
 /*
@@ -137,9 +154,15 @@ function update_handlers_firefox() {
         return;
     }
 
+    if (WELL_KNOWN_APP_FILTERS.length == 0) {
+        return;
+    }
     chrome.webRequest.onBeforeSendHeaders.addListener(
         on_before_send_headers,
-        { urls: ["https://login.microsoftonline.com/*"] },
+        {
+            urls: WELL_KNOWN_APP_FILTERS,
+            types: ["main_frame", "sub_frame"],
+        },
         ["blocking", "requestHeaders"],
     );
 }
@@ -360,10 +383,7 @@ async function get_or_request_prt(ssoUrl) {
 
 async function on_before_send_headers(e) {
     // filter out requests that are not part of the OAuth2.0 flow
-    accept = e.requestHeaders.find(
-        (header) => header.name.toLowerCase() === "accept",
-    );
-    if (accept === undefined || !accept.value.includes("text/html")) {
+    if (!e.url.startsWith(SSO_URL)) {
         return { requestHeaders: e.requestHeaders };
     }
     let prt = await get_or_request_prt(e.url);
@@ -378,7 +398,6 @@ async function on_before_send_headers(e) {
 
 async function update_net_rules(e) {
     ssoLog("update network rules");
-    const SSO_URL = "https://login.microsoftonline.com";
     let prt = await get_or_request_prt(SSO_URL);
     if ("error" in prt) {
         ssoLogError("could not acquire PRT SSO cookie: " + prt.error);
@@ -492,6 +511,7 @@ function on_startup() {
     }
     initialized = true;
     ssoLog("start linux-entra-sso");
+    load_host_permissions();
     notify_state_change(true);
 
     port_native = chrome.runtime.connectNative("linux_entra_sso");
