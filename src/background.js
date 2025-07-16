@@ -33,6 +33,22 @@ function is_operational() {
 }
 
 /*
+ * Read the host_permissions from the manifest.
+ * We import them lazy, as they only get relevant on token_refresh.
+ */
+async function load_host_permissions() {
+    await chrome.permissions
+        .getAll()
+        .then((p) => (PLATFORM.well_known_app_filters = p.origins));
+}
+
+async function on_permissions_changed() {
+    ssoLog("permissions changed, reload host_permissions");
+    await load_host_permissions();
+    notify_state_change();
+}
+
+/*
  * Update the UI according to the current state
  */
 function update_ui() {
@@ -120,6 +136,7 @@ function notify_state_change(ui_only = false) {
         enabled: state_active,
         host_version: host_versions.native,
         broker_version: host_versions.broker,
+        sso_url: PLATFORM.getSsoUrl(),
     });
 }
 
@@ -287,6 +304,9 @@ function on_startup() {
     }
     initialized = true;
     ssoLog("start linux-entra-sso on " + PLATFORM.browser);
+    load_host_permissions();
+    chrome.permissions.onAdded.addListener(on_permissions_changed);
+    chrome.permissions.onRemoved.addListener(on_permissions_changed);
 
     broker = new Broker("linux_entra_sso", on_broker_state_change);
     notify_state_change(true);
