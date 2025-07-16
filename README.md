@@ -55,7 +55,9 @@ Get the `linux_entra_sso-<version>.xpi` file from the [project's releases page](
 
 After installing the extension, enable the following permission:
 
-Access your data for `https://login.microsoftonline.com`
+Access your data for `https://login.microsoftonline.com`.
+To support transparent re-login on applications using this identity provider, you need to grant permission for these domains as well.
+For details, see [PRIVACY.md](PRIVACY.md).
 
 ### Chrome & Brave: Signed Extension from Chrome Web Store
 
@@ -118,6 +120,22 @@ For details, have a look at the Makefile.
 **No configuration is required.** The SSO is automatically enabled.
 If you want to disable the SSO for this session, click on the tray icon and select the guest account.
 In case you are already logged in, you might need to clear all cookies on `login.microsoftonline.com`.
+
+### Single Page Applications
+
+For single-page applications (SPAs, like the Teams PWA) that perform automated re-logins in the background,
+ensure the extension has the necessary permissions to interact with the SPA's domain.
+Otherwise, a manual re-login after approximately 24 hours (depending on the tenant's configuration) may be required.
+
+To grant the necessary permissions, follow these steps:
+
+1. Open the SPA URL in your web browser
+2. Click on the extension's tray icon
+3. Click on "Background SSO (enable)"
+4. A dot should appear next to the domain indicating that permission has been granted
+
+Once configured, no further authentication requests will be needed.
+To revoke permissions, return to the extension's settings and select the domain again.
 
 ### Technical Background
 
