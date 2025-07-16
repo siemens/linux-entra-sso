@@ -55,7 +55,9 @@ Get the `linux_entra_sso-<version>.xpi` file from the [project's releases page](
 
 After installing the extension, enable the following permission:
 
-Access your data for `https://login.microsoftonline.com`
+Access your data for `https://login.microsoftonline.com`.
+To support transparent re-login on applications using this identity provider, you need to grant permission for these domains as well.
+For details, see [PRIVACY.md](PRIVACY.md).
 
 ### Chrome & Brave: Signed Extension from Chrome Web Store
 

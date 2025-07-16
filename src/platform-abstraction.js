@@ -4,11 +4,23 @@
  */
 
 export class Platform {
+    static SSO_URL = "https://login.microsoftonline.com";
+
     browser;
 
     /* references needed for PRT injection */
     broker = null;
     account = null;
+    well_known_app_filters = [];
+
+    constructor() {
+        /*
+         * The WebRequest API operates on allowed URLs only.
+         * To intercept a sub-resource request (e.g. from an iframe), the extension
+         * must have access to both the requested URL and its initiator.
+         */
+        this.well_known_app_filters = [Platform.SSO_URL + "/*"];
+    }
 
     setIconDisabled() {
         chrome.action.setIcon({
