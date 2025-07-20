@@ -42,23 +42,30 @@ SPDX-FileCopyrightText: Copyright 2024 Siemens AG
             </div>
         </div>
         <div class="footer">
-            <div id="broker-state">
-                <span id="broker-state-text" class="left">Identity broker</span>
-                <span class="right">
-                    <span id="broker-version"></span>
-                    &#40;
-                    <span class="state-connected-icon">&#9210;</span>
-                    <span id="broker-state-value">unknown</span>&#41;
-                </span>
+            <div id="message-box" class="footer-block hidden">
+                <div id="message-text"></div>
             </div>
-            <div>
-                <a
-                    href="https://github.com/siemens/linux-entra-sso"
-                    target="_blank"
-                    class="left"
-                    >linux-entra-sso</a
-                >
-                <span id="version" class="right"></span>
+            <div class="footer-block">
+                <div id="broker-state">
+                    <span id="broker-state-text" class="left"
+                        >Identity broker</span
+                    >
+                    <span class="right">
+                        <span id="broker-version"></span>
+                        &#40;
+                        <span class="state-connected-icon">&#9210;</span>
+                        <span id="broker-state-value">unknown</span>&#41;
+                    </span>
+                </div>
+                <div class="clear">
+                    <a
+                        href="https://github.com/siemens/linux-entra-sso"
+                        target="_blank"
+                        class="left"
+                        >linux-entra-sso</a
+                    >
+                    <span id="version" class="right"></span>
+                </div>
             </div>
         </div>
         <script src="menu.js"></script>

@@ -75,6 +75,24 @@ bg_port.onMessage.addListener(async (m) => {
             }
             document.getElementById("version").innerText = vstr;
         }
+
+        // check if at least login provider is enabled
+        // When enabled from the webpage itself, the permissions are granted for *://,
+        // while the manifest limits it to https://. Account for that.
+        msgbox = document.getElementById("message-box");
+        msgtext = document.getElementById("message-text");
+        if (
+            !m.enabled_apps.some((item) =>
+                item.replace("*://", "https://").startsWith(m.sso_url),
+            )
+        ) {
+            msgtext.innerText =
+                "No permission to access login provider. Check app permissions.";
+            msgbox.classList.remove("hidden");
+        } else {
+            msgbox.classList.add("hidden");
+            msgbox.innerText = "";
+        }
     }
 });
 
