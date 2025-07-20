@@ -64,15 +64,17 @@ body.pending .entity {
 }
 
 .footer {
-    padding: 5px 5px 10px 5px;
-    border-top: 1px solid #e0e0e0;
+    padding-bottom: 5px;
     font-size: 0.8em;
     min-height: 1em;
     color: #707070;
 }
 
-.footer > div {
-    clear: both;
+.footer > .footer-block {
+    border-top: 1px solid #e0e0e0;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    margin: 0px 5px 0px 5px;
 }
 
 .footer a,
@@ -82,4 +84,12 @@ body.pending .entity {
 
 .footer .right {
     float: right;
+}
+
+.footer .clear {
+    clear: both;
+}
+
+#message-box {
+    color: red;
 }

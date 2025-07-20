@@ -73,9 +73,15 @@ function is_operational() {
  * We import them lazy, as they only get relevant on token_refresh.
  */
 async function load_host_permissions() {
-    chrome.permissions
+    await chrome.permissions
         .getAll()
         .then((p) => (WELL_KNOWN_APP_FILTERS = p.origins));
+}
+
+async function on_permissions_changed() {
+    ssoLog("permissions changed, reload host_permissions");
+    await load_host_permissions();
+    notify_state_change();
 }
 
 /*
@@ -206,6 +212,8 @@ function notify_state_change(ui_only = false) {
         enabled: state_active,
         host_version: host_versions.native,
         broker_version: host_versions.broker,
+        sso_url: SSO_URL,
+        enabled_apps: WELL_KNOWN_APP_FILTERS,
     });
 }
 
@@ -512,6 +520,8 @@ function on_startup() {
     initialized = true;
     ssoLog("start linux-entra-sso");
     load_host_permissions();
+    chrome.permissions.onAdded.addListener(on_permissions_changed);
+    chrome.permissions.onRemoved.addListener(on_permissions_changed);
     notify_state_change(true);
 
     port_native = chrome.runtime.connectNative("linux_entra_sso");
