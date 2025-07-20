@@ -31,6 +31,10 @@ export class Platform {
         });
     }
 
+    getSsoUrl() {
+        return Platform.SSO_URL;
+    }
+
     update_request_handlers(enabled, account, broker) {
         this.broker = broker;
         this.account = account;
