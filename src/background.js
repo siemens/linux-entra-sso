@@ -137,7 +137,6 @@ function notify_state_change(ui_only = false) {
         host_version: host_versions.native,
         broker_version: host_versions.broker,
         sso_url: PLATFORM.getSsoUrl(),
-        enabled_apps: PLATFORM.well_known_app_filters,
     });
 }
 
