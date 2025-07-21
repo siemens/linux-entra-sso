@@ -5,7 +5,7 @@
 
 html,
 body {
-    width: 320px;
+    width: 420px;
     padding: 0;
     margin: 0;
 }
@@ -52,10 +52,10 @@ body.pending .entity {
     height: 48px;
 }
 
-#broker-state.connected .state-connected-icon {
+.connected .state-connected-icon {
     color: green;
 }
-#broker-state.disconnected .state-connected-icon {
+.disconnected .state-connected-icon {
     color: red;
 }
 
@@ -77,6 +77,10 @@ body.pending .entity {
     margin: 0px 5px 0px 5px;
 }
 
+.footer > .footer-block > div {
+    clear: both;
+}
+
 .footer a,
 .footer a:visited {
     color: #707070;
@@ -90,6 +94,18 @@ body.pending .entity {
     clear: both;
 }
 
-#message-box {
+.error-text {
     color: red;
+}
+
+span.link {
+    text-decoration: underline dotted;
+    cursor: pointer;
+}
+
+.connected #grant-access {
+    display: none;
+}
+.disconnected #withdraw-access {
+    display: none;
 }
