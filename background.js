@@ -213,7 +213,6 @@ function notify_state_change(ui_only = false) {
         host_version: host_versions.native,
         broker_version: host_versions.broker,
         sso_url: SSO_URL,
-        enabled_apps: WELL_KNOWN_APP_FILTERS,
     });
 }
 
