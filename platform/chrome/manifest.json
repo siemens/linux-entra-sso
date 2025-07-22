@@ -32,5 +32,8 @@
     ],
     "optional_host_permissions": [
         "https://*/*"
-    ]
+    ],
+    "storage": {
+        "managed_schema": "storage-schema.json"
+    }
 }
