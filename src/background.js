@@ -11,6 +11,16 @@ import { ssoLog } from "./utils.js";
 const PLATFORM = create_platform();
 let broker = null;
 
+/*
+ * Apps registered via group policy
+ */
+let group_policy = {
+    pending: false,
+    apps_to_add: [],
+    apps_to_remove: [],
+    apps_managed: [],
+};
+
 let accounts = {
     registered: [],
     active: null,
@@ -39,14 +49,14 @@ function is_operational() {
  * We import them lazy, as they only get relevant on token_refresh.
  */
 async function load_host_permissions() {
-    await chrome.permissions
-        .getAll()
-        .then((p) => (PLATFORM.well_known_app_filters = p.origins));
+    const currentPermissions = await chrome.permissions.getAll();
+    PLATFORM.well_known_app_filters = currentPermissions.origins;
 }
 
 async function on_permissions_changed() {
     ssoLog("permissions changed, reload host_permissions");
     await load_host_permissions();
+    load_managed_policies();
     notify_state_change();
 }
 
@@ -81,6 +91,9 @@ function update_ui() {
         }
         chrome.action.setIcon({
             imageData: imgdata,
+        });
+        chrome.action.setBadgeText({
+            text: group_policy.pending ? "1" : null,
         });
         return;
     }
@@ -139,6 +152,7 @@ function notify_state_change(ui_only = false) {
         host_version: host_versions.native,
         broker_version: host_versions.broker,
         sso_url: PLATFORM.getSsoUrl(),
+        gpo_update: group_policy,
     });
 }
 
@@ -299,6 +313,45 @@ async function on_broker_state_change(online) {
     }
 }
 
+function load_managed_policies() {
+    function make_filter(hostname) {
+        return "https://" + hostname + "/*";
+    }
+
+    chrome.storage.managed.get("wellKnownApps", (data) => {
+        if (!data || !data.wellKnownApps) return;
+        group_policy.pending = false;
+        group_policy.apps_to_remove = [];
+        group_policy.apps_to_add = [];
+        group_policy.apps_managed = { ...data.wellKnownApps };
+        for (const [app, enabled] of Object.entries(data.wellKnownApps)) {
+            if (
+                !enabled &&
+                PLATFORM.well_known_app_filters.some(
+                    (value) => value == make_filter(app),
+                )
+            ) {
+                group_policy.apps_to_remove.push(app);
+                group_policy.pending = true;
+            } else if (
+                enabled &&
+                !PLATFORM.well_known_app_filters.some(
+                    (value) => value == make_filter(app),
+                )
+            ) {
+                group_policy.apps_to_add.push(app);
+                group_policy.pending = true;
+            }
+        }
+        ssoLog("managed policies loaded");
+        notify_state_change(true);
+    });
+}
+
+function on_storage_changed(changes, areaName) {
+    if (areaName == "managed") load_managed_policies();
+}
+
 function on_startup() {
     if (initialized) {
         ssoLog("linux-entra-sso already initialized");
@@ -306,7 +359,8 @@ function on_startup() {
     }
     initialized = true;
     ssoLog("start linux-entra-sso on " + PLATFORM.browser);
-    load_host_permissions();
+    load_host_permissions().then(load_managed_policies());
+    chrome.storage.onChanged.addListener(on_storage_changed);
     chrome.permissions.onAdded.addListener(on_permissions_changed);
     chrome.permissions.onRemoved.addListener(on_permissions_changed);
     notify_state_change(true);
