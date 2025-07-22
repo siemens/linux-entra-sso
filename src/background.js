@@ -7,9 +7,11 @@ import { create_platform } from "./platform.js";
 import { Broker } from "./broker.js";
 import { Account } from "./account.js";
 import { ssoLog } from "./utils.js";
+import { PolicyManager } from "./policy.js";
 
 const PLATFORM = create_platform();
 let broker = null;
+let policyManager = null;
 
 let accounts = {
     registered: [],
@@ -32,26 +34,16 @@ function is_operational() {
     return state_active && accounts.active;
 }
 
-/*
- * Read the host_permissions from the manifest.
- * We import them lazy, as they only get relevant on token_refresh.
- */
-async function load_host_permissions() {
-    await chrome.permissions
-        .getAll()
-        .then((p) => (PLATFORM.well_known_app_filters = p.origins));
-}
-
 async function on_permissions_changed() {
     ssoLog("permissions changed, reload host_permissions");
-    await load_host_permissions();
+    await PLATFORM.update_host_permissions();
     notify_state_change();
 }
 
 /*
  * Update the UI according to the current state
  */
-function update_ui() {
+function update_tray(action_needed) {
     chrome.action.enable();
     if (is_operational()) {
         let imgdata = {};
@@ -79,6 +71,9 @@ function update_ui() {
         }
         chrome.action.setIcon({
             imageData: imgdata,
+        });
+        chrome.action.setBadgeText({
+            text: action_needed ? "1" : null,
         });
         return;
     }
@@ -116,7 +111,10 @@ function update_storage() {
  * the menu about a state change.
  */
 function notify_state_change(ui_only = false) {
-    update_ui();
+    const gpo_update = policyManager.getPolicyUpdate(
+        PLATFORM.well_known_app_filters,
+    );
+    update_tray(gpo_update.pending);
     if (!ui_only) {
         ssoLog("update handlers");
         PLATFORM.update_request_handlers(
@@ -137,6 +135,7 @@ function notify_state_change(ui_only = false) {
         host_version: host_versions.native,
         broker_version: host_versions.broker,
         sso_url: PLATFORM.getSsoUrl(),
+        gpo_update: gpo_update,
     });
 }
 
@@ -297,6 +296,12 @@ async function on_broker_state_change(online) {
     notify_state_change(true);
 }
 
+async function on_storage_changed(changes, areaName) {
+    if (areaName == "managed") {
+        await policyManager.load_policies();
+    }
+}
+
 function on_startup() {
     if (initialized) {
         ssoLog("linux-entra-sso already initialized");
@@ -304,7 +309,16 @@ function on_startup() {
     }
     initialized = true;
     ssoLog("start linux-entra-sso on " + PLATFORM.browser);
-    load_host_permissions();
+    policyManager = new PolicyManager();
+
+    Promise.all([
+        PLATFORM.update_host_permissions(),
+        policyManager.load_policies(),
+    ]).then(() => {
+        notify_state_change(true);
+    });
+
+    chrome.storage.onChanged.addListener(on_storage_changed);
     chrome.permissions.onAdded.addListener(on_permissions_changed);
     chrome.permissions.onRemoved.addListener(on_permissions_changed);
 

@@ -43,6 +43,7 @@ COMMON_INPUT_FILES= \
 	src/background.js \
 	src/broker.js \
 	src/platform-abstraction.js \
+	src/policy.js \
 	src/utils.js \
 	icons/profile-outline_48.png \
 	icons/profile-outline_48.png.license \
@@ -55,6 +56,8 @@ CHROME_INPUT_FILES= \
 	platform/chrome/manifest.json \
 	platform/chrome/manifest.json.license \
 	platform/chrome/js/platform.js \
+	platform/chrome/storage-schema.json \
+	platform/chrome/storage-schema.json.license \
 	icons/linux-entra-sso_48.png \
 	icons/linux-entra-sso_48.png.license \
 	icons/linux-entra-sso_128.png \
@@ -82,6 +85,8 @@ CHROME_PACKAGE_FILES= \
 	src/platform.js \
 	manifest.json \
 	manifest.json.license \
+	storage-schema.json \
+	storage-schema.json.license \
 	icons/linux-entra-sso_48.png \
 	icons/linux-entra-sso_48.png.license \
 	icons/linux-entra-sso_128.png \
@@ -123,6 +128,7 @@ all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES) $(THUNDERBIRD_IN
 		cp platform/$$P/js/* build/$$P/src; \
 	done
 	cp -r build/firefox/icons build/firefox/popup build/thunderbird/
+	cp platform/chrome/storage* build/chrome/
 	cp icons/*.svg icons/profile-outline_48.* build/firefox/icons/
 	cp icons/*.png* icons/profile-outline.svg build/chrome/icons/
 	cp popup/menu.* icons/linux-entra-sso.svg icons/profile-outline.svg build/firefox/popup/

@@ -12,6 +12,8 @@ let active = false;
 let sso_url = null;
 /* current URL filter */
 let current_filter = null;
+/* group policy update */
+let gpo = null;
 
 function set_inflight() {
     if (inflight) return false;
@@ -28,7 +30,6 @@ function clear_inflight() {
 bg_port.onMessage.addListener(async (m) => {
     if (m.event == "stateChanged") {
         clear_inflight();
-        check_bg_sso_enabled();
         if (m.account !== null) {
             document.getElementById("me-name").innerText = m.account.name;
             document.getElementById("me-email").innerText = m.account.username;
@@ -81,7 +82,10 @@ bg_port.onMessage.addListener(async (m) => {
             document.getElementById("version").innerText = vstr;
         }
         sso_url = m.sso_url;
+        gpo = m.gpo_update;
         check_sso_provider_perms();
+        check_bg_sso_enabled();
+        check_gpo_update();
     }
 });
 
@@ -128,15 +132,37 @@ async function check_bg_sso_enabled() {
     const permissionsToCheck = {
         origins: [current_filter],
     };
+    var sso_state_classes = document.getElementById("bg-sso-state").classList;
     chrome.permissions.contains(permissionsToCheck).then((result) => {
-        var sso_state_classes =
-            document.getElementById("bg-sso-state").classList;
         if (result) {
             sso_state_classes.replace("disconnected", "connected");
         } else {
             sso_state_classes.replace("connected", "disconnected");
         }
     });
+    if (
+        gpo !== null &&
+        (gpo.has_catch_all || tab_hostname in gpo.apps_managed)
+    ) {
+        sso_state_classes.add("immutable");
+    } else {
+        sso_state_classes.remove("immutable");
+    }
+}
+
+function check_gpo_update() {
+    gpo_box_classes = document.getElementById("gpo-update-box").classList;
+    if (gpo === null || !gpo.pending) {
+        gpo_box_classes.add("hidden");
+        return;
+    }
+    gpo_box_classes.remove("hidden");
+}
+
+function apply_gpo_update() {
+    if (gpo === null) return;
+    request_host_permission(gpo.filters_to_add);
+    remove_host_permission(gpo.filters_to_remove);
 }
 
 function request_host_permission(urls) {
@@ -160,6 +186,17 @@ function request_host_permission(urls) {
     window.close();
 }
 
+function remove_host_permission(urls) {
+    if (urls === null || urls.length == 0) return;
+    const permissionsToRemove = {
+        origins: urls,
+    };
+    chrome.permissions.remove(permissionsToRemove).then((removed) => {
+        if (removed) console.log("Permission removed");
+        else console.log("Failed to remove permission");
+    });
+}
+
 // Requires user interaction, as otherwise we lack the permission to
 // request further host permissions
 document.getElementById("grant-access").addEventListener("click", (event) => {
@@ -176,4 +213,10 @@ document
     .getElementById("grant-access-sso")
     .addEventListener("click", (event) => {
         request_host_permission([sso_url + "/*"]);
+    });
+
+document
+    .getElementById("apply-gpo-update")
+    .addEventListener("click", (event) => {
+        apply_gpo_update();
     });
