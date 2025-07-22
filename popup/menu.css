@@ -98,6 +98,10 @@ body.pending .entity {
     color: red;
 }
 
+.warning-text {
+    color: rgb(255, 120, 0);
+}
+
 span.link {
     text-decoration: underline dotted;
     cursor: pointer;
@@ -107,5 +111,9 @@ span.link {
     display: none;
 }
 .disconnected #withdraw-access {
+    display: none;
+}
+
+#bg-sso-state.immutable .link {
     display: none;
 }

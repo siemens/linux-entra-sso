@@ -39,4 +39,9 @@ export class Platform {
         this.broker = broker;
         this.account = account;
     }
+
+    async update_host_permissions() {
+        const currentPermissions = await chrome.permissions.getAll();
+        this.well_known_app_filters = currentPermissions.origins;
+    }
 }
