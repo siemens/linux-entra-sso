@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "properties": {
+    "wellKnownApps": {
+      "description": "Apps that are allowed to perform background SSO.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    }
+  }
+}
