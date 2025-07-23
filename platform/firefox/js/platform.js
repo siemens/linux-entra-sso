@@ -29,14 +29,11 @@ export class PlatformFirefox extends Platform {
 
     update_request_handlers(enabled, account, broker) {
         super.update_request_handlers(enabled, account, broker);
-        if (!enabled) {
-            chrome.webRequest.onBeforeSendHeaders.removeListener(
-                this.#on_before_send_headers,
-            );
-            this.account = null;
-            return;
-        }
+        chrome.webRequest.onBeforeSendHeaders.removeListener(
+            this.#on_before_send_headers,
+        );
 
+        if (!enabled) return;
         chrome.webRequest.onBeforeSendHeaders.addListener(
             this.#on_before_send_headers,
             { urls: ["https://login.microsoftonline.com/*"] },
