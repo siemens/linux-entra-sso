@@ -8,24 +8,42 @@ import { ssoLog } from "./utils.js";
 
 export class PlatformChrome extends Platform {
     browser = "Chrome";
+    #update_net_rules_cb = null;
 
     static SSO_URL = "https://login.microsoftonline.com";
     static CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
 
+    constructor() {
+        super();
+        this.#update_net_rules_cb = this.#update_net_rules.bind(this);
+    }
+
     update_request_handlers(enabled, account, broker) {
         super.update_request_handlers(enabled, account, broker);
         if (!enabled) {
+            chrome.alarms.onAlarm.removeListener(this.#update_net_rules_cb);
             chrome.alarms.clear("prt-sso-refresh");
             this.#clear_net_rules();
             return;
         }
-        chrome.alarms.create("prt-sso-refresh", {
-            periodInMinutes: PlatformChrome.CHROME_PRT_SSO_REFRESH_INTERVAL_MIN,
-        });
-        chrome.alarms.onAlarm.addListener((alarm) => {
-            this.#update_net_rules(alarm);
-        });
+        this.#ensure_refresh_alarm("prt-sso-refresh");
         this.#update_net_rules();
+    }
+
+    /*
+     * Ensure the alarm is armed exactly once.
+     */
+    async #ensure_refresh_alarm(alarm_id) {
+        const alarm = await chrome.alarms.get(alarm_id);
+        if (!alarm) {
+            await chrome.alarms.create(alarm_id, {
+                periodInMinutes:
+                    PlatformChrome.CHROME_PRT_SSO_REFRESH_INTERVAL_MIN,
+            });
+        }
+        if (!chrome.alarms.onAlarm.hasListener(this.#update_net_rules_cb)) {
+            chrome.alarms.onAlarm.addListener(this.#update_net_rules_cb);
+        }
     }
 
     async #clear_net_rules() {
