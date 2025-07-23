@@ -164,6 +164,21 @@ function update_storage() {
     chrome.storage.local.set({ ssostate });
 }
 
+/*
+ * Ensure the alarm is armed exactly once.
+ */
+async function chrome_ensure_refresh_alarm(alarm_id) {
+    const alarm = await chrome.alarms.get(alarm_id);
+    if (!alarm) {
+        await chrome.alarms.create(alarm_id, {
+            periodInMinutes: CHROME_PRT_SSO_REFRESH_INTERVAL_MIN,
+        });
+    }
+    if (!chrome.alarms.onAlarm.hasListener(update_net_rules)) {
+        chrome.alarms.onAlarm.addListener(update_net_rules);
+    }
+}
+
 function update_handlers_firefox() {
     chrome.webRequest.onBeforeSendHeaders.removeListener(
         on_before_send_headers,
@@ -183,16 +198,12 @@ function update_handlers_firefox() {
 
 function update_handlers_chrome() {
     if (!is_operational()) {
+        chrome.alarms.onAlarm.removeListener(update_net_rules);
         chrome.alarms.clear("prt-sso-refresh");
         clear_net_rules();
         return;
     }
-    chrome.alarms.create("prt-sso-refresh", {
-        periodInMinutes: CHROME_PRT_SSO_REFRESH_INTERVAL_MIN,
-    });
-    chrome.alarms.onAlarm.addListener((alarm) => {
-        update_net_rules(alarm);
-    });
+    chrome_ensure_refresh_alarm("prt-sso-refresh");
     update_net_rules();
 }
 
