@@ -165,16 +165,12 @@ function update_storage() {
 }
 
 function update_handlers_firefox() {
-    if (!is_operational()) {
-        chrome.webRequest.onBeforeSendHeaders.removeListener(
-            on_before_send_headers,
-        );
-        return;
-    }
+    chrome.webRequest.onBeforeSendHeaders.removeListener(
+        on_before_send_headers,
+    );
 
-    if (WELL_KNOWN_APP_FILTERS.length == 0) {
-        return;
-    }
+    if (!is_operational() || WELL_KNOWN_APP_FILTERS.length == 0) return;
+
     chrome.webRequest.onBeforeSendHeaders.addListener(
         on_before_send_headers,
         {
