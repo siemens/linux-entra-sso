@@ -82,7 +82,12 @@ function update_ui() {
     chrome.action.enable();
     if (is_operational()) {
         let imgdata = {};
-        let icon_title = "EntraID SSO: " + accounts.active.username;
+        let icon_title = accounts.active.username;
+
+        // shorten the title a bit
+        if (getBrowser() == "Thunderbird")
+            icon_title = icon_title.split("@")[0];
+
         let color = null;
         chrome.action.setTitle({
             title: icon_title,
@@ -91,7 +96,6 @@ function update_ui() {
         if (!accounts.active.avatar_imgdata) return;
         if (!broker_online) {
             color = "#cc0000";
-            icon_title += " (offline)";
         }
         for (const r of [16, 32, 48]) {
             imgdata[r] = decorate_avatar(
@@ -127,6 +131,8 @@ function update_ui() {
     if (port_native === null) {
         title = "EntraID SSO disabled (no connection to host application)";
     }
+    // We have limited space on Thunderbird, hence shorten the title
+    if (getBrowser() == "Thunderbird") title = "EntraID SSO disabled";
     chrome.action.setTitle({ title: title });
 }
 
