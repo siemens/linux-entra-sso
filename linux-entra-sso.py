@@ -140,8 +140,8 @@ class SsoMib:
         self._state_changed_cb = callback
 
     @staticmethod
-    def _get_auth_parameters(account, scopes):
-        return {
+    def _get_auth_parameters(account, scopes, sso_url=None):
+        params = {
             "account": account,
             "additionalQueryParametersForAuthorization": {},
             "authority": "https://login.microsoftonline.com/common",
@@ -151,7 +151,11 @@ class SsoMib:
             "/common/oauth2/nativeclient",
             "requestedScopes": scopes,
             "username": account["username"],
+            "uxContextHandle": -1,
         }
+        if sso_url:
+            params["ssoUrl"] = sso_url
+        return params
 
     def get_accounts(self):
         self._introspect_broker()
@@ -168,7 +172,8 @@ class SsoMib:
         self._introspect_broker()
         request = {
             "account": account,
-            "authParameters": SsoMib._get_auth_parameters(account, scopes),
+            "authParameters": SsoMib._get_auth_parameters(account, scopes, sso_url),
+            "mamEnrollment": False,
             "ssoUrl": sso_url,
         }
         token = json.loads(

@@ -24,6 +24,8 @@ The extension requires [PyGObject](https://pygobject.gnome.org/) and [pydbus](ht
 - On Arch Linux: `sudo pacman -S python-gobject python-pydbus`
 - If you are using a Python version manager such as `asdf` you must install the Python packages manually: `pip install PyGObject pydbus`
 
+**Note:** System-wide installation and configuration is supported. For more information, see [Global Install](docs/global_install.md).
+
 ### Firefox: Signed Version from GitHub Releases
 
 You can download a **signed version** of the browser extension directly from our [GitHub Releases](https://github.com/siemens/linux-entra-sso/releases).
@@ -53,7 +55,9 @@ Get the `linux_entra_sso-<version>.xpi` file from the [project's releases page](
 
 After installing the extension, enable the following permission:
 
-Access your data for `https://login.microsoftonline.com`
+Access your data for `https://login.microsoftonline.com`.
+To support transparent re-login on applications using this identity provider, you need to grant permission for these domains as well.
+For details, see [PRIVACY.md](PRIVACY.md).
 
 ### Chrome & Brave: Signed Extension from Chrome Web Store
 

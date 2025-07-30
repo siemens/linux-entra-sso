@@ -3,6 +3,22 @@
  * SPDX-FileCopyrightText: Copyright 2024 Siemens AG
  */
 let CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
+const SSO_URL = "https://login.microsoftonline.com";
+/*
+ * The WebRequest API operates on allowed URLs only.
+ * To intercept a sub-resource request (e.g. from an iframe), the extension
+ * must have access to both the requested URL and its initiator.
+ */
+let WELL_KNOWN_APP_FILTERS = [SSO_URL + "/*"];
+/*
+ * Apps registered via group policy
+ */
+let group_policy = {
+    pending: false,
+    apps_to_add: [],
+    apps_to_remove: [],
+    apps_managed: [],
+};
 
 let prt_sso_cookie = {
     data: {},
@@ -62,13 +78,29 @@ function is_operational() {
 }
 
 /*
+ * Read the host_permissions from the manifest.
+ * We import them lazy, as they only get relevant on token_refresh.
+ */
+async function load_host_permissions() {
+    const currentPermissions = await chrome.permissions.getAll();
+    WELL_KNOWN_APP_FILTERS = currentPermissions.origins;
+}
+
+async function on_permissions_changed() {
+    ssoLog("permissions changed, reload host_permissions");
+    await load_host_permissions();
+    load_managed_policies();
+    notify_state_change();
+}
+
+/*
  * Update the UI according to the current state
  */
 function update_ui() {
     chrome.action.enable();
     if (is_operational()) {
         let imgdata = {};
-        let icon_title = "EntraID SSO: " + accounts.active.username;
+        let icon_title = "EntraID SSO: " + accounts.active.broker_obj.username;
         let color = null;
         chrome.action.setTitle({
             title: icon_title,
@@ -88,6 +120,9 @@ function update_ui() {
         }
         chrome.action.setIcon({
             imageData: imgdata,
+        });
+        chrome.action.setBadgeText({
+            text: group_policy.pending ? "1" : null,
         });
         return;
     }
@@ -122,42 +157,53 @@ function update_ui() {
  */
 function update_storage() {
     let default_account = { ...accounts.registered[0] };
-    // remove non serializable properties
-    delete default_account.avatar_imgdata;
     let ssostate = {
         state: state_active,
-        account: state_active ? default_account : null,
+        account: state_active ? default_account.broker_obj : null,
     };
     chrome.storage.local.set({ ssostate });
 }
 
-function update_handlers_firefox() {
-    if (!is_operational()) {
-        chrome.webRequest.onBeforeSendHeaders.removeListener(
-            on_before_send_headers,
-        );
-        return;
+/*
+ * Ensure the alarm is armed exactly once.
+ */
+async function chrome_ensure_refresh_alarm(alarm_id) {
+    const alarm = await chrome.alarms.get(alarm_id);
+    if (!alarm) {
+        await chrome.alarms.create(alarm_id, {
+            periodInMinutes: CHROME_PRT_SSO_REFRESH_INTERVAL_MIN,
+        });
     }
+    if (!chrome.alarms.onAlarm.hasListener(update_net_rules)) {
+        chrome.alarms.onAlarm.addListener(update_net_rules);
+    }
+}
+
+function update_handlers_firefox() {
+    chrome.webRequest.onBeforeSendHeaders.removeListener(
+        on_before_send_headers,
+    );
+
+    if (!is_operational() || WELL_KNOWN_APP_FILTERS.length == 0) return;
 
     chrome.webRequest.onBeforeSendHeaders.addListener(
         on_before_send_headers,
-        { urls: ["https://login.microsoftonline.com/*"] },
+        {
+            urls: WELL_KNOWN_APP_FILTERS,
+            types: ["main_frame", "sub_frame"],
+        },
         ["blocking", "requestHeaders"],
     );
 }
 
 function update_handlers_chrome() {
     if (!is_operational()) {
+        chrome.alarms.onAlarm.removeListener(update_net_rules);
         chrome.alarms.clear("prt-sso-refresh");
         clear_net_rules();
         return;
     }
-    chrome.alarms.create("prt-sso-refresh", {
-        periodInMinutes: CHROME_PRT_SSO_REFRESH_INTERVAL_MIN,
-    });
-    chrome.alarms.onAlarm.addListener((alarm) => {
-        update_net_rules(alarm);
-    });
+    chrome_ensure_refresh_alarm("prt-sso-refresh");
     update_net_rules();
 }
 
@@ -185,6 +231,8 @@ function notify_state_change(ui_only = false) {
         enabled: state_active,
         host_version: host_versions.native,
         broker_version: host_versions.broker,
+        sso_url: SSO_URL,
+        gpo_update: group_policy,
     });
 }
 
@@ -275,14 +323,14 @@ async function load_accounts() {
         "icons/profile-outline_48.png",
         48,
     );
-    ssoLog("active account: " + accounts.active.username);
+    ssoLog("active account: " + accounts.active.broker_obj.username);
 
     // load profile picture and set it as icon
     if (!graph_api_token || graph_api_token.expiresOn < Date.now() + 60000) {
         graph_api_token = null;
         port_native.postMessage({
             command: "acquireTokenSilently",
-            account: accounts.active,
+            account: accounts.active.broker_obj,
         });
         let success = await waitFor(() => {
             return graph_api_token !== null;
@@ -340,7 +388,7 @@ async function get_or_request_prt(ssoUrl) {
     ssoLog("request new PrtSsoCookie from broker for ssoUrl: " + ssoUrl);
     port_native.postMessage({
         command: "acquirePrtSsoCookie",
-        account: accounts.active,
+        account: accounts.active.broker_obj,
         ssoUrl: ssoUrl,
     });
     let success = await waitFor(() => {
@@ -362,10 +410,7 @@ async function get_or_request_prt(ssoUrl) {
 
 async function on_before_send_headers(e) {
     // filter out requests that are not part of the OAuth2.0 flow
-    accept = e.requestHeaders.find(
-        (header) => header.name.toLowerCase() === "accept",
-    );
-    if (accept === undefined || !accept.value.includes("text/html")) {
+    if (!e.url.startsWith(SSO_URL)) {
         return { requestHeaders: e.requestHeaders };
     }
     let prt = await get_or_request_prt(e.url);
@@ -380,7 +425,6 @@ async function on_before_send_headers(e) {
 
 async function update_net_rules(e) {
     ssoLog("update network rules");
-    const SSO_URL = "https://login.microsoftonline.com";
     let prt = await get_or_request_prt(SSO_URL);
     if ("error" in prt) {
         ssoLogError("could not acquire PRT SSO cookie: " + prt.error);
@@ -392,7 +436,7 @@ async function update_net_rules(e) {
             priority: 1,
             condition: {
                 urlFilter: SSO_URL + "/*",
-                resourceTypes: ["main_frame"],
+                resourceTypes: ["main_frame", "sub_frame"],
             },
             action: {
                 type: "modifyHeaders",
@@ -436,7 +480,13 @@ async function on_message_native(response) {
             ssoLog("could not get accounts: " + response.message.error);
             return;
         }
-        accounts.registered = response.message.accounts;
+        for (const a of response.message.accounts) {
+            accounts.registered.push({
+                broker_obj: a,
+                avatar: null,
+                avatar_imgdata: null,
+            });
+        }
     } else if (response.command == "getVersion") {
         host_versions.native = response.message.native;
         host_versions.broker = response.message.linuxBrokerVersion;
@@ -481,6 +531,45 @@ async function on_message_menu(request) {
     notify_state_change();
 }
 
+function load_managed_policies() {
+    function make_filter(hostname) {
+        return "https://" + hostname + "/*";
+    }
+
+    chrome.storage.managed.get("wellKnownApps", (data) => {
+        if (!data.wellKnownApps) return;
+        group_policy.pending = false;
+        group_policy.apps_to_remove = [];
+        group_policy.apps_to_add = [];
+        group_policy.apps_managed = { ...data.wellKnownApps };
+        for (const [app, enabled] of Object.entries(data.wellKnownApps)) {
+            if (
+                !enabled &&
+                WELL_KNOWN_APP_FILTERS.some(
+                    (value) => value == make_filter(app),
+                )
+            ) {
+                group_policy.apps_to_remove.push(app);
+                group_policy.pending = true;
+            } else if (
+                enabled &&
+                !WELL_KNOWN_APP_FILTERS.some(
+                    (value) => value == make_filter(app),
+                )
+            ) {
+                group_policy.apps_to_add.push(app);
+                group_policy.pending = true;
+            }
+        }
+        ssoLog("managed policies loaded");
+        notify_state_change(true);
+    });
+}
+
+function on_storage_changed(changes, areaName) {
+    if (areaName == "managed") load_managed_policies();
+}
+
 function on_startup() {
     if (initialized) {
         ssoLog("linux-entra-sso already initialized");
@@ -488,6 +577,10 @@ function on_startup() {
     }
     initialized = true;
     ssoLog("start linux-entra-sso");
+    load_host_permissions().then(load_managed_policies());
+    chrome.storage.onChanged.addListener(on_storage_changed);
+    chrome.permissions.onAdded.addListener(on_permissions_changed);
+    chrome.permissions.onRemoved.addListener(on_permissions_changed);
     notify_state_change(true);
 
     port_native = chrome.runtime.connectNative("linux_entra_sso");
@@ -518,10 +611,10 @@ function on_startup() {
         if (data.ssostate) {
             state_active = data.ssostate.state;
             if (state_active) {
-                accounts.active = { ...data.ssostate.account };
+                accounts.active = { broker_obj: { ...data.ssostate.account } };
                 ssoLog(
                     "temporarily using last-known account: " +
-                        accounts.active.username,
+                        accounts.active.broker_obj.username,
                 );
             }
             notify_state_change();
