@@ -64,4 +64,5 @@ The creation of public releases is a partially automated process:
 4. add release-notes to public release
 5. manually inspect signed xpi (double check)
 6. merge auto-created MR to enroll Firefox update manifest
-7. wait for CWS to review and sign extension, upload `.crx` to releases page
+7. publish CWS upload (answer questions on permission changes)
+8. wait for CWS to review and sign extension, upload `.crx` to releases page
