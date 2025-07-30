@@ -32,8 +32,22 @@ function ssoLogError(message) {
     console.error("[Linux Entra SSO] " + message);
 }
 
-function isFirefox() {
-    return typeof browser !== "undefined";
+function getBrowser() {
+    let userAgent = navigator.userAgent.toLowerCase();
+
+    if (userAgent.includes("firefox")) {
+        return "Firefox";
+    } else if (userAgent.includes("thunderbird")) {
+        return "Thunderbird";
+    } else if (userAgent.includes("chrome")) {
+        return "Chrome";
+    } else {
+        return "Unknown";
+    }
+}
+
+function isFirefoxLike() {
+    return ["Firefox", "Thunderbird"].includes(getBrowser());
 }
 
 /*
@@ -92,7 +106,7 @@ function update_ui() {
         return;
     }
     /* inactive states */
-    if (isFirefox()) {
+    if (isFirefoxLike()) {
         chrome.action.setIcon({
             path: "icons/linux-entra-sso.svg",
         });
@@ -163,7 +177,7 @@ function update_handlers_chrome() {
 
 function update_handlers() {
     ssoLog("update handlers");
-    if (isFirefox()) {
+    if (isFirefoxLike()) {
         update_handlers_firefox();
     } else {
         update_handlers_chrome();
