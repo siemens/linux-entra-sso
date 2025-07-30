@@ -7,7 +7,7 @@ SPDX-License-Identifier: MPL-2.0
 
 This browser extension uses a locally running Microsoft Identity Broker to authenticate the current user on Microsoft Entra ID on Linux devices.
 By that, also sites behind conditional access policies can be accessed.
-The extension is written for Firefox but provides a limited support for Google Chrome (and Chromium).
+The extension is written for Firefox but provides a limited support for Google Chrome, Chromium and Thunderbird.
 
 ## Pre-conditions
 
@@ -24,7 +24,7 @@ The extension requires [PyGObject](https://pygobject.gnome.org/) and [pydbus](ht
 - On Arch Linux: `sudo pacman -S python-gobject python-pydbus`
 - If you are using a Python version manager such as `asdf` you must install the Python packages manually: `pip install PyGObject pydbus`
 
-### Firefox: Signed Version from GitHub Releases
+### Firefox & Thunderbird: Signed Version from GitHub Releases
 
 You can download a **signed version** of the browser extension directly from our [GitHub Releases](https://github.com/siemens/linux-entra-sso/releases).
 
@@ -48,6 +48,8 @@ $ make local-install-firefox
 3. Download the extension file:
 
 Get the `linux_entra_sso-<version>.xpi` file from the [project's releases page](https://github.com/siemens/linux-entra-sso/releases).
+
+> If you are installing for Thunderbird, right-click the link and select "Save Link As..." to avoid installing it in Firefox.
 
 4. Enable required permissions:
 
