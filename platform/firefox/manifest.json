@@ -20,9 +20,8 @@
         "default_area": "navbar"
     },
     "background": {
-        "scripts": [
-            "background.js"
-        ]
+        "scripts": [ "/src/background.js" ],
+        "type": "module"
     },
     "permissions": [
         "nativeMessaging",

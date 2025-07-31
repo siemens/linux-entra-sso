@@ -39,7 +39,8 @@ ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG)
 
 COMMON_INPUT_FILES= \
 	LICENSES/MPL-2.0.txt \
-	background.js \
+	src/background.js \
+	src/platform-abstraction.js \
 	icons/profile-outline_48.png \
 	icons/profile-outline_48.png.license \
 	popup/menu.css \
@@ -50,6 +51,7 @@ CHROME_INPUT_FILES= \
 	$(COMMON_INPUT_FILES) \
 	platform/chrome/manifest.json \
 	platform/chrome/manifest.json.license \
+	platform/chrome/js/platform.js \
 	icons/linux-entra-sso_48.png \
 	icons/linux-entra-sso_48.png.license \
 	icons/linux-entra-sso_128.png \
@@ -59,6 +61,7 @@ FIREFOX_INPUT_FILES= \
 	$(COMMON_INPUT_FILES) \
 	platform/firefox/manifest.json \
 	platform/firefox/manifest.json.license \
+	platform/firefox/js/platform.js \
 	icons/linux-entra-sso.svg \
 	icons/profile-outline.svg
 
@@ -100,7 +103,8 @@ all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES)
 	for P in firefox chrome; do \
 		mkdir -p build/$$P/icons build/$$P/popup; \
 		cp platform/$$P/manifest* build/$$P; \
-		cp -rf LICENSES background.js build/$$P/; \
+		cp -rf LICENSES src build/$$P/; \
+		cp platform/$$P/js/* build/$$P/src; \
 	done
 	cp icons/*.svg icons/profile-outline_48.* build/firefox/icons/
 	cp icons/*.png* icons/profile-outline.svg build/chrome/icons/

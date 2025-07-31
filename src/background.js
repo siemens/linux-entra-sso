@@ -2,6 +2,11 @@
  * SPDX-License-Identifier: MPL-2.0
  * SPDX-FileCopyrightText: Copyright 2024 Siemens AG
  */
+
+import { create_platform } from "./platform.js";
+
+const PLATFORM = create_platform();
+
 let CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
 
 let prt_sso_cookie = {
@@ -44,10 +49,6 @@ function getBrowser() {
     } else {
         return "Unknown";
     }
-}
-
-function isFirefoxLike() {
-    return ["Firefox", "Thunderbird"].includes(getBrowser());
 }
 
 /*
@@ -110,15 +111,15 @@ function update_ui() {
         return;
     }
     /* inactive states */
-    if (isFirefoxLike()) {
+    if (PLATFORM.isLike("Firefox")) {
         chrome.action.setIcon({
-            path: "icons/linux-entra-sso.svg",
+            path: "/icons/linux-entra-sso.svg",
         });
     } else {
         chrome.action.setIcon({
             path: {
-                48: "icons/linux-entra-sso_48.png",
-                128: "icons/linux-entra-sso_128.png",
+                48: "/icons/linux-entra-sso_48.png",
+                128: "/icons/linux-entra-sso_128.png",
             },
         });
     }
@@ -183,7 +184,7 @@ function update_handlers_chrome() {
 
 function update_handlers() {
     ssoLog("update handlers");
-    if (isFirefoxLike()) {
+    if (PLATFORM.isLike("Firefox")) {
         update_handlers_firefox();
     } else {
         update_handlers_chrome();
@@ -292,7 +293,7 @@ async function load_accounts() {
     accounts.active = accounts.registered[0];
     accounts.active.avatar = null;
     accounts.active.avatar_imgdata = await load_icon(
-        "icons/profile-outline_48.png",
+        "/icons/profile-outline_48.png",
         48,
     );
     ssoLog("active account: " + accounts.active.username);
@@ -382,7 +383,7 @@ async function get_or_request_prt(ssoUrl) {
 
 async function on_before_send_headers(e) {
     // filter out requests that are not part of the OAuth2.0 flow
-    accept = e.requestHeaders.find(
+    const accept = e.requestHeaders.find(
         (header) => header.name.toLowerCase() === "accept",
     );
     if (accept === undefined || !accept.value.includes("text/html")) {
@@ -507,7 +508,7 @@ function on_startup() {
         return;
     }
     initialized = true;
-    ssoLog("start linux-entra-sso");
+    ssoLog("start linux-entra-sso on " + PLATFORM.browser);
     notify_state_change(true);
 
     port_native = chrome.runtime.connectNative("linux_entra_sso");
