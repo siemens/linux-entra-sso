@@ -26,15 +26,6 @@ let broker_online = false;
 let port_native = null;
 let port_menu = null;
 
-function getBrowser() {
-    let browser = PLATFORM.browser;
-    if (browser == "Firefox") {
-        if (navigator.userAgent.toLowerCase().includes("thunderbird"))
-            return "Thunderbird";
-    }
-    return browser;
-}
-
 /*
  * Check if all conditions for SSO are met
  */
@@ -52,7 +43,7 @@ function update_ui() {
         let icon_title = accounts.active.username;
 
         // shorten the title a bit
-        if (getBrowser() == "Thunderbird")
+        if (PLATFORM.browser == "Thunderbird")
             icon_title = icon_title.split("@")[0];
 
         let color = null;
@@ -88,7 +79,7 @@ function update_ui() {
         title = "EntraID SSO disabled (no connection to host application)";
     }
     // We have limited space on Thunderbird, hence shorten the title
-    if (getBrowser() == "Thunderbird") title = "EntraID SSO disabled";
+    if (PLATFORM.browser == "Thunderbird") title = "EntraID SSO disabled";
     chrome.action.setTitle({ title: title });
 }
 
