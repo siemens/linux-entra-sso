@@ -4,15 +4,14 @@
  */
 
 import { create_platform } from "./platform.js";
+import { Broker } from "./broker.js";
+import { ssoLog, ssoLogError } from "./utils.js";
 
 const PLATFORM = create_platform();
+let broker = null;
 
 let CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
 
-let prt_sso_cookie = {
-    data: {},
-    hasData: false,
-};
 let accounts = {
     registered: [],
     active: null,
@@ -25,17 +24,7 @@ let host_versions = {
 let initialized = false;
 let graph_api_token = null;
 let state_active = true;
-let broker_online = false;
-let port_native = null;
 let port_menu = null;
-
-function ssoLog(message) {
-    console.log("[Linux Entra SSO] " + message);
-}
-
-function ssoLogError(message) {
-    console.error("[Linux Entra SSO] " + message);
-}
 
 function getBrowser() {
     let userAgent = navigator.userAgent.toLowerCase();
@@ -49,24 +38,6 @@ function getBrowser() {
     } else {
         return "Unknown";
     }
-}
-
-/*
- * Helpers to wait for a value to become available
- */
-async function sleep(ms) {
-    return new Promise((r) => setTimeout(r, ms));
-}
-async function waitFor(f) {
-    let retries = 50;
-    while (!f() && --retries > 0) {
-        await sleep(200);
-    }
-    if (retries <= 0) {
-        ssoLogError("timeout while waiting for native messaging host");
-        return false;
-    }
-    return true;
 }
 
 /*
@@ -95,7 +66,7 @@ function update_ui() {
         });
         // we do not yet have the avatar image
         if (!accounts.active.avatar_imgdata) return;
-        if (!broker_online) {
+        if (!broker.isRunning()) {
             color = "#cc0000";
         }
         for (const r of [16, 32, 48]) {
@@ -116,9 +87,9 @@ function update_ui() {
     if (state_active) title = "EntraID SSO disabled (waiting for broker).";
     if (accounts.registered.length == 0) {
         title = "EntraID SSO disabled (no accounts registered).";
-        if (!broker_online) chrome.action.disable();
+        if (!broker.isRunning()) chrome.action.disable();
     }
-    if (port_native === null) {
+    if (!broker.isConnected()) {
         title = "EntraID SSO disabled (no connection to host application)";
     }
     // We have limited space on Thunderbird, hence shorten the title
@@ -191,7 +162,7 @@ function notify_state_change(ui_only = false) {
     port_menu.postMessage({
         event: "stateChanged",
         account: accounts.registered.length > 0 ? accounts.registered[0] : null,
-        broker_online: broker_online,
+        broker_online: broker.isRunning(),
         enabled: state_active,
         host_version: host_versions.native,
         broker_version: host_versions.broker,
@@ -265,21 +236,13 @@ async function load_icon(path, width) {
 
 async function load_accounts() {
     ssoLog("loading accounts");
-    port_native.postMessage({ command: "getAccounts" });
-    let success = await waitFor(() => {
-        if (accounts.queried) {
-            return true;
-        }
-        return false;
-    });
-    if (!success) {
-        accounts.queried = false;
-        return;
-    } else if (accounts.registered.length == 0) {
-        ssoLog("no accounts registered");
-        return;
-    }
-    accounts.active = accounts.registered[0];
+    if (accounts.queried) return;
+
+    const _accounts = await broker.getAccounts();
+    if (!_accounts) return;
+    accounts.queried = true;
+    accounts.registered = _accounts;
+    accounts.active = _accounts[0];
     accounts.active.avatar = null;
     accounts.active.avatar_imgdata = await load_icon(
         "/icons/profile-outline_48.png",
@@ -290,20 +253,10 @@ async function load_accounts() {
     // load profile picture and set it as icon
     if (!graph_api_token || graph_api_token.expiresOn < Date.now() + 60000) {
         graph_api_token = null;
-        port_native.postMessage({
-            command: "acquireTokenSilently",
-            account: accounts.active,
-        });
-        let success = await waitFor(() => {
-            return graph_api_token !== null;
-        });
-        if (!success) {
-            return;
-        } else if ("error" in graph_api_token) {
-            ssoLog(
-                "couldn't acquire API token for avatar: " +
-                    graph_api_token.error,
-            );
+        graph_api_token = await broker.acquireTokenSilently(accounts.active);
+        if ("error" in graph_api_token) {
+            ssoLog("couldn't acquire API token for avatar:");
+            console.log(graph_api_token.error);
             return;
         }
         ssoLog("API token acquired");
@@ -346,30 +299,6 @@ async function load_accounts() {
     update_storage();
 }
 
-async function get_or_request_prt(ssoUrl) {
-    ssoLog("request new PrtSsoCookie from broker for ssoUrl: " + ssoUrl);
-    port_native.postMessage({
-        command: "acquirePrtSsoCookie",
-        account: accounts.active,
-        ssoUrl: ssoUrl,
-    });
-    let success = await waitFor(() => {
-        if (prt_sso_cookie.hasData) {
-            return true;
-        }
-        return false;
-    });
-    if (!success) {
-        return { error: "timeout while waiting for native messaging host" };
-    }
-    prt_sso_cookie.hasData = false;
-    const data = prt_sso_cookie.data;
-    if ("error" in data) {
-        ssoLog("could not acquire PRT SSO cookie: " + data.error);
-    }
-    return data;
-}
-
 async function on_before_send_headers(e) {
     // filter out requests that are not part of the OAuth2.0 flow
     const accept = e.requestHeaders.find(
@@ -378,7 +307,7 @@ async function on_before_send_headers(e) {
     if (accept === undefined || !accept.value.includes("text/html")) {
         return { requestHeaders: e.requestHeaders };
     }
-    let prt = await get_or_request_prt(e.url);
+    let prt = await broker.acquirePrtSsoCookie(accounts.active, e.url);
     if ("error" in prt) {
         return { requestHeaders: e.requestHeaders };
     }
@@ -391,7 +320,7 @@ async function on_before_send_headers(e) {
 async function update_net_rules(e) {
     ssoLog("update network rules");
     const SSO_URL = "https://login.microsoftonline.com";
-    let prt = await get_or_request_prt(SSO_URL);
+    let prt = await broker.acquirePrtSsoCookie(accounts.active, SSO_URL);
     if ("error" in prt) {
         ssoLogError("could not acquire PRT SSO cookie: " + prt.error);
         return;
@@ -436,51 +365,6 @@ async function clear_net_rules() {
     });
 }
 
-async function on_message_native(response) {
-    if (response.command == "acquirePrtSsoCookie") {
-        prt_sso_cookie.data = response.message;
-        prt_sso_cookie.hasData = true;
-    } else if (response.command == "getAccounts") {
-        accounts.queried = true;
-        if ("error" in response.message) {
-            ssoLog("could not get accounts: " + response.message.error);
-            return;
-        }
-        accounts.registered = response.message.accounts;
-    } else if (response.command == "getVersion") {
-        host_versions.native = response.message.native;
-        host_versions.broker = response.message.linuxBrokerVersion;
-        notify_state_change(true);
-    } else if (response.command == "acquireTokenSilently") {
-        if ("error" in response.message) {
-            graph_api_token = {
-                error: response.message.error,
-            };
-            return;
-        }
-        graph_api_token = response.message.brokerTokenResponse;
-    } else if (response.command == "brokerStateChanged") {
-        if (response.message == "online") {
-            ssoLog("connection to broker restored");
-            broker_online = true;
-            // only reload data if we did not see the broker before
-            if (accounts.queried === false) {
-                await load_accounts();
-                notify_state_change();
-            }
-            if (host_versions.native === null) {
-                port_native.postMessage({ command: "getVersion" });
-            }
-        } else {
-            ssoLog("lost connection to broker");
-            broker_online = false;
-        }
-        notify_state_change(true);
-    } else {
-        ssoLog("unknown command: " + response.command);
-    }
-}
-
 async function on_message_menu(request) {
     if (request.command == "enable") {
         state_active = true;
@@ -489,6 +373,22 @@ async function on_message_menu(request) {
     }
     update_storage();
     notify_state_change();
+}
+
+async function on_broker_state_change(online) {
+    if (online) {
+        ssoLog("connection to broker restored");
+        // only reload data if we did not see the broker before
+        if (accounts.queried === false) {
+            await load_accounts();
+            notify_state_change();
+        }
+        if (host_versions.native === null) {
+            host_versions = await broker.getVersion();
+        }
+    } else {
+        ssoLog("lost connection to broker");
+    }
 }
 
 function on_startup() {
@@ -500,21 +400,8 @@ function on_startup() {
     ssoLog("start linux-entra-sso on " + PLATFORM.browser);
     notify_state_change(true);
 
-    port_native = chrome.runtime.connectNative("linux_entra_sso");
-    port_native.onDisconnect.addListener(() => {
-        port_native = null;
-        if (chrome.runtime.lastError) {
-            ssoLogError(
-                "Error in native application connection: " +
-                    chrome.runtime.lastError.message,
-            );
-        } else {
-            ssoLogError("Native application connection closed.");
-        }
-        notify_state_change(true);
-    });
+    broker = new Broker("linux_entra_sso", on_broker_state_change);
 
-    port_native.onMessage.addListener(on_message_native);
     chrome.runtime.onConnect.addListener((port) => {
         port_menu = port;
         port_menu.onMessage.addListener(on_message_menu);
