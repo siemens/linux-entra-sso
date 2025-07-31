@@ -68,6 +68,7 @@ FIREFOX_INPUT_FILES= \
 # common files for all platforms (relative to build directory)
 CHROME_PACKAGE_FILES= \
 	$(COMMON_INPUT_FILES) \
+	src/platform.js \
 	manifest.json \
 	manifest.json.license \
 	icons/linux-entra-sso_48.png \
@@ -78,6 +79,7 @@ CHROME_PACKAGE_FILES= \
 
 FIREFOX_PACKAGE_FILES= \
 	$(COMMON_INPUT_FILES) \
+	src/platform.js \
 	manifest.json \
 	manifest.json.license \
 	icons/linux-entra-sso.svg \

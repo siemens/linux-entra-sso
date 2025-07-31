@@ -111,18 +111,7 @@ function update_ui() {
         return;
     }
     /* inactive states */
-    if (PLATFORM.isLike("Firefox")) {
-        chrome.action.setIcon({
-            path: "/icons/linux-entra-sso.svg",
-        });
-    } else {
-        chrome.action.setIcon({
-            path: {
-                48: "/icons/linux-entra-sso_48.png",
-                128: "/icons/linux-entra-sso_128.png",
-            },
-        });
-    }
+    PLATFORM.setIconDisabled();
     let title = "EntraID SSO disabled. Click to enable.";
     if (state_active) title = "EntraID SSO disabled (waiting for broker).";
     if (accounts.registered.length == 0) {

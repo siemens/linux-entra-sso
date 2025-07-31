@@ -8,9 +8,10 @@ import { Platform } from "./platform-abstraction.js";
 export class PlatformFirefox extends Platform {
     browser = "Firefox";
 
-    isLike(_browser) {
-        if (["Firefox", "Thunderbird"].includes(this.browser)) return true;
-        return super.isLike(_browser);
+    setIconDisabled() {
+        chrome.action.setIcon({
+            path: "/icons/linux-entra-sso.svg",
+        });
     }
 }
 

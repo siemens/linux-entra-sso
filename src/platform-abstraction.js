@@ -6,7 +6,16 @@
 export class Platform {
     browser;
 
-    isLike(_browser) {
-        return this.browser == _browser;
+    /* references needed for PRT injection */
+    broker = null;
+    account = null;
+
+    setIconDisabled() {
+        chrome.action.setIcon({
+            path: {
+                48: "/icons/linux-entra-sso_48.png",
+                128: "/icons/linux-entra-sso_128.png",
+            },
+        });
     }
 }
