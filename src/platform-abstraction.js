@@ -18,4 +18,9 @@ export class Platform {
             },
         });
     }
+
+    update_request_handlers(enabled, account, broker) {
+        this.broker = broker;
+        this.account = account;
+    }
 }
