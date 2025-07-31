@@ -5,12 +5,10 @@
 
 import { create_platform } from "./platform.js";
 import { Broker } from "./broker.js";
-import { ssoLog, ssoLogError } from "./utils.js";
+import { ssoLog } from "./utils.js";
 
 const PLATFORM = create_platform();
 let broker = null;
-
-let CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
 
 let accounts = {
     registered: [],
@@ -112,52 +110,20 @@ function update_storage() {
     chrome.storage.local.set({ ssostate });
 }
 
-function update_handlers_firefox() {
-    if (!is_operational()) {
-        chrome.webRequest.onBeforeSendHeaders.removeListener(
-            on_before_send_headers,
-        );
-        return;
-    }
-
-    chrome.webRequest.onBeforeSendHeaders.addListener(
-        on_before_send_headers,
-        { urls: ["https://login.microsoftonline.com/*"] },
-        ["blocking", "requestHeaders"],
-    );
-}
-
-function update_handlers_chrome() {
-    if (!is_operational()) {
-        chrome.alarms.clear("prt-sso-refresh");
-        clear_net_rules();
-        return;
-    }
-    chrome.alarms.create("prt-sso-refresh", {
-        periodInMinutes: CHROME_PRT_SSO_REFRESH_INTERVAL_MIN,
-    });
-    chrome.alarms.onAlarm.addListener((alarm) => {
-        update_net_rules(alarm);
-    });
-    update_net_rules();
-}
-
-function update_handlers() {
-    ssoLog("update handlers");
-    if (PLATFORM.isLike("Firefox")) {
-        update_handlers_firefox();
-    } else {
-        update_handlers_chrome();
-    }
-}
-
 /*
  * Update the tray icon, (un)register the handlers and notify
  * the menu about a state change.
  */
 function notify_state_change(ui_only = false) {
     update_ui();
-    if (!ui_only) update_handlers();
+    if (!ui_only) {
+        ssoLog("update handlers");
+        PLATFORM.update_request_handlers(
+            is_operational(),
+            accounts.active,
+            broker,
+        );
+    }
     if (port_menu === null) return;
     port_menu.postMessage({
         event: "stateChanged",
@@ -297,72 +263,6 @@ async function load_accounts() {
         ssoLog("Warning: Could not get profile picture.");
     }
     update_storage();
-}
-
-async function on_before_send_headers(e) {
-    // filter out requests that are not part of the OAuth2.0 flow
-    const accept = e.requestHeaders.find(
-        (header) => header.name.toLowerCase() === "accept",
-    );
-    if (accept === undefined || !accept.value.includes("text/html")) {
-        return { requestHeaders: e.requestHeaders };
-    }
-    let prt = await broker.acquirePrtSsoCookie(accounts.active, e.url);
-    if ("error" in prt) {
-        return { requestHeaders: e.requestHeaders };
-    }
-    // ms-oapxbc OAuth2 protocol extension
-    ssoLog("inject PRT SSO into request headers");
-    e.requestHeaders.push({ name: prt.cookieName, value: prt.cookieContent });
-    return { requestHeaders: e.requestHeaders };
-}
-
-async function update_net_rules(e) {
-    ssoLog("update network rules");
-    const SSO_URL = "https://login.microsoftonline.com";
-    let prt = await broker.acquirePrtSsoCookie(accounts.active, SSO_URL);
-    if ("error" in prt) {
-        ssoLogError("could not acquire PRT SSO cookie: " + prt.error);
-        return;
-    }
-    const newRules = [
-        {
-            id: 1,
-            priority: 1,
-            condition: {
-                urlFilter: SSO_URL + "/*",
-                resourceTypes: ["main_frame"],
-            },
-            action: {
-                type: "modifyHeaders",
-                requestHeaders: [
-                    {
-                        header: prt.cookieName,
-                        operation: "set",
-                        value: prt.cookieContent,
-                    },
-                ],
-            },
-        },
-    ];
-    const oldRules = await chrome.declarativeNetRequest.getSessionRules();
-    const oldRuleIds = oldRules.map((rule) => rule.id);
-
-    // Use the arrays to update the dynamic rules
-    await chrome.declarativeNetRequest.updateSessionRules({
-        removeRuleIds: oldRuleIds,
-        addRules: newRules,
-    });
-    ssoLog("network rules updated");
-}
-
-async function clear_net_rules() {
-    ssoLog("clear network rules");
-    const oldRules = await chrome.declarativeNetRequest.getSessionRules();
-    const oldRuleIds = oldRules.map((rule) => rule.id);
-    await chrome.declarativeNetRequest.updateSessionRules({
-        removeRuleIds: oldRuleIds,
-    });
 }
 
 async function on_message_menu(request) {
