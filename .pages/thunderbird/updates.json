@@ -1,0 +1,8 @@
+{
+  "addons": {
+    "linux-entra-sso@example.com": {
+      "updates": [
+      ]
+    }
+  }
+}
