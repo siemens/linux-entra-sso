@@ -17,7 +17,7 @@
         "default_area": "navbar"
     },
     "background": {
-        "service_worker": "background.js",
+        "service_worker": "/src/background.js",
         "type": "module"
     },
     "permissions": [
