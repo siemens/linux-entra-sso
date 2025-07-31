@@ -25,17 +25,12 @@ let state_active = true;
 let port_menu = null;
 
 function getBrowser() {
-    let userAgent = navigator.userAgent.toLowerCase();
-
-    if (userAgent.includes("firefox")) {
-        return "Firefox";
-    } else if (userAgent.includes("thunderbird")) {
-        return "Thunderbird";
-    } else if (userAgent.includes("chrome")) {
-        return "Chrome";
-    } else {
-        return "Unknown";
+    let browser = PLATFORM.browser;
+    if (browser == "Firefox") {
+        if (navigator.userAgent.toLowerCase().includes("thunderbird"))
+            return "Thunderbird";
     }
+    return browser;
 }
 
 /*
