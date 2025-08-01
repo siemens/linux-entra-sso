@@ -39,7 +39,10 @@ ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG)
 
 COMMON_INPUT_FILES= \
 	LICENSES/MPL-2.0.txt \
-	background.js \
+	src/background.js \
+	src/broker.js \
+	src/platform-abstraction.js \
+	src/utils.js \
 	icons/profile-outline_48.png \
 	icons/profile-outline_48.png.license \
 	popup/menu.css \
@@ -50,6 +53,7 @@ CHROME_INPUT_FILES= \
 	$(COMMON_INPUT_FILES) \
 	platform/chrome/manifest.json \
 	platform/chrome/manifest.json.license \
+	platform/chrome/js/platform.js \
 	icons/linux-entra-sso_48.png \
 	icons/linux-entra-sso_48.png.license \
 	icons/linux-entra-sso_128.png \
@@ -59,12 +63,22 @@ FIREFOX_INPUT_FILES= \
 	$(COMMON_INPUT_FILES) \
 	platform/firefox/manifest.json \
 	platform/firefox/manifest.json.license \
+	platform/firefox/js/platform.js \
+	icons/linux-entra-sso.svg \
+	icons/profile-outline.svg
+
+THUNDERBIRD_INPUT_FILES= \
+	$(COMMON_INPUT_FILES) \
+	platform/thunderbird/manifest.json \
+	platform/thunderbird/manifest.json.license \
+	platform/thunderbird/js/platform.js \
 	icons/linux-entra-sso.svg \
 	icons/profile-outline.svg
 
 # common files for all platforms (relative to build directory)
 CHROME_PACKAGE_FILES= \
 	$(COMMON_INPUT_FILES) \
+	src/platform.js \
 	manifest.json \
 	manifest.json.license \
 	icons/linux-entra-sso_48.png \
@@ -75,10 +89,14 @@ CHROME_PACKAGE_FILES= \
 
 FIREFOX_PACKAGE_FILES= \
 	$(COMMON_INPUT_FILES) \
+	src/platform.js \
 	manifest.json \
 	manifest.json.license \
 	icons/linux-entra-sso.svg \
 	popup/profile-outline.svg
+
+THUNDERBIRD_PACKAGE_FILES= \
+	$(FIREFOX_PACKAGE_FILES)
 
 UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
 UPDATE_VERSION_PY='s|0.0.0-dev|$(WEBEXT_VERSION)|g'
@@ -96,17 +114,22 @@ DEBIAN_ARCH = all
 DEBIAN_PKG_DIR = $(CURDIR)/pkgs
 DEBIAN_PKG_FILE = $(DEBIAN_PKG_DIR)/$(DEBIAN_PN)_$(DEBIAN_PV)_$(DEBIAN_ARCH).deb
 
-all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES)
-	for P in firefox chrome; do \
+all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES) $(THUNDERBIRD_INPUT_FILES)
+	for P in firefox thunderbird chrome; do \
 		mkdir -p build/$$P/icons build/$$P/popup; \
 		cp platform/$$P/manifest* build/$$P; \
-		cp -rf LICENSES background.js build/$$P/; \
+		cp -rf LICENSES src build/$$P/; \
+		cp platform/$$P/js/* build/$$P/src; \
 	done
+	cp -r build/firefox/icons build/firefox/popup build/thunderbird/
 	cp icons/*.svg icons/profile-outline_48.* build/firefox/icons/
 	cp icons/*.png* icons/profile-outline.svg build/chrome/icons/
 	cp popup/menu.* icons/linux-entra-sso.svg icons/profile-outline.svg build/firefox/popup/
 	cp popup/menu.* icons/linux-entra-sso.svg icons/profile-outline.svg build/chrome/popup/
+# thunderbird is almost identical to Firefox
+	cp -r build/firefox/icons build/firefox/popup build/thunderbird/
 	cd build/firefox && zip -r ../$(ARCHIVE_NAME).firefox.xpi $(FIREFOX_PACKAGE_FILES) && cd ../../;
+	cd build/thunderbird && zip -r ../$(ARCHIVE_NAME).thunderbird.xpi $(THUNDERBIRD_PACKAGE_FILES) && cd ../../;
 	cd build/chrome && zip -r ../$(ARCHIVE_NAME).chrome.zip $(CHROME_PACKAGE_FILES) && cd ../../;
 
 deb:
@@ -144,7 +167,7 @@ release:
 		exit 1;					\
 	fi
 	${Q}sed -i $(UPDATE_VERSION) platform/*/manifest.json
-	git commit -s platform/firefox/manifest.json platform/chrome/manifest.json -m "Bump version number"
+	git commit -s platform/firefox/manifest.json platform/thunderbird/manifest.json platform/chrome/manifest.json -m "Bump version number"
 	git tag -as v$(VERSION) -m "Release v$(VERSION)"
 
 local-install-firefox:

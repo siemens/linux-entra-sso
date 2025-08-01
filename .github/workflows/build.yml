@@ -67,14 +67,18 @@ jobs:
 
       - run: make package deb
 
-      - name: "web-ext lint"
+      - name: "web-ext lint Firefox"
         run: |
           npx web-ext@${{ env.WEB_EXT_VERS }} lint --source-dir build/firefox --self-hosted
 
-      - name: upload firefox extension
+      - name: "web-ext lint Thunderbird"
+        run: |
+          npx web-ext@${{ env.WEB_EXT_VERS }} lint --source-dir build/thunderbird --self-hosted
+
+      - name: upload Firefox and Thunderbird extension
         uses: actions/upload-artifact@v4
         with:
-          name: firefox-xpi
+          name: mozilla-xpi
           path: |
             build/**/*.xpi
 
