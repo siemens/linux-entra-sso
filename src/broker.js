@@ -40,14 +40,19 @@ export class RpcHandlerQueue {
 }
 
 export class Broker {
+    #name = null;
     #notify_fn = null;
     #port_native = null;
     #rpc_queue = new RpcHandlerQueue();
     #online = false;
 
     constructor(name, state_change_fn) {
+        this.#name = name;
         this.#notify_fn = state_change_fn;
-        this.#port_native = chrome.runtime.connectNative(name);
+    }
+
+    connect() {
+        this.#port_native = chrome.runtime.connectNative(this.#name);
         this.#port_native.onDisconnect.addListener(() => {
             this.#port_native = null;
             if (chrome.runtime.lastError) {
