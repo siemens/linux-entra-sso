@@ -21,7 +21,8 @@
             "mail",
             "calendar",
             "addressbook",
-            "tasks"
+            "tasks",
+            "settings"
         ]
     },
     "background": {
