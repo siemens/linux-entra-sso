@@ -8,6 +8,11 @@ export class Platform {
 
     browser;
 
+    host_versions = {
+        native: null,
+        broker: null,
+    };
+
     /* references needed for PRT injection */
     broker = null;
     account = null;
@@ -20,6 +25,13 @@ export class Platform {
          * must have access to both the requested URL and its initiator.
          */
         this.well_known_app_filters = [Platform.SSO_URL + "/*"];
+    }
+
+    /**
+     * Load platform information from backend.
+     */
+    async setup(broker) {
+        this.host_versions = await broker.getVersion();
     }
 
     setIconDisabled() {
