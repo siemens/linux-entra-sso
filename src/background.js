@@ -87,7 +87,8 @@ function notify_state_change(ui_only = false) {
     const gpo_update = policyManager.getPolicyUpdate(
         PLATFORM.well_known_app_filters,
     );
-    update_tray(gpo_update.pending);
+    let action_needed = !PLATFORM.sso_url_permitted || gpo_update.pending;
+    update_tray(action_needed);
     if (!ui_only && broker.isConnected()) {
         ssoLog("update handlers");
         PLATFORM.update_request_handlers(
