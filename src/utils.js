@@ -10,3 +10,15 @@ export function ssoLog(message) {
 export function ssoLogError(message) {
     console.error("[Linux Entra SSO] " + message);
 }
+
+/**
+ * Promise that can externally be resolved or rejected.
+ */
+export class Deferred {
+    constructor() {
+        this.promise = new Promise((resolve, reject) => {
+            this.reject = reject;
+            this.resolve = resolve;
+        });
+    }
+}
