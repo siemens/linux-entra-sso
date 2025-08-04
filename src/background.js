@@ -14,10 +14,6 @@ let broker = null;
 let policyManager = null;
 let accountManager = null;
 
-let host_versions = {
-    native: null,
-    broker: null,
-};
 let initialized = false;
 let state_active = true;
 let port_menu = null;
@@ -108,8 +104,8 @@ function notify_state_change(ui_only = false) {
             : null,
         broker_online: broker.isRunning(),
         enabled: state_active,
-        host_version: host_versions.native,
-        broker_version: host_versions.broker,
+        host_version: PLATFORM.host_versions.native,
+        broker_version: PLATFORM.host_versions.broker,
         sso_url: PLATFORM.getSsoUrl(),
         gpo_update: gpo_update,
     });
@@ -133,9 +129,6 @@ async function on_broker_state_change(online) {
             await accountManager.loadAccounts();
             accountManager.persist(state_active);
             notify_state_change();
-        }
-        if (host_versions.native === null) {
-            host_versions = await broker.getVersion();
         }
     } else {
         ssoLog("lost connection to broker");
@@ -171,6 +164,9 @@ function on_startup() {
         }),
     ]).then(() => {
         broker.connect();
+        PLATFORM.setup(broker).then(() => {
+            notify_state_change(true);
+        });
         notify_state_change();
     });
 
