@@ -3,19 +3,7 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { ssoLog, ssoLogError } from "./utils.js";
-
-/**
- * Promise that can externally be resolved or rejected.
- */
-export class Deferred {
-    constructor() {
-        this.promise = new Promise((resolve, reject) => {
-            this.reject = reject;
-            this.resolve = resolve;
-        });
-    }
-}
+import { ssoLog, ssoLogError, Deferred } from "./utils.js";
 
 /**
  * Queue to resolve promises, once the data arrives from the
