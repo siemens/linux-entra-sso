@@ -29,27 +29,24 @@ export class PlatformFirefox extends Platform {
 
     update_request_handlers(enabled, account, broker) {
         super.update_request_handlers(enabled, account, broker);
-        if (!enabled) {
-            chrome.webRequest.onBeforeSendHeaders.removeListener(
-                this.#on_before_send_headers,
-            );
-            this.account = null;
-            return;
-        }
+        chrome.webRequest.onBeforeSendHeaders.removeListener(
+            this.#on_before_send_headers,
+        );
 
+        if (!enabled || this.well_known_app_filters.length == 0) return;
         chrome.webRequest.onBeforeSendHeaders.addListener(
             this.#on_before_send_headers,
-            { urls: ["https://login.microsoftonline.com/*"] },
+            {
+                urls: this.well_known_app_filters,
+                types: ["main_frame", "sub_frame"],
+            },
             ["blocking", "requestHeaders"],
         );
     }
 
     async #onBeforeSendHeaders(e) {
         // filter out requests that are not part of the OAuth2.0 flow
-        const accept = e.requestHeaders.find(
-            (header) => header.name.toLowerCase() === "accept",
-        );
-        if (accept === undefined || !accept.value.includes("text/html")) {
+        if (!e.url.startsWith(Platform.SSO_URL)) {
             return { requestHeaders: e.requestHeaders };
         }
         let prt = await this.broker.acquirePrtSsoCookie(this.account, e.url);

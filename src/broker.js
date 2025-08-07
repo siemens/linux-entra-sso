@@ -3,19 +3,8 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { ssoLog, ssoLogError } from "./utils.js";
-
-/**
- * Promise that can externally be resolved or rejected.
- */
-export class Deferred {
-    constructor() {
-        this.promise = new Promise((resolve, reject) => {
-            this.reject = reject;
-            this.resolve = resolve;
-        });
-    }
-}
+import { ssoLog, ssoLogError, Deferred } from "./utils.js";
+import { Account } from "./account.js";
 
 /**
  * Queue to resolve promises, once the data arrives from the
@@ -51,14 +40,19 @@ export class RpcHandlerQueue {
 }
 
 export class Broker {
+    #name = null;
     #notify_fn = null;
     #port_native = null;
     #rpc_queue = new RpcHandlerQueue();
     #online = false;
 
     constructor(name, state_change_fn) {
+        this.#name = name;
         this.#notify_fn = state_change_fn;
-        this.#port_native = chrome.runtime.connectNative(name);
+    }
+
+    connect() {
+        this.#port_native = chrome.runtime.connectNative(this.#name);
         this.#port_native.onDisconnect.addListener(() => {
             this.#port_native = null;
             if (chrome.runtime.lastError) {
@@ -93,7 +87,7 @@ export class Broker {
     async acquireTokenSilently(account) {
         this.#port_native.postMessage({
             command: "acquireTokenSilently",
-            account: account,
+            account: account.brokerObject(),
         });
         return this.#rpc_queue.register_handle("acquireTokenSilently");
     }
@@ -101,7 +95,7 @@ export class Broker {
     async acquirePrtSsoCookie(account, ssoUrl) {
         this.#port_native.postMessage({
             command: "acquirePrtSsoCookie",
-            account: account,
+            account: account.brokerObject(),
             ssoUrl: ssoUrl,
         });
         return this.#rpc_queue.register_handle("acquirePrtSsoCookie");
@@ -124,10 +118,11 @@ export class Broker {
                     ...response.message.error,
                 });
             } else {
-                this.#rpc_queue.resolve_handle(
-                    "getAccounts",
-                    response.message.accounts.slice(),
-                );
+                let _accounts = [];
+                for (const a of response.message.accounts) {
+                    _accounts.push(new Account(a));
+                }
+                this.#rpc_queue.resolve_handle("getAccounts", _accounts);
             }
         } else if (response.command == "getVersion") {
             this.#rpc_queue.resolve_handle("getVersion", {
