@@ -284,9 +284,9 @@ function on_startup() {
     }
     initialized = true;
     ssoLog("start linux-entra-sso on " + PLATFORM.browser);
-    notify_state_change(true);
 
     broker = new Broker("linux_entra_sso", on_broker_state_change);
+    notify_state_change(true);
 
     chrome.runtime.onConnect.addListener((port) => {
         port_menu = port;
