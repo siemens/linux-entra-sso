@@ -10,7 +10,6 @@ export class PlatformChrome extends Platform {
     browser = "Chrome";
     #update_net_rules_cb = null;
 
-    static SSO_URL = "https://login.microsoftonline.com";
     static CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
 
     constructor() {
@@ -59,7 +58,7 @@ export class PlatformChrome extends Platform {
         ssoLog("update network rules");
         let prt = await this.broker.acquirePrtSsoCookie(
             this.account,
-            PlatformChrome.SSO_URL,
+            Platform.SSO_URL,
         );
         if ("error" in prt) {
             ssoLogError("could not acquire PRT SSO cookie: " + prt.error);
@@ -70,8 +69,8 @@ export class PlatformChrome extends Platform {
                 id: 1,
                 priority: 1,
                 condition: {
-                    urlFilter: PlatformChrome.SSO_URL + "/*",
-                    resourceTypes: ["main_frame"],
+                    urlFilter: Platform.SSO_URL + "/*",
+                    resourceTypes: ["main_frame", "sub_frame"],
                 },
                 action: {
                     type: "modifyHeaders",
