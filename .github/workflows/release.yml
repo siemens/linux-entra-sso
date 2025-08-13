@@ -13,7 +13,7 @@ on:
 permissions: {}
 
 env:
-  WEB_EXT_VERS: 8.3.0
+  WEB_EXT_VERS: 8.9.0
 
 jobs:
   release-extension:
