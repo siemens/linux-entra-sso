@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 env:
-  WEB_EXT_VERS: 8.3.0
+  WEB_EXT_VERS: 8.9.0
 
 jobs:
   reuse-and-codestyle:
@@ -45,7 +45,7 @@ jobs:
         run: black --diff --check .
 
       - name: run prettier
-        uses: creyD/prettier_action@v4.3
+        uses: creyD/prettier_action@v4.6
         with:
           dry: true
           prettier_options: '--check **/*.{js,html,css}'
