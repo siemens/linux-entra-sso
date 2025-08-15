@@ -277,6 +277,7 @@ async function on_broker_state_change(online) {
     } else {
         ssoLog("lost connection to broker");
     }
+    notify_state_change(true);
 }
 
 function on_startup() {
