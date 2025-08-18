@@ -100,21 +100,33 @@ jobs:
             .pages/firefox/updates.json \
             > .pages/firefox/updates.json.tmp && mv .pages/firefox/updates.json.tmp .pages/firefox/updates.json
 
-      - name: prepare PR for Firefox update manifest
+      - name: create update manifest for Thunderbird
+        run: |
+          VERSION=$(echo ${{ github.ref_name }} | cut -c 2-)
+          DIGEST="sha256:$(sha256sum build/linux_entra_sso-${VERSION}.thunderbird.xpi | cut -d ' ' -f 1)"
+          LINK="https://github.com/siemens/linux-entra-sso/releases/download/v${VERSION}/linux_entra_sso-${VERSION}.thunderbird.xpi"
+          jq --arg version "${VERSION}" --arg digest "${DIGEST}" --arg link "${LINK}" \
+            '."addons"."@linux-entra-sso.tb"."updates" += [{"version":$version, "update_link":$link, "update_hash":$digest}]' \
+            .pages/thunderbird/updates.json \
+            > .pages/thunderbird/updates.json.tmp && mv .pages/thunderbird/updates.json.tmp .pages/thunderbird/updates.json
+
+      - name: prepare PR for Mozilla update manifests
         uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7.0.6
         with:
-          add-paths: '.pages/firefox/updates.json'
-          commit-message: "chore: release Firefox update manifest"
+          add-paths: |
+            .pages/firefox/updates.json
+            .pages/thunderbird/updates.json
+          commit-message: "chore: release Mozilla update manifests"
           branch: ci/release-firefox-update-manifest
           base: main
-          title: "chore: release Firefox update manifest [bot]"
+          title: "chore: release Mozilla update manifests [bot]"
           assignees: fmoessbauer
           reviewers: jan-kiszka
           author: ${{ env.GIT_COMMITTER }}
           committer: ${{ env.GIT_COMMITTER }}
           signoff: true
           body: |
-            Publish update manifest for Firefox extension, version ${{ github.ref_name }}.
+            Publish update manifest for Mozilla extensions, version ${{ github.ref_name }}.
 
       - name: release Chrome extension on CWS
         uses: mnao305/chrome-extension-upload@4008e29e13c144d0f6725462cbd49b7c291b4928 # v5.0.0
