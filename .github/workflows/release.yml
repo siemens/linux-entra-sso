@@ -48,6 +48,14 @@ jobs:
             --source-dir build/firefox \
             --artifacts-dir build
 
+      # self distributed extensions on Thunderbird are not signed
+      - name: build Thunderbird extension
+        run: |
+          npx web-ext@${{ env.WEB_EXT_VERS }} build \
+            --source-dir build/thunderbird \
+            --artifacts-dir build \
+            --filename '{name}-{version}.thunderbird.xpi'
+
       - name: upload firefox extension
         uses: actions/upload-artifact@v4
         with:
