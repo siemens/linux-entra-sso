@@ -1,6 +1,6 @@
 {
   "addons": {
-    "linux-entra-sso@example.com": {
+    "@linux-entra-sso.tb": {
       "updates": [
       ]
     }
