@@ -4,6 +4,7 @@
     "path": "/usr/local/lib/linux-entra-sso/linux-entra-sso.py",
     "type": "stdio",
     "allowed_extensions": [
-        "linux-entra-sso@example.com"
+        "linux-entra-sso@example.com",
+        "@linux-entra-sso.tb"
     ]
 }

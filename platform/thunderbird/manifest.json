@@ -8,7 +8,7 @@
     },
     "browser_specific_settings": {
         "gecko": {
-            "id": "linux-entra-sso@example.com",
+            "id": "@linux-entra-sso.tb",
             "strict_min_version": "128.0",
             "update_url": "https://siemens.github.io/linux-entra-sso/thunderbird/updates.json"
         }
