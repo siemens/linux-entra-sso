@@ -2,6 +2,11 @@
   "addons": {
     "@linux-entra-sso.tb": {
       "updates": [
+        {
+          "version": "1.5.0",
+          "update_link": "https://github.com/siemens/linux-entra-sso/releases/download/v1.5.0/linux_entra_sso-1.5.0.thunderbird.xpi",
+          "update_hash": "sha256:d0e47ead833030a178a33934b634ed929b94faf265a2d1a63e51f6a02c61df49"
+        }
       ]
     }
   }
