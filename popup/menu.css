@@ -24,9 +24,14 @@
     --light-gray-40: #cfcfd8;
     --light-gray-50: #bfbfc9;
     --dark-gray-05: #5b5b66;
+    --dark-gray-20: #4a4a55;
+    --dark-gray-40: #3a3944;
     --dark-gray-90: #15141a;
+    --red-40: #ff6a75;
     --red-70: #c50042;
+    --green-40: #54ffbd;
     --green-70: #008787;
+    --orange-40: #ff8a50;
     --orange-70: #cc3d00;
 }
 
@@ -36,6 +41,13 @@
         --surface-0: var(--light-gray-05);
         --surface-1: var(--light-gray-20);
         --surface-2: var(--light-gray-40);
+    }
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --surface-0: var(--dark-gray-90);
+        --surface-1: var(--dark-gray-40);
+        --surface-2: var(--dark-gray-20);
     }
 }
 
@@ -49,6 +61,18 @@
     --text-red: var(--red-70);
     --text-green: var(--green-70);
     --text-orange: var(--orange-70);
+}
+
+:root.dark {
+    --surface-0: var(--dark-gray-90);
+    --surface-1: var(--dark-gray-40);
+    --surface-2: var(--dark-gray-20);
+    --border-0: var(--dark-gray-05);
+    --text-0: var(--light-gray-05);
+    --text-1: var(--light-gray-50);
+    --text-red: var(--red-40);
+    --text-green: var(--green-40);
+    --text-orange: var(--orange-40);
 }
 
 html,
