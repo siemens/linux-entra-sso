@@ -199,3 +199,16 @@ span.link {
 #bg-sso-state.immutable .link {
     display: none;
 }
+/* show the immutable texts only when immutable */
+#bg-sso-state .info-text-immutable {
+    display: none;
+}
+#bg-sso-state.immutable .info-text-immutable.disabled {
+    display: inline-block;
+}
+#bg-sso-state.immutable.connected .info-text-immutable.disabled {
+    display: none;
+}
+#bg-sso-state.immutable.connected .info-text-immutable.enabled {
+    display: inline-block;
+}
