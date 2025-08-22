@@ -18,8 +18,28 @@ body {
     cursor: pointer;
 }
 
+#entity-me {
+    display: none;
+}
+body.has-account #entity-me {
+    display: block;
+}
+.info-no-trust {
+    display: none;
+}
+body.has-account .info-no-trust {
+    display: inline-block;
+}
+body.has-account .info-no-account {
+    display: none;
+}
+
 body.pending .entity {
     cursor: wait;
+}
+
+body.nm-connected #nm-error-box {
+    display: none;
 }
 
 .entity:hover {
@@ -95,6 +115,10 @@ body.pending .entity {
 }
 
 .error-text {
+    color: red;
+}
+.footer .error-text a,
+.footer .error-text a:visited {
     color: red;
 }
 

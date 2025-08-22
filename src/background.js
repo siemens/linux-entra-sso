@@ -65,14 +65,16 @@ async function update_tray(action_needed) {
     }
     /* inactive states */
     PLATFORM.setIconDisabled();
-    let title = "EntraID SSO disabled. Click to enable.";
-    if (state_active) title = "EntraID SSO disabled (waiting for broker).";
+    let title = "EntraID SSO disabled";
+    if (state_active) title = "EntraID SSO disabled (waiting for broker)";
     if (accountManager.hasAccounts() == 0) {
-        title = "EntraID SSO disabled (no accounts registered).";
-        if (!broker.isRunning()) chrome.action.disable();
+        title = "EntraID SSO disabled (no accounts registered)";
     }
     if (!broker.isConnected()) {
         title = "EntraID SSO disabled (no connection to host application)";
+        chrome.action.setBadgeText({
+            text: "1",
+        });
     }
     // We have limited space on Thunderbird, hence shorten the title
     if (PLATFORM.browser == "Thunderbird") title = "EntraID SSO disabled";
@@ -104,6 +106,7 @@ function notify_state_change(ui_only = false) {
             ? accountManager.getRegistered()[0].toMenuObject()
             : null,
         broker_online: broker.isRunning(),
+        nm_connected: broker.isConnected(),
         enabled: state_active,
         host_version: PLATFORM.host_versions.native,
         broker_version: PLATFORM.host_versions.broker,
