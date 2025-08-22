@@ -12,6 +12,45 @@
     --monospace-size: 12px;
 }
 
+/*
+ * Colors from https://protocol.mozilla.org/docs/fundamentals/color.html
+ */
+
+:root {
+    --light-gray-05: #ffffff;
+    --light-gray-10: #f9f9fb;
+    --light-gray-20: #f0f0f4;
+    --light-gray-30: #e0e0e6;
+    --light-gray-40: #cfcfd8;
+    --light-gray-50: #bfbfc9;
+    --dark-gray-05: #5b5b66;
+    --dark-gray-90: #15141a;
+    --red-70: #c50042;
+    --green-70: #008787;
+    --orange-70: #cc3d00;
+}
+
+/* set color scheme before JS overwrites it to avoid flickering of white page on dark default */
+@media (prefers-color-scheme: light) {
+    :root {
+        --surface-0: var(--light-gray-05);
+        --surface-1: var(--light-gray-20);
+        --surface-2: var(--light-gray-40);
+    }
+}
+
+:root.light {
+    --surface-0: var(--light-gray-05);
+    --surface-1: var(--light-gray-20);
+    --surface-2: var(--light-gray-40);
+    --border-0: var(--light-gray-30);
+    --text-0: var(--dark-gray-90);
+    --text-1: var(--dark-gray-05);
+    --text-red: var(--red-70);
+    --text-green: var(--green-70);
+    --text-orange: var(--orange-70);
+}
+
 html,
 body {
     width: 420px;
@@ -19,11 +58,15 @@ body {
     margin: 0;
 }
 
+body {
+    background-color: var(--surface-0);
+}
+
 .entity {
     padding: 10px;
     margin: 10px;
     border-radius: 15px;
-    color: #707070;
+    color: var(--text-1);
     cursor: pointer;
 }
 
@@ -52,12 +95,12 @@ body.nm-connected #nm-error-box {
 }
 
 .entity:hover {
-    background-color: #e0e0e0;
+    background-color: var(--surface-1);
 }
 
 .entity.active {
-    background-color: #e0e0e0;
-    color: #000;
+    background-color: var(--surface-2);
+    color: var(--text-0);
     cursor: default;
 }
 
@@ -85,10 +128,10 @@ body.nm-connected #nm-error-box {
 }
 
 .state-connected-icon {
-    color: red;
+    color: var(--text-red);
 }
 .connected .state-connected-icon {
-    color: green;
+    color: var(--text-green);
 }
 
 .hidden {
@@ -99,11 +142,11 @@ body.nm-connected #nm-error-box {
     padding-bottom: 5px;
     font-size: var(--font-size-smaller);
     min-height: 1em;
-    color: #707070;
+    color: var(--text-1);
 }
 
 .footer > .footer-block {
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid var(--border-0);
     padding-top: 5px;
     padding-bottom: 5px;
     margin: 0px 5px 0px 5px;
@@ -115,7 +158,7 @@ body.nm-connected #nm-error-box {
 
 .footer a,
 .footer a:visited {
-    color: #707070;
+    color: var(--text-1);
 }
 
 .footer .right {
@@ -127,15 +170,15 @@ body.nm-connected #nm-error-box {
 }
 
 .error-text {
-    color: red;
+    color: var(--text-red);
 }
 .footer .error-text a,
 .footer .error-text a:visited {
-    color: red;
+    color: var(--text-red);
 }
 
 .warning-text {
-    color: rgb(255, 120, 0);
+    color: var(--text-orange);
 }
 
 span.link {
