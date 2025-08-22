@@ -27,9 +27,17 @@ function clear_inflight() {
     document.body.classList.remove("pending");
 }
 
+function annotate_body_if(annotation, state) {
+    if (state) document.body.classList.add(annotation);
+    else document.body.classList.remove(annotation);
+}
+
 bg_port.onMessage.addListener(async (m) => {
     if (m.event == "stateChanged") {
         clear_inflight();
+        annotate_body_if("has-account", m.account !== null);
+        annotate_body_if("nm-connected", m.nm_connected);
+
         if (m.account !== null) {
             document.getElementById("me-name").innerText = m.account.name;
             document.getElementById("me-email").innerText = m.account.username;
@@ -50,7 +58,7 @@ bg_port.onMessage.addListener(async (m) => {
                 fallback.classList.remove("hidden");
             }
         }
-        if (m.enabled) {
+        if (m.enabled && m.account !== null) {
             document.getElementById("entity-me").classList.add("active");
             document.getElementById("entity-guest").classList.remove("active");
             active = true;
