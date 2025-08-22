@@ -39,6 +39,14 @@ function annotate_by_id_if(element_id, annotation, state) {
     else element.classList.remove(annotation);
 }
 
+function setup_color_scheme() {
+    const scheme = window?.matchMedia?.("(prefers-color-scheme:dark)")?.matches
+        ? "dark"
+        : "light";
+    document.documentElement.classList.add(scheme);
+}
+
+setup_color_scheme();
 bg_port.onMessage.addListener(async (m) => {
     if (m.event == "stateChanged") {
         clear_inflight();
