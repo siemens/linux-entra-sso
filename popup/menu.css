@@ -3,6 +3,15 @@
  * SPDX-FileCopyrightText: Copyright 2024 Siemens AG
  */
 
+:root {
+    --font-size: 14px;
+    --font-size-smaller: calc(var(--font-size) - 1px);
+    --font-size-xsmall: calc(var(--font-size) - 3px);
+    --font-size-larger: 15px;
+    --font-family: Inter, sans-serif;
+    --monospace-size: 12px;
+}
+
 html,
 body {
     width: 420px;
@@ -63,8 +72,11 @@ body.nm-connected #nm-error-box {
     max-width: 200px;
     overflow: hidden;
 }
+.entity .info .name {
+    font-size: var(--font-size-larger);
+}
 .entity .info .email {
-    font-size: 0.8em;
+    font-size: var(--font-size-smaller);
 }
 
 .entity .avatar img {
@@ -85,7 +97,7 @@ body.nm-connected #nm-error-box {
 
 .footer {
     padding-bottom: 5px;
-    font-size: 0.8em;
+    font-size: var(--font-size-smaller);
     min-height: 1em;
     color: #707070;
 }
