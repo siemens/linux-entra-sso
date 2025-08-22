@@ -72,11 +72,11 @@ body.nm-connected #nm-error-box {
     height: 48px;
 }
 
+.state-connected-icon {
+    color: red;
+}
 .connected .state-connected-icon {
     color: green;
-}
-.disconnected .state-connected-icon {
-    color: red;
 }
 
 .hidden {
@@ -131,11 +131,14 @@ span.link {
     cursor: pointer;
 }
 
+#withdraw-access {
+    display: none;
+}
 .connected #grant-access {
     display: none;
 }
-.disconnected #withdraw-access {
-    display: none;
+.connected #withdraw-access {
+    display: inline-block;
 }
 
 #bg-sso-state.immutable .link {
