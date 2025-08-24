@@ -117,7 +117,11 @@ function check_sso_provider_perms() {
 
 async function check_bg_sso_enabled() {
     let [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
-    if (!Object.hasOwn(tab, "url") || !tab.url.startsWith("https://")) {
+    if (
+        !Object.hasOwn(tab, "url") ||
+        !tab.url.startsWith("https://") ||
+        tab.url.startsWith(sso_url)
+    ) {
         annotate_by_id_if("bg-sso-state", "hidden", true);
         return;
     }
