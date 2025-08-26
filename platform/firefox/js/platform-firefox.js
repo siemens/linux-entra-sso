@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { Platform } from "./platform-abstraction.js";
+import { Platform } from "./platform.js";
 import { ssoLog } from "./utils.js";
 
 export class PlatformFirefox extends Platform {
@@ -61,8 +61,4 @@ export class PlatformFirefox extends Platform {
         });
         return { requestHeaders: e.requestHeaders };
     }
-}
-
-export function create_platform() {
-    return new PlatformFirefox();
 }

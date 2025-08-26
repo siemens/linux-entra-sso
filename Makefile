@@ -42,7 +42,7 @@ COMMON_INPUT_FILES= \
 	src/account.js \
 	src/background.js \
 	src/broker.js \
-	src/platform-abstraction.js \
+	src/platform.js \
 	src/policy.js \
 	src/utils.js \
 	icons/profile-outline_48.png \
@@ -55,7 +55,8 @@ CHROME_INPUT_FILES= \
 	$(COMMON_INPUT_FILES) \
 	platform/chrome/manifest.json \
 	platform/chrome/manifest.json.license \
-	platform/chrome/js/platform.js \
+	platform/chrome/js/platform-chrome.js \
+	platform/chrome/js/platform-factory.js \
 	platform/chrome/storage-schema.json \
 	platform/chrome/storage-schema.json.license \
 	icons/linux-entra-sso_48.png \
@@ -67,7 +68,8 @@ FIREFOX_INPUT_FILES= \
 	$(COMMON_INPUT_FILES) \
 	platform/firefox/manifest.json \
 	platform/firefox/manifest.json.license \
-	platform/firefox/js/platform.js \
+	platform/firefox/js/platform-firefox.js \
+	platform/firefox/js/platform-factory.js \
 	icons/linux-entra-sso.svg \
 	icons/profile-outline.svg
 
@@ -75,14 +77,16 @@ THUNDERBIRD_INPUT_FILES= \
 	$(COMMON_INPUT_FILES) \
 	platform/thunderbird/manifest.json \
 	platform/thunderbird/manifest.json.license \
-	platform/thunderbird/js/platform.js \
+	platform/thunderbird/js/platform-thunderbird.js \
+	platform/thunderbird/js/platform-factory.js \
 	icons/linux-entra-sso.svg \
 	icons/profile-outline.svg
 
 # common files for all platforms (relative to build directory)
 CHROME_PACKAGE_FILES= \
 	$(COMMON_INPUT_FILES) \
-	src/platform.js \
+	src/platform-chrome.js \
+	src/platform-factory.js \
 	manifest.json \
 	manifest.json.license \
 	storage-schema.json \
@@ -95,14 +99,16 @@ CHROME_PACKAGE_FILES= \
 
 FIREFOX_PACKAGE_FILES= \
 	$(COMMON_INPUT_FILES) \
-	src/platform.js \
+	src/platform-firefox.js \
+	src/platform-factory.js \
 	manifest.json \
 	manifest.json.license \
 	icons/linux-entra-sso.svg \
 	popup/profile-outline.svg
 
 THUNDERBIRD_PACKAGE_FILES= \
-	$(FIREFOX_PACKAGE_FILES)
+	$(FIREFOX_PACKAGE_FILES) \
+	src/platform-thunderbird.js
 
 UPDATE_VERSION='s|"version":.*|"version": "$(VERSION)",|'
 UPDATE_VERSION_PY='s|0.0.0-dev|$(WEBEXT_VERSION)|g'
@@ -135,6 +141,7 @@ all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES) $(THUNDERBIRD_IN
 	cp popup/menu.* icons/linux-entra-sso.svg icons/profile-outline.svg build/chrome/popup/
 # thunderbird is almost identical to Firefox
 	cp -r build/firefox/icons build/firefox/popup build/thunderbird/
+	cp build/firefox/src/platform-firefox.js build/thunderbird/src/
 	cd build/firefox && zip -r ../$(ARCHIVE_NAME).firefox.xpi $(FIREFOX_PACKAGE_FILES) && cd ../../;
 	cd build/thunderbird && zip -r ../$(ARCHIVE_NAME).thunderbird.xpi $(THUNDERBIRD_PACKAGE_FILES) && cd ../../;
 	cd build/chrome && zip -r ../$(ARCHIVE_NAME).chrome.zip $(CHROME_PACKAGE_FILES) && cd ../../;
