@@ -3,12 +3,9 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { Platform } from "./platform-abstraction.js";
+import { Platform } from "./platform.js";
+
 
 export class PlatformThunderbird extends Platform {
     browser = "Thunderbird";
-}
-
-export function create_platform() {
-    return new PlatformThunderbird();
 }

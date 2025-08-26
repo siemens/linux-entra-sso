@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright 2024 Siemens AG
  */
 
-import { create_platform } from "./platform.js";
+import { create_platform } from "./platform-factory.js";
 import { Broker } from "./broker.js";
 import { AccountManager } from "./account.js";
 import { ssoLog } from "./utils.js";

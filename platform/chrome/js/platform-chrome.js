@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { Platform } from "./platform-abstraction.js";
+import { Platform } from "./platform.js";
 import { ssoLog } from "./utils.js";
 
 export class PlatformChrome extends Platform {
@@ -94,8 +94,4 @@ export class PlatformChrome extends Platform {
         });
         ssoLog("network rules updated");
     }
-}
-
-export function create_platform() {
-    return new PlatformChrome();
 }
