@@ -3,9 +3,8 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { Platform } from "./platform.js";
+import { PlatformFirefox } from "./platform-firefox.js";
 
-
-export class PlatformThunderbird extends Platform {
+export class PlatformThunderbird extends PlatformFirefox {
     browser = "Thunderbird";
 }
