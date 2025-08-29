@@ -150,11 +150,11 @@ export class AccountManager {
         const account = this.#registered.find((a) => a.username() == username);
         if (account === undefined) {
             ssoLogError("no account found with username " + username);
-            return;
+            return undefined;
         }
-        ssoLog("selected account " + account.username());
         this.logout();
         account.active = true;
+        return account;
     }
 
     async loadAccounts() {
@@ -162,10 +162,23 @@ export class AccountManager {
 
         ssoLog("loading accounts");
         const _accounts = await this.#broker.getAccounts();
-        if (!_accounts) return;
+        if (!_accounts || !_accounts.length) {
+            this.#registered = [];
+            return;
+        }
+        // if we already got an account from storage, select the
+        // corresponding one from the broker as active.
+        const last_username = this.getActive()?.username();
         this.#registered = _accounts;
-        this.#registered[0].active = true;
-        ssoLog("active account: " + this.getActive().username());
+        if (last_username && this.selectAccount(last_username)) {
+            ssoLog(
+                "select previously used account: " +
+                    this.getActive().username(),
+            );
+        } else {
+            this.#registered[0].active = true;
+            ssoLog("select first account: " + this.getActive().username());
+        }
         await Promise.all(
             this.#registered.map((a) => this.loadProfilePicture(a)),
         );
