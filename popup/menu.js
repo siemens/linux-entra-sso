@@ -14,6 +14,8 @@ let sso_url = null;
 let current_filter = null;
 /* group policy update */
 let gpo = null;
+/* size of avatar images */
+const AVATAR_SIZE = 48;
 
 function set_inflight() {
     if (inflight) return false;
@@ -54,24 +56,13 @@ bg_port.onMessage.addListener(async (m) => {
         annotate_body_if("nm-connected", m.nm_connected);
 
         if (m.account !== null) {
-            document.getElementById("me-name").innerText = m.account.name;
-            document.getElementById("me-email").innerText = m.account.username;
-            const canvas = document.getElementById("me-avatar");
-            const ctx = canvas.getContext("2d");
-            if (m.account.avatar !== null) {
-                let img = new Image();
-                await new Promise(
-                    (r) => (img.onload = r),
-                    (img.src = m.account.avatar),
-                );
-                ctx.drawImage(img, 0, 0);
-            }
-            annotate_by_id_if("me-avatar-fallback", "hidden", m.account.avatar);
-            annotate_by_id_if("me-avatar", "hidden", !m.account.avatar);
+            const accountsdom = document.getElementById("accountlist");
+            const entity = create_account_entity(m.account);
+            accountsdom.replaceChildren();
+            accountsdom.appendChild(entity);
         }
 
         active = m.enabled && m.account !== null;
-        annotate_by_id_if("entity-me", "active", active);
         annotate_by_id_if("entity-guest", "active", !active);
 
         annotate_by_id_if("broker-state", "connected", m.broker_online);
@@ -95,11 +86,57 @@ bg_port.onMessage.addListener(async (m) => {
     }
 });
 
-document.getElementById("entity-me").addEventListener("click", (event) => {
-    if (active) return;
-    if (!set_inflight(this)) return;
-    bg_port.postMessage({ command: "enable" });
-});
+function create_account_entity(account) {
+    const entity = document.createElement("div");
+    entity.classList.add("entity");
+    if (account.active) entity.classList.add("active");
+
+    const avatarDiv = document.createElement("div");
+    avatarDiv.classList.add("avatar");
+
+    if (account.avatar !== null) {
+        const canvas = document.createElement("canvas");
+        canvas.width = AVATAR_SIZE;
+        canvas.height = AVATAR_SIZE;
+        const ctx = canvas.getContext("2d");
+        let img = new Image(AVATAR_SIZE, AVATAR_SIZE);
+        img.src = account.avatar;
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0);
+        };
+        avatarDiv.appendChild(canvas);
+    } else {
+        const fallbackImg = document.createElement("img");
+        fallbackImg.src = "profile-outline.svg";
+        fallbackImg.width = AVATAR_SIZE;
+        fallbackImg.height = AVATAR_SIZE;
+        fallbackImg.alt = "Avatar";
+        avatarDiv.appendChild(fallbackImg);
+    }
+    entity.appendChild(avatarDiv);
+
+    const infoDiv = document.createElement("div");
+    infoDiv.classList.add("info");
+
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "name";
+    nameDiv.innerText = account.name;
+    infoDiv.appendChild(nameDiv);
+
+    const emailDiv = document.createElement("div");
+    emailDiv.className = "email";
+    emailDiv.innerText = account.username;
+    infoDiv.appendChild(emailDiv);
+
+    entity.appendChild(infoDiv);
+    entity.addEventListener("click", (event) => {
+        if (account.active) return;
+        if (!set_inflight(this)) return;
+        bg_port.postMessage({ command: "enable", username: account.username });
+    });
+    return entity;
+}
+
 document.getElementById("entity-guest").addEventListener("click", (event) => {
     if (!active) return;
     if (!set_inflight(this)) return;

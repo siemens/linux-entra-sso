@@ -10,29 +10,7 @@ SPDX-FileCopyrightText: Copyright 2024 Siemens AG
         <link rel="stylesheet" href="menu.css" />
     </head>
     <body>
-        <div class="entity active" id="entity-me">
-            <div class="avatar">
-                <canvas
-                    id="me-avatar"
-                    width="48"
-                    height="48"
-                    class="hidden"
-                ></canvas>
-                <img
-                    id="me-avatar-fallback"
-                    src="profile-outline.svg"
-                    width="48"
-                    ,
-                    height="48"
-                    ,
-                    alt="Avatar"
-                />
-            </div>
-            <div class="info">
-                <div id="me-name" class="name"></div>
-                <div id="me-email" class="email"></div>
-            </div>
-        </div>
+        <div id="accountlist"></div>
         <div class="entity" id="entity-guest">
             <div class="avatar">
                 <img src="profile-outline.svg" alt="Avatar" />
