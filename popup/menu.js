@@ -52,17 +52,17 @@ setup_color_scheme();
 bg_port.onMessage.addListener(async (m) => {
     if (m.event == "stateChanged") {
         clear_inflight();
-        annotate_body_if("has-account", m.account !== null);
+        annotate_body_if("has-account", m.accounts.length);
         annotate_body_if("nm-connected", m.nm_connected);
 
-        if (m.account !== null) {
+        if (m.accounts !== null) {
             const accountsdom = document.getElementById("accountlist");
-            const entity = create_account_entity(m.account);
+            const entities = m.accounts.map((a) => create_account_entity(a));
             accountsdom.replaceChildren();
-            accountsdom.appendChild(entity);
+            entities.map((e) => accountsdom.appendChild(e));
         }
 
-        active = m.enabled && m.account !== null;
+        active = m.enabled && m.accounts.length;
         annotate_by_id_if("entity-guest", "active", !active);
 
         annotate_by_id_if("broker-state", "connected", m.broker_online);
