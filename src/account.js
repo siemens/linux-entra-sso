@@ -3,13 +3,14 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { ssoLog, load_icon } from "./utils.js";
+import { ssoLog, load_icon, ssoLogError } from "./utils.js";
 import { Deferred } from "./utils.js";
 
 export class Account {
     #broker_obj = null;
     #avatar_imgdata = null;
     avatar = null;
+    active = false;
 
     constructor(broker_obj) {
         this.#broker_obj = { ...broker_obj };
@@ -32,6 +33,7 @@ export class Account {
             name: this.name(),
             username: this.username(),
             avatar: this.avatar,
+            active: this.active,
         };
     }
 
@@ -100,13 +102,21 @@ export class Account {
         ctx.stroke();
         return ctx.getImageData(0, 0, width, width);
     }
+
+    toSerial() {
+        return { broker_obj: this.brokerObject(), active: this.active };
+    }
+
+    static fromSerial(serial) {
+        let acc = new Account(serial.broker_obj);
+        acc.active = serial.active;
+        return acc;
+    }
 }
 
 export class AccountManager {
     #broker = null;
-    #graph_token = null;
     #registered = [];
-    #active = null;
     #queried = false;
 
     constructor(broker) {
@@ -125,11 +135,26 @@ export class AccountManager {
     }
 
     getActive() {
-        return this.#active;
+        return this.#registered.find((a) => a.active);
     }
 
     getRegistered() {
         return this.#registered;
+    }
+
+    logout() {
+        this.#registered.map((a) => (a.active = false));
+    }
+
+    selectAccount(username) {
+        const account = this.#registered.find((a) => a.username() == username);
+        if (account === undefined) {
+            ssoLogError("no account found with username " + username);
+            return;
+        }
+        ssoLog("selected account " + account.username());
+        this.logout();
+        account.active = true;
     }
 
     async loadAccounts() {
@@ -139,30 +164,27 @@ export class AccountManager {
         const _accounts = await this.#broker.getAccounts();
         if (!_accounts) return;
         this.#registered = _accounts;
-        this.#active = _accounts[0];
-        ssoLog("active account: " + this.#active.username());
+        this.#registered[0].active = true;
+        ssoLog("active account: " + this.getActive().username());
+        await Promise.all(
+            this.#registered.map((a) => this.loadProfilePicture(a)),
+        );
+    }
 
-        // load profile picture and set it as icon
-        if (
-            !this.#graph_token ||
-            this.#graph_token.expiresOn < Date.now() + 60000
-        ) {
-            this.#graph_token = await this.#broker.acquireTokenSilently(
-                this.#active,
-            );
-            if ("error" in this.#graph_token) {
-                ssoLog("couldn't acquire API token for avatar:");
-                console.log(this.#graph_token.error);
-                return;
-            }
-            ssoLog("API token acquired");
+    async loadProfilePicture(account) {
+        const graph_token = await this.#broker.acquireTokenSilently(account);
+        if ("error" in graph_token) {
+            ssoLog("couldn't acquire API token for avatar:");
+            console.log(graph_token.error);
+            return;
         }
+        ssoLog("API token acquired for " + account.username());
         const response = await fetch(
             "https://graph.microsoft.com/v1.0/me/photos/48x48/$value",
             {
                 headers: {
                     Accept: "image/jpeg",
-                    Authorization: "Bearer " + this.#graph_token.accessToken,
+                    Authorization: "Bearer " + graph_token.accessToken,
                 },
             },
         );
@@ -187,10 +209,13 @@ export class AccountManager {
             /* store image data */
             ctx.clearRect(0, 0, 48, 48);
             ctx.drawImage(avatar, 0, 0, 48, 48);
-            this.#active.setAvatarImgData(ctx.getImageData(0, 0, 48, 48));
-            this.#active.avatar = dataUrl;
+            account.setAvatarImgData(ctx.getImageData(0, 0, 48, 48));
+            account.avatar = dataUrl;
         } else {
-            ssoLog("Warning: Could not get profile picture.");
+            ssoLog(
+                "Warning: Could not get profile picture of " +
+                    account.username(),
+            );
         }
     }
 
@@ -198,13 +223,13 @@ export class AccountManager {
      * Store the current state in the local storage.
      * To not leak account data in disabled state, we clear the account object.
      */
-    async persist(sso_state) {
+    async persist() {
+        if (!this.hasAccounts()) return;
         let ssostate = {
-            state: sso_state,
-            account:
-                sso_state && this.#active !== null
-                    ? this.#active.brokerObject()
-                    : null,
+            state: this.getActive() != null,
+            accounts: this.getActive()
+                ? this.#registered.map((a) => a.toSerial())
+                : [],
         };
         return chrome.storage.local.set({ ssostate });
     }
@@ -212,19 +237,24 @@ export class AccountManager {
     async restore() {
         let dfd = new Deferred();
         chrome.storage.local.get("ssostate", (data) => {
-            let state_active = true;
-            if (data.ssostate) {
-                state_active = data.ssostate.state;
-                if (
-                    state_active &&
-                    data.ssostate.account &&
-                    !this.hasAccounts()
-                ) {
-                    this.#registered = [new Account(data.ssostate.account)];
-                    this.#active = this.#registered[0];
+            let active_acc = undefined;
+            if (!data.ssostate) {
+                ssoLog("no preserved state found");
+                // if the SSO is not explicitly disabled, we assume it is on.
+                dfd.resolve(true);
+                return;
+            }
+            const state_active = data.ssostate.state;
+            if (state_active && data.ssostate.accounts) {
+                this.#registered = data.ssostate.accounts.map((a) =>
+                    Account.fromSerial(a),
+                );
+                if (!state_active) this.logout();
+                active_acc = this.getActive();
+                if (active_acc) {
                     ssoLog(
                         "temporarily using last-known account: " +
-                            this.#active.username(),
+                            active_acc.username(),
                     );
                 }
             }
