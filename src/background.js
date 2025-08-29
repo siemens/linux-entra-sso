@@ -102,9 +102,7 @@ function notify_state_change(ui_only = false) {
     if (port_menu === null) return;
     port_menu.postMessage({
         event: "stateChanged",
-        account: accountManager.hasAccounts()
-            ? accountManager.getRegistered()[0].toMenuObject()
-            : null,
+        accounts: accountManager.getRegistered().map((a) => a.toMenuObject()),
         broker_online: broker.isRunning(),
         nm_connected: broker.isConnected(),
         enabled: state_active,
@@ -118,11 +116,12 @@ function notify_state_change(ui_only = false) {
 async function on_message_menu(request) {
     if (request.command == "enable") {
         state_active = true;
-        const account = accountManager.getRegistered()[0];
-        accountManager.selectAccount(account.username());
+        const account = accountManager.selectAccount(request.username);
+        if (account) ssoLog("select account " + account.username());
     } else if (request.command == "disable") {
         state_active = false;
         accountManager.logout();
+        ssoLog("disable SSO");
     }
     accountManager.persist();
     notify_state_change();
