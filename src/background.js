@@ -22,7 +22,7 @@ let port_menu = null;
  * Check if all conditions for SSO are met
  */
 function is_operational() {
-    return state_active && accountManager.getActive() !== null;
+    return state_active && accountManager.getActive();
 }
 
 async function on_permissions_changed() {
@@ -65,14 +65,16 @@ async function update_tray(action_needed) {
     }
     /* inactive states */
     PLATFORM.setIconDisabled();
-    let title = "EntraID SSO disabled. Click to enable.";
-    if (state_active) title = "EntraID SSO disabled (waiting for broker).";
+    let title = "EntraID SSO disabled";
+    if (state_active) title = "EntraID SSO disabled (waiting for broker)";
     if (accountManager.hasAccounts() == 0) {
-        title = "EntraID SSO disabled (no accounts registered).";
-        if (!broker.isRunning()) chrome.action.disable();
+        title = "EntraID SSO disabled (no accounts registered)";
     }
     if (!broker.isConnected()) {
         title = "EntraID SSO disabled (no connection to host application)";
+        chrome.action.setBadgeText({
+            text: "1",
+        });
     }
     // We have limited space on Thunderbird, hence shorten the title
     if (PLATFORM.browser == "Thunderbird") title = "EntraID SSO disabled";
@@ -92,7 +94,7 @@ function notify_state_change(ui_only = false) {
     if (!ui_only && broker.isConnected()) {
         ssoLog("update handlers");
         PLATFORM.update_request_handlers(
-            state_active,
+            is_operational(),
             accountManager.getActive(),
             broker,
         );
@@ -100,10 +102,9 @@ function notify_state_change(ui_only = false) {
     if (port_menu === null) return;
     port_menu.postMessage({
         event: "stateChanged",
-        account: accountManager.hasAccounts()
-            ? accountManager.getRegistered()[0].toMenuObject()
-            : null,
+        accounts: accountManager.getRegistered().map((a) => a.toMenuObject()),
         broker_online: broker.isRunning(),
+        nm_connected: broker.isConnected(),
         enabled: state_active,
         host_version: PLATFORM.host_versions.native,
         broker_version: PLATFORM.host_versions.broker,
@@ -115,10 +116,14 @@ function notify_state_change(ui_only = false) {
 async function on_message_menu(request) {
     if (request.command == "enable") {
         state_active = true;
+        const account = accountManager.selectAccount(request.username);
+        if (account) ssoLog("select account " + account.username());
     } else if (request.command == "disable") {
         state_active = false;
+        accountManager.logout();
+        ssoLog("disable SSO");
     }
-    accountManager.persist(state_active);
+    accountManager.persist();
     notify_state_change();
 }
 
@@ -128,7 +133,7 @@ async function on_broker_state_change(online) {
         // only reload data if we did not see the broker before
         if (!accountManager.hasBrokerData()) {
             await accountManager.loadAccounts();
-            accountManager.persist(state_active);
+            accountManager.persist();
             notify_state_change();
         }
     } else {
