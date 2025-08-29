@@ -22,7 +22,7 @@ let port_menu = null;
  * Check if all conditions for SSO are met
  */
 function is_operational() {
-    return state_active && accountManager.getActive() !== null;
+    return state_active && accountManager.getActive();
 }
 
 async function on_permissions_changed() {
@@ -118,10 +118,13 @@ function notify_state_change(ui_only = false) {
 async function on_message_menu(request) {
     if (request.command == "enable") {
         state_active = true;
+        const account = accountManager.getRegistered()[0];
+        accountManager.selectAccount(account.username());
     } else if (request.command == "disable") {
         state_active = false;
+        accountManager.logout();
     }
-    accountManager.persist(state_active);
+    accountManager.persist();
     notify_state_change();
 }
 
@@ -131,7 +134,7 @@ async function on_broker_state_change(online) {
         // only reload data if we did not see the broker before
         if (!accountManager.hasBrokerData()) {
             await accountManager.loadAccounts();
-            accountManager.persist(state_active);
+            accountManager.persist();
             notify_state_change();
         }
     } else {
