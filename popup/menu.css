@@ -94,12 +94,6 @@ body {
     cursor: pointer;
 }
 
-#entity-me {
-    display: none;
-}
-body.has-account #entity-me {
-    display: block;
-}
 .info-no-trust {
     display: none;
 }
