@@ -92,7 +92,7 @@ function notify_state_change(ui_only = false) {
     if (!ui_only && broker.isConnected()) {
         ssoLog("update handlers");
         PLATFORM.update_request_handlers(
-            state_active,
+            is_operational(),
             accountManager.getActive(),
             broker,
         );
