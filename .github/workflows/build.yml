@@ -31,14 +31,13 @@ jobs:
 
       - name: install dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y python3-gi flake8 pylint python3-pydbus black
+          sudo apt-get update && sudo apt-get install -y python3-gi pylint python3-pydbus black
           pip3 install --break-system-packages fsfe-reuse
           git clean -f -d
 
       - name: execute linters
         run: |
           reuse lint
-          flake8 --max-line-length=88
           pylint linux-entra-sso.py
 
       - name: check Python code formatting
