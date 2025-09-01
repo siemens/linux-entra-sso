@@ -54,6 +54,15 @@ following:
             maintained indefinitely and may be redistributed consistent with
             this project or the open source license(s) involved.
 
+## Testing
+
+Please test the extension on all supported platforms (browsers).
+If you cannot test on a platform (e.g., because you don't have it), clearly state this.
+We also provide a mock implementation of the backend part, which can be installed using `make local-install-mock`.
+This mock processes and returns syntactically valid data via the native messaging protocol,
+enabling testing of features like multi-account support that are otherwise difficult to test.
+It does not require a `microsoft-identity-broker` to be running but also does not issue valid tokens.
+
 ## Maintainers: Create Releases
 
 The creation of public releases is a partially automated process:
