@@ -215,6 +215,16 @@ local-install-brave:
 
 local-install: local-install-firefox local-install-chrome local-install-brave
 
+# For testing, we provide a mock implementation of the broker communication
+local-install-mock: local-install
+	install -m 0755 tests/linux_entra_sso_mock.py ~/.mozilla
+	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' ~/.mozilla/native-messaging-hosts/linux_entra_sso.json
+	install -m 0755 tests/linux_entra_sso_mock.py ~/.config/google-chrome
+	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
+	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
+	install -m 0755 tests/linux_entra_sso_mock.py ~/.config/BraveSoftware/Brave-Browser
+	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/linux_entra_sso.json
+
 install:
 	${Q}[ -z "$(python3_bin)" ] && { echo "python3 not found. Please set 'python3_bin'."; exit 1; } || true
 	# Host application
