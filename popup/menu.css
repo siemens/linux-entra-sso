@@ -92,6 +92,7 @@ body {
     border-radius: 15px;
     color: var(--text-1);
     cursor: pointer;
+    display: flow-root;
 }
 
 .info-no-trust {
@@ -123,16 +124,10 @@ body.nm-connected #nm-error-box {
 }
 
 .entity .avatar {
-    display: inline-block;
+    float: left;
     margin-right: 10px;
 }
 
-.entity .info {
-    display: inline-block;
-    vertical-align: top;
-    max-width: 200px;
-    overflow: hidden;
-}
 .entity .info .name {
     font-size: var(--font-size-larger);
 }
