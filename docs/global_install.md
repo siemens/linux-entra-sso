@@ -6,9 +6,22 @@ SPDX-License-Identifier: MPL-2.0
 
 We support both system-wide installation and managed configuration.
 
-## Installation
+## Host Components
 
-A system-wide install is supported for both Firefox and Chromium-based browsers.
+Linux distributions can include the host components by packaging the output of `make install` (using `DESTDIR` is supported).
+This makes the host parts available to all users, but requires the use of signed extension versions.
+
+The native messaging directories differ across Linux distributions.
+The variables `(firefox|chrome|chromium)_nm_dir` and `chrome_ext_dir` must be configured appropriately.
+The Python interpreter (shebang) is determined at install time to avoid runtime dependencies on venvs.
+This can be adjusted by setting `python3_bin`.
+The default values are suitable for a Debian system. For more information, refer to the `Makefile`.
+
+## Webextension
+
+On Chrome, the `make install` target takes care of registering the extension to be auto-installed when starting the browser.
+
+On other browsers, the installation of the extension is controlled via a policy.
 The paths of the policy files may vary across browsers and distributions.
 On Debian, the following paths are known to work.
 
