@@ -103,20 +103,6 @@ To build the extension and install the host parts, perform the following steps:
 5. Install the extension in the Browser from the local `linux-entra-sso-*.xpi` file (Firefox). On Chrome, use `load unpacked` and point to `build/chrome`
 6. Enable "Access your data for `https://login.microsoftonline.com`" under the extension's permissions
 
-### Global Installation of Host Components
-
-Linux distributions can ship the host components by packaging the output of `make install` (`DESTDIR` is supported).
-This makes the host parts available to all users, but will only work with the signed versions of the extension.
-On Chrome, the extension is registered to be auto-installed when starting the browser.
-On Firefox and Chromium, the users still need to manually install the browser extension from the respective stores.
-
-**Note:** The native messaging dirs vary across Linux distributions.
-The variables `(firefox|chrome|chromium)_nm_dir` and `chrome_ext_dir` need to be set accordingly.
-The Python interpreter (shebang) is resolved at install time to avoid depending on venvs at runtime.
-This can be changed by setting `python3_bin`.
-The provided defaults work on a Debian system.
-For details, have a look at the Makefile.
-
 ## Usage
 
 **No configuration is required.** The SSO is automatically enabled.
