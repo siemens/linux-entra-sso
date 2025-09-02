@@ -9,14 +9,19 @@ This browser extension uses a locally running Microsoft Identity Broker to authe
 By that, also sites behind conditional access policies can be accessed.
 The extension is written for Firefox but provides a limited support for Google Chrome, Chromium and Thunderbird.
 
-## Pre-conditions
-
-This extension will only work on intune-enabled Linux devices. Please double
-check this by running the `intune-portal` application and check if your user
-is logged in (after clicking `sign-in`).
-Also make sure to install the host components (see *Installation* below).
+> [!NOTE]
+> This extension will only work on intune-enabled Linux devices. Please double
+> check this by running the `intune-portal` application and check if your user
+> is logged in (after clicking `sign-in`).
 
 ## Installation
+
+The extension consists of two parts:
+
+- a host program that communicates with the Microsoft Identity Broker via DBus
+- a WebExtension that injects the acquired tokens into the corresponding requests
+
+### Dependencies
 
 The extension requires [PyGObject](https://pygobject.gnome.org/) and [pydbus](https://github.com/LEW21/pydbus) as runtime dependencies.
 
@@ -24,15 +29,7 @@ The extension requires [PyGObject](https://pygobject.gnome.org/) and [pydbus](ht
 - On Arch Linux: `sudo pacman -S python-gobject python-pydbus`
 - If you are using a Python version manager such as `asdf` you must install the Python packages manually: `pip install PyGObject pydbus`
 
-**Note:** System-wide installation and configuration is supported. For more information, see [Global Install](docs/global_install.md).
-
-### Firefox & Thunderbird: Signed Version from GitHub Releases
-
-You can download a **signed version** of the browser extension directly from our [GitHub Releases](https://github.com/siemens/linux-entra-sso/releases).
-
-> This package includes only the **browser extension**. The **host tooling** must still be installed manually.
-
-#### Installation Steps
+### Installation of Host Tooling
 
 1. Clone this repository:
 
@@ -41,69 +38,48 @@ $ git clone https://github.com/siemens/linux-entra-sso.git
 $ cd linux-entra-sso
 ```
 
-2. Run the local install command:
+2. Run the local install command (for the intended target):
 
 ```bash
+$ # Firefox & Thunderbird
 $ make local-install-firefox
+$ # Chromium, Chrome and Brave
+$ make local-install-chrome
+$ # All supported browsers
+$ make local-install
 ```
 
-3. Download the extension file:
+> [!NOTE]
+> System-wide installation and configuration is supported. For more information, see [Global Install](docs/global_install.md).
 
-Get the `linux_entra_sso-<version>.xpi` file from the [project's releases page](https://github.com/siemens/linux-entra-sso/releases).
+### Installation of WebExtension
 
-> If you are installing for Thunderbird, right-click the link and select "Save Link As..." to avoid installing it in Firefox.
+To complete the setup, install the WebExtension in your browser. This is necessary alongside the host tooling for the extension to function properly.
 
-4. Enable required permissions:
+**Firefox & Thunderbird: Signed Version from GitHub Releases**:
+Install the signed webextension `linux_entra_sso-<version>.xpi` from the [project's releases page](https://github.com/siemens/linux-entra-sso/releases).
+If you are installing for Thunderbird, right-click the link and select "Save Link As..." to avoid installing it in Firefox.
 
-After installing the extension, enable the following permission:
+**Chromium, Chrome & Brave: Signed Extension from Chrome Web Store**:
+Install the signed browser extension from the [Chrome Web Store](https://chrome.google.com/webstore/detail/jlnfnnolkbjieggibinobhkjdfbpcohn).
 
-Access your data for `https://login.microsoftonline.com`.
-To support transparent re-login on applications using this identity provider, you need to grant permission for these domains as well.
-For details, see [PRIVACY.md](PRIVACY.md).
-
-### Chrome & Brave: Signed Extension from Chrome Web Store
-
-You can install the signed browser extension from the [Chrome Web Store](https://chrome.google.com/webstore/detail/jlnfnnolkbjieggibinobhkjdfbpcohn), which works for both **Google Chrome** and **Brave Browser**.
-
-> **Note:** This only installs the browser extension. You still need to install the host integration manually.
-
-#### Installation Steps:
-
-1. Clone this repository:
-
-```bash
-$ git@github.com:siemens/linux-entra-sso.git
-$ cd linux-entra-sso
-```
-
-2. Run the local install command:
-
-```bash
-$ make local-install-chrome # command for Chrome Browser
-$ make local-install-brave # command for Brave Browser
-```
-
-3. Install the extension file:
-
--  [linux-entra-sso](https://chromewebstore.google.com/detail/linux-entra-sso/jlnfnnolkbjieggibinobhkjdfbpcohn)
-
-### Development Version and Other Browsers
-
+**Development Version and Other Browsers**:
 If you want to execute unsigned versions of the extension (e.g. test builds) on Firefox, you have to use either Firefox ESR,
 nightly or developer, as [standard Firefox does not allow installing unsigned extensions](https://support.mozilla.org/en-US/kb/add-on-signing-in-firefox#w_what-are-my-options-if-i-want-to-use-an-unsigned-add-on-advanced-users)
 since version 48.
 
-To build the extension and install the host parts, perform the following steps:
+To build the extension, perform the following steps:
 
-1. clone this repository
-2. run `make local-install-<firefox|chrome|brave>` to install the native messaging app in the user's `.mozilla` (or Chrome) folder
-3. run `make` to build the extension (For Firefox, `build/<platform>/linux-entra-sso-*.xpi` is generated)
-4. Firefox only: Permit unsigned extensions in Firefox by setting `xpinstall.signatures.required` to `false`
-4. Chrome only: In extension menu, enable `Developer mode`.
-5. Install the extension in the Browser from the local `linux-entra-sso-*.xpi` file (Firefox). On Chrome, use `load unpacked` and point to `build/chrome`
-6. Enable "Access your data for `https://login.microsoftonline.com`" under the extension's permissions
+1. run `make` to build the extension (For Firefox, `build/<platform>/linux-entra-sso-*.xpi` is generated)
+2. Firefox only: Permit unsigned extensions in Firefox by setting `xpinstall.signatures.required` to `false`
+3. Chrome only: In extension menu, enable `Developer mode`.
+4. Install the extension in the Browser from the local `linux-entra-sso-*.xpi` file (Firefox). On Chrome, use `load unpacked` and point to `build/chrome`
 
 ## Usage
+
+After installing the extension, you might need to manually grant the following permission:
+
+- Access your data for `https://login.microsoftonline.com`.
 
 **No configuration is required.** The SSO is automatically enabled.
 If you want to disable the SSO for this session, click on the tray icon and select the guest account.
@@ -124,6 +100,7 @@ To grant the necessary permissions, follow these steps:
 
 Once configured, no further authentication requests will be needed.
 To revoke permissions, return to the extension's settings and select the domain again.
+For details, also see [PRIVACY.md](PRIVACY.md).
 
 ### Technical Background
 
