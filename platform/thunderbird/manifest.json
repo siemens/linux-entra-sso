@@ -22,7 +22,8 @@
             "calendar",
             "addressbook",
             "tasks",
-            "settings"
+            "settings",
+            "default"
         ]
     },
     "background": {
