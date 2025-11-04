@@ -147,6 +147,13 @@ body.nm-connected #nm-error-box {
     color: var(--text-green);
 }
 
+.state-compliant-icon {
+    color: var(--text-red);
+}
+.compliant .state-compliant-icon {
+    color: var(--text-green);
+}
+
 .hidden {
     display: none !important;
 }
