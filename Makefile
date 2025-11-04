@@ -42,6 +42,7 @@ COMMON_INPUT_FILES= \
 	src/account.js \
 	src/background.js \
 	src/broker.js \
+	src/device.js \
 	src/platform.js \
 	src/policy.js \
 	src/utils.js \

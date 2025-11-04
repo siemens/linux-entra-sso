@@ -8,11 +8,13 @@ import { Broker } from "./broker.js";
 import { AccountManager } from "./account.js";
 import { ssoLog } from "./utils.js";
 import { PolicyManager } from "./policy.js";
+import { Device, DeviceManager } from "./device.js";
 
 const PLATFORM = create_platform();
 let broker = null;
 let policyManager = null;
 let accountManager = null;
+let deviceManager = null;
 
 let initialized = false;
 let state_active = true;
@@ -105,6 +107,7 @@ function notify_state_change(ui_only = false) {
         accounts: accountManager.getRegistered().map((a) => a.toMenuObject()),
         broker_online: broker.isRunning(),
         nm_connected: broker.isConnected(),
+        device: deviceManager.getDevice(),
         enabled: state_active,
         host_version: PLATFORM.host_versions.native,
         broker_version: PLATFORM.host_versions.broker,
@@ -134,6 +137,7 @@ async function on_broker_state_change(online) {
         if (!accountManager.hasBrokerData()) {
             await accountManager.loadAccounts();
             accountManager.persist();
+            await deviceManager.loadDeviceInfo();
             notify_state_change();
         }
     } else {
@@ -163,6 +167,7 @@ function on_startup() {
 
     broker = new Broker("linux_entra_sso", on_broker_state_change);
     accountManager = new AccountManager(broker);
+    deviceManager = new DeviceManager(accountManager);
     Promise.all([
         PLATFORM.update_host_permissions(),
         policyManager.load_policies(),
