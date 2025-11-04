@@ -78,6 +78,14 @@ bg_port.onMessage.addListener(async (m) => {
             }
             document.getElementById("version").innerText = vstr;
         }
+        if (m.device) {
+            document.getElementById("device-name").innerText = m.device.name;
+            document.getElementById("state-compliant-value").innerText = m
+                .device.compliant
+                ? "compliant"
+                : "not compliant";
+            annotate_body_if("compliant", m.device.compliant);
+        }
         sso_url = m.sso_url;
         gpo = m.gpo_update;
         check_sso_provider_perms();
