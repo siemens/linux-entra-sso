@@ -11,6 +11,8 @@ export class Account {
     #avatar_imgdata = null;
     avatar = null;
     active = false;
+    access_token = null;
+    access_token_exp = 0;
 
     constructor(broker_obj) {
         this.#broker_obj = { ...broker_obj };
@@ -190,20 +192,31 @@ export class AccountManager {
         );
     }
 
-    async loadProfilePicture(account) {
+    async getToken(account) {
+        if (Date.now() + 60 * 1000 < account.access_token_exp) {
+            return account.access_token;
+        }
         const graph_token = await this.#broker.acquireTokenSilently(account);
         if ("error" in graph_token) {
-            ssoLog("couldn't acquire API token for avatar:");
+            ssoLog("couldn't acquire API token");
             console.log(graph_token.error);
             return;
         }
         ssoLog("API token acquired for " + account.username());
+        account.access_token = graph_token.accessToken;
+        account.access_token_exp = graph_token.expiresOn;
+        return account.access_token;
+    }
+
+    async loadProfilePicture(account) {
+        const graph_token = await this.getToken(account);
+        if (!graph_token) return;
         const response = await fetch(
             "https://graph.microsoft.com/v1.0/me/photos/48x48/$value",
             {
                 headers: {
                     Accept: "image/jpeg",
-                    Authorization: "Bearer " + graph_token.accessToken,
+                    Authorization: "Bearer " + graph_token,
                 },
             },
         );
