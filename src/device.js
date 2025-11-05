@@ -36,7 +36,6 @@ export class DeviceManager {
             ssoLog("access token does not have deviceid grant");
             return;
         }
-        ssoLog(grants["deviceid"]);
         const response = await fetch(
             `https://graph.microsoft.com/v1.0/devices(deviceId='{${grants["deviceid"]}}')?$select=isCompliant,displayName`,
             {
