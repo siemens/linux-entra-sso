@@ -16,12 +16,27 @@ export class Device {
 }
 
 export class DeviceManager {
+    static DEVICE_REFRESH_INTERVAL_MIN = 30;
+
     #am = null;
+    #last_refresh = 0;
     device = null;
 
     constructor(account_manager) {
         this.#am = account_manager;
         this.device = null;
+    }
+
+    async updateDeviceInfo() {
+        if (
+            Date.now() <
+            this.#last_refresh +
+                DeviceManager.DEVICE_REFRESH_INTERVAL_MIN * 60 * 1000
+        ) {
+            return false;
+        }
+        await this.loadDeviceInfo();
+        return true;
     }
 
     async loadDeviceInfo() {
@@ -50,7 +65,9 @@ export class DeviceManager {
             return;
         }
         const data = await response.json();
+        this.#last_refresh = Date.now();
         this.device = new Device(data.displayName, data.isCompliant);
+        ssoLog("updated device information");
     }
 
     getDevice() {

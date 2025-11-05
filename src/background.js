@@ -102,6 +102,11 @@ function notify_state_change(ui_only = false) {
         );
     }
     if (port_menu === null) return;
+    deviceManager.updateDeviceInfo().then((updated) => {
+        if (updated) {
+            notify_state_change(true);
+        }
+    });
     port_menu.postMessage({
         event: "stateChanged",
         accounts: accountManager.getRegistered().map((a) => a.toMenuObject()),
