@@ -3,6 +3,9 @@
  * SPDX-FileCopyrightText: Copyright 2024 Siemens AG
  */
 
+/* max length of user-provided strings in UI */
+const UI_MAX_STRING_LEN = 30;
+
 let bg_port = chrome.runtime.connect({ name: "linux-entra-sso" });
 /* communication with backend is in progress */
 let inflight = false;
@@ -48,6 +51,21 @@ function setup_color_scheme() {
     document.documentElement.classList.add(scheme);
 }
 
+/**
+ * If string is short enough, just set the innerText property.
+ * If not, set it to a cropped version and set the title to the
+ * full one.
+ */
+function set_text_cropped(element, str) {
+    if (str.length <= UI_MAX_STRING_LEN) {
+        element.innerText = str;
+        element.title = "";
+    } else {
+        element.innerText = str.slice(0, UI_MAX_STRING_LEN) + "…";
+        element.title = str;
+    }
+}
+
 setup_color_scheme();
 bg_port.onMessage.addListener(async (m) => {
     if (m.event == "stateChanged") {
@@ -79,7 +97,10 @@ bg_port.onMessage.addListener(async (m) => {
             document.getElementById("version").innerText = vstr;
         }
         if (m.device) {
-            document.getElementById("device-name").innerText = m.device.name;
+            set_text_cropped(
+                document.getElementById("device-name"),
+                m.device.name,
+            );
             document.getElementById("state-compliant-value").innerText = m
                 .device.compliant
                 ? "compliant"
@@ -174,7 +195,7 @@ async function check_bg_sso_enabled() {
 
     var tab_hostname = new URL(tab.url).hostname;
     current_filter = "https://" + tab_hostname + "/*";
-    document.getElementById("current-url").innerText = tab_hostname;
+    set_text_cropped(document.getElementById("current-url"), tab_hostname);
     const permissionsToCheck = {
         origins: [current_filter],
     };
