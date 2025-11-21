@@ -8,7 +8,7 @@
     --font-size-smaller: calc(var(--font-size) - 1px);
     --font-size-xsmall: calc(var(--font-size) - 3px);
     --font-size-larger: 15px;
-    --font-family: Inter, sans-serif;
+    --font-family: Arial, Helvetica, Sans-Serif;
     --monospace-size: 12px;
 }
 
@@ -84,6 +84,7 @@ body {
 
 body {
     background-color: var(--surface-0);
+    font-family: var(--font-family);
 }
 
 .entity {
