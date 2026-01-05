@@ -56,6 +56,9 @@ export class DeviceManager {
         const graph_token = await this.#am.getToken(
             this.#am.getRegistered()[0],
         );
+        if (!graph_token) {
+            return false;
+        }
         const grants = jwt_get_payload(graph_token);
         if ((!"deviceid") in grants) {
             ssoLog("access token does not have deviceid grant");
