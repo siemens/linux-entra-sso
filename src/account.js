@@ -169,7 +169,12 @@ export class AccountManager {
         if (this.hasBrokerData()) return;
 
         ssoLog("loading accounts");
-        const _accounts = await this.#broker.getAccounts();
+        var _accounts = [];
+        try {
+            _accounts = await this.#broker.getAccounts();
+        } catch (error) {
+            ssoLog(error);
+        }
         if (!_accounts || !_accounts.length) {
             this.#registered = [];
             return;
@@ -196,16 +201,17 @@ export class AccountManager {
         if (Date.now() + 60 * 1000 < account.access_token_exp) {
             return account.access_token;
         }
-        const graph_token = await this.#broker.acquireTokenSilently(account);
-        if ("error" in graph_token) {
-            ssoLog("couldn't acquire API token");
-            console.log(graph_token.error);
-            return;
+        try {
+            const graph_token =
+                await this.#broker.acquireTokenSilently(account);
+            ssoLog("API token acquired for " + account.username());
+            account.access_token = graph_token.accessToken;
+            account.access_token_exp = graph_token.expiresOn;
+            return account.access_token;
+        } catch (error) {
+            ssoLog(error);
+            return null;
         }
-        ssoLog("API token acquired for " + account.username());
-        account.access_token = graph_token.accessToken;
-        account.access_token_exp = graph_token.expiresOn;
-        return account.access_token;
     }
 
     async loadProfilePicture(account) {

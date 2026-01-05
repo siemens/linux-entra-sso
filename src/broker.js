@@ -107,43 +107,48 @@ export class Broker {
     }
 
     #on_message_native(response) {
+        /* handle events (not an RPC response) */
+        if (response.command == "brokerStateChanged") {
+            if (response.message == "online") this.#online = true;
+            else this.#online = false;
+            this.#notify_fn(this.#online);
+            return;
+        }
+
+        /* on rpc messages, reject all responses that have errors */
+        if ("error" in response.message) {
+            this.#rpc_queue.reject_handle(response.command, {
+                ...response.message.error,
+            });
+            return;
+        }
+
         if (response.command == "acquirePrtSsoCookie") {
             this.#rpc_queue.resolve_handle("acquirePrtSsoCookie", {
                 cookieName: response.message.cookieName,
                 cookieContent: response.message.cookieContent,
             });
         } else if (response.command == "getAccounts") {
-            if ("error" in response.message) {
-                this.#rpc_queue.reject_handle("getAccounts", {
-                    ...response.message.error,
-                });
-            } else {
-                let _accounts = [];
-                for (const a of response.message.accounts) {
-                    _accounts.push(new Account(a));
-                }
-                this.#rpc_queue.resolve_handle("getAccounts", _accounts);
+            let _accounts = [];
+            for (const a of response.message.accounts) {
+                _accounts.push(new Account(a));
             }
+            this.#rpc_queue.resolve_handle("getAccounts", _accounts);
         } else if (response.command == "getVersion") {
             this.#rpc_queue.resolve_handle("getVersion", {
                 native: response.message.native,
                 broker: response.message.linuxBrokerVersion,
             });
         } else if (response.command == "acquireTokenSilently") {
-            if ("error" in response.message) {
+            if ("error" in response.message.brokerTokenResponse) {
                 this.#rpc_queue.reject_handle("acquireTokenSilently", {
-                    ...response.message.error,
+                    ...response.message.brokerTokenResponse.error,
                 });
             } else {
                 this.#rpc_queue.resolve_handle("acquireTokenSilently", {
                     ...response.message.brokerTokenResponse,
                 });
             }
-        } else if (response.command == "brokerStateChanged") {
-            /* event (not an RPC response) */
-            if (response.message == "online") this.#online = true;
-            else this.#online = false;
-            this.#notify_fn(this.#online);
         } else {
             ssoLog("unknown command: " + response.command);
         }
