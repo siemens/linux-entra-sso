@@ -4,11 +4,11 @@
  */
 
 export function ssoLog(message) {
-    console.log("[Linux Entra SSO] " + message);
+    console.log("[Linux Entra SSO]", message);
 }
 
 export function ssoLogError(message) {
-    console.error("[Linux Entra SSO] " + message);
+    console.error("[Linux Entra SSO]", message);
 }
 
 export async function load_icon(path, width) {
