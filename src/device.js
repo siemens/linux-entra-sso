@@ -60,7 +60,7 @@ export class DeviceManager {
             return false;
         }
         const grants = jwt_get_payload(graph_token);
-        if ((!"deviceid") in grants) {
+        if (!grants["deviceid"]) {
             ssoLog("access token does not have deviceid grant");
             return false;
         }
