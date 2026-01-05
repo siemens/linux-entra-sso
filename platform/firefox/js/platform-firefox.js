@@ -49,16 +49,20 @@ export class PlatformFirefox extends Platform {
         if (!e.url.startsWith(Platform.SSO_URL)) {
             return { requestHeaders: e.requestHeaders };
         }
-        let prt = await this.broker.acquirePrtSsoCookie(this.account, e.url);
-        if ("error" in prt) {
-            return { requestHeaders: e.requestHeaders };
+        try {
+            let prt = await this.broker.acquirePrtSsoCookie(
+                this.account,
+                e.url,
+            );
+            // ms-oapxbc OAuth2 protocol extension
+            ssoLog("inject PRT SSO into request headers");
+            e.requestHeaders.push({
+                name: prt.cookieName,
+                value: prt.cookieContent,
+            });
+        } catch (error) {
+            ssoLog(error);
         }
-        // ms-oapxbc OAuth2 protocol extension
-        ssoLog("inject PRT SSO into request headers");
-        e.requestHeaders.push({
-            name: prt.cookieName,
-            value: prt.cookieContent,
-        });
         return { requestHeaders: e.requestHeaders };
     }
 }

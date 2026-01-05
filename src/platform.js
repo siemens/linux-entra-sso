@@ -34,7 +34,11 @@ export class Platform {
      * Load platform information from backend.
      */
     async setup(broker) {
-        this.host_versions = await broker.getVersion();
+        try {
+            this.host_versions = await broker.getVersion();
+        } catch (error) {
+            ssoLog(error);
+        }
     }
 
     setIconDisabled() {

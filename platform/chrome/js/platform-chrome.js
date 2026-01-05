@@ -56,12 +56,14 @@ export class PlatformChrome extends Platform {
 
     async #update_net_rules(e) {
         ssoLog("update network rules");
-        let prt = await this.broker.acquirePrtSsoCookie(
-            this.account,
-            Platform.SSO_URL,
-        );
-        if ("error" in prt) {
-            ssoLogError("could not acquire PRT SSO cookie: " + prt.error);
+        var prt = undefined;
+        try {
+            prt = await this.broker.acquirePrtSsoCookie(
+                this.account,
+                Platform.SSO_URL,
+            );
+        } catch (error) {
+            ssoLog(error);
             return;
         }
         const newRules = [
