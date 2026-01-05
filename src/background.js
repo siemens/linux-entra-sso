@@ -103,6 +103,7 @@ function notify_state_change(ui_only = false) {
     }
     if (port_menu === null) return;
     deviceManager.updateDeviceInfo().then((updated) => {
+        /* only notify on success to avoid indefinite recursion as errors are not cached */
         if (updated) {
             notify_state_change(true);
         }
