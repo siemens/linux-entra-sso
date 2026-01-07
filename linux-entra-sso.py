@@ -145,7 +145,7 @@ class SsoMib:
             "account": account,
             "additionalQueryParametersForAuthorization": {},
             "authority": "https://login.microsoftonline.com/common",
-            "authorizationType": 8,  # OAUTH2
+            "authorizationType": 8 if sso_url else 1,
             "clientId": EDGE_BROWSER_CLIENT_ID,
             "redirectUri": "https://login.microsoftonline.com"
             "/common/oauth2/nativeclient",
