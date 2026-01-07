@@ -8,6 +8,7 @@
 # pylint: enable=invalid-name
 
 import argparse
+from enum import Enum
 import sys
 import json
 import struct
@@ -34,6 +35,11 @@ START_REPLY_SUCCESS = 1
 START_REPLY_ALREADY_RUNNING = 2
 # prctl constants
 PR_SET_PDEATHSIG = 1
+
+
+class AuthorizationType(Enum):
+    CACHED_REFRESH_TOKEN = (1,)
+    PRT_SSO_COOKIE = (8,)
 
 
 class NativeMessaging:
@@ -145,7 +151,11 @@ class SsoMib:
             "account": account,
             "additionalQueryParametersForAuthorization": {},
             "authority": "https://login.microsoftonline.com/common",
-            "authorizationType": 8,  # OAUTH2
+            "authorizationType": (
+                AuthorizationType.PRT_SSO_COOKIE.value[0]
+                if sso_url
+                else AuthorizationType.CACHED_REFRESH_TOKEN.value[0]
+            ),
             "clientId": EDGE_BROWSER_CLIENT_ID,
             "redirectUri": "https://login.microsoftonline.com"
             "/common/oauth2/nativeclient",
