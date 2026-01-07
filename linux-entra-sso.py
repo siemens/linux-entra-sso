@@ -198,7 +198,6 @@ class SsoMib:
     ):  # pylint: disable=dangerous-default-value
         self._introspect_broker()
         request = {
-            "account": account,
             "authParameters": SsoMib._get_auth_parameters(account, scopes),
         }
         token = json.loads(
