@@ -124,9 +124,14 @@ export class Broker {
         }
 
         if (response.command == "acquirePrtSsoCookie") {
+            var cookieData = response.message;
+            /* microsoft-identity-broker > 2.0.1 */
+            if ("cookieItems" in cookieData) {
+                cookieData = cookieData.cookieItems[0];
+            }
             this.#rpc_queue.resolve_handle("acquirePrtSsoCookie", {
-                cookieName: response.message.cookieName,
-                cookieContent: response.message.cookieContent,
+                cookieName: cookieData.cookieName,
+                cookieContent: cookieData.cookieContent,
             });
         } else if (response.command == "getAccounts") {
             let _accounts = [];
