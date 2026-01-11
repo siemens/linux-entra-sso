@@ -182,7 +182,10 @@ function check_sso_provider_perms() {
 }
 
 async function check_bg_sso_enabled() {
-    let [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+    const [tab] = await chrome.tabs.query({
+        currentWindow: true,
+        active: true,
+    });
     if (
         !tab?.url ||
         !tab.url.startsWith("https://") ||
@@ -193,7 +196,7 @@ async function check_bg_sso_enabled() {
     }
     annotate_by_id_if("bg-sso-state", "hidden", false);
 
-    var tab_hostname = new URL(tab.url).hostname;
+    const tab_hostname = new URL(tab.url).hostname;
     current_filter = "https://" + tab_hostname + "/*";
     set_text_cropped(document.getElementById("current-url"), tab_hostname);
     const permissionsToCheck = {

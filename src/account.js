@@ -169,7 +169,7 @@ export class AccountManager {
         if (this.hasBrokerData()) return;
 
         ssoLog("loading accounts");
-        var _accounts = [];
+        let _accounts = [];
         try {
             _accounts = await this.#broker.getAccounts();
         } catch (error) {
@@ -263,7 +263,7 @@ export class AccountManager {
      */
     async persist() {
         if (!this.hasAccounts()) return;
-        let ssostate = {
+        const ssostate = {
             state: this.getActive() != null,
             accounts: this.getActive()
                 ? this.#registered.map((a) => a.toSerial())

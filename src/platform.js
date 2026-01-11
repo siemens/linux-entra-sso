@@ -64,7 +64,7 @@ export class Platform {
         this.well_known_app_filters = currentPermissions.origins;
 
         // check if we have access to the SSO url
-        let dfd = new Deferred();
+        const dfd = new Deferred();
         const permissionsToCheck = {
             origins: [Platform.SSO_URL + "/*"],
         };

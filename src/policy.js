@@ -10,7 +10,7 @@ export class PolicyManager {
     #apps = null;
 
     async load_policies() {
-        let dfd = new Deferred();
+        const dfd = new Deferred();
         chrome.storage.managed.get(
             PolicyManager.MANAGED_POLICIES_KEY,
             (data) => {
@@ -37,7 +37,7 @@ export class PolicyManager {
         const catch_all = active_app_filters.find((value) =>
             matches_filter(value, "*"),
         );
-        let gpo_update = {
+        const gpo_update = {
             pending: false,
             filters_to_add: [],
             filters_to_remove: [],
