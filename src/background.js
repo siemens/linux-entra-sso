@@ -39,8 +39,8 @@ async function on_permissions_changed() {
 async function update_tray(action_needed) {
     chrome.action.enable();
     if (is_operational()) {
-        let account = accountManager.getActive();
-        let imgdata = {};
+        const account = accountManager.getActive();
+        const imgdata = {};
         let icon_title = account.username();
 
         // shorten the title a bit

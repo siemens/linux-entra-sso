@@ -14,7 +14,7 @@ export class RpcHandlerQueue {
     #queue = [];
 
     register_handle(id) {
-        let handle = {
+        const handle = {
             id: id,
             dfd: new Deferred(),
         };
@@ -23,7 +23,7 @@ export class RpcHandlerQueue {
     }
 
     resolve_handle(id, data) {
-        let idx = this.#queue.findIndex((hdl) => hdl.id == id);
+        const idx = this.#queue.findIndex((hdl) => hdl.id == id);
         if (idx !== -1) {
             this.#queue[idx].dfd.resolve(data);
             this.#queue.splice(idx, 1);
@@ -31,7 +31,7 @@ export class RpcHandlerQueue {
     }
 
     reject_handle(id, data) {
-        let idx = this.#queue.findIndex((hdl) => hdl.id == id);
+        const idx = this.#queue.findIndex((hdl) => hdl.id == id);
         if (idx !== -1) {
             this.#queue[idx].dfd.reject(data);
             this.#queue.splice(idx, 1);

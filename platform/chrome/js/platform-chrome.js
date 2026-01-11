@@ -56,7 +56,7 @@ export class PlatformChrome extends Platform {
 
     async #update_net_rules(e) {
         ssoLog("update network rules");
-        var prt = undefined;
+        let prt = undefined;
         try {
             prt = await this.broker.acquirePrtSsoCookie(
                 this.account,

@@ -17,8 +17,8 @@ export async function load_icon(path, width) {
         resizeWidth: width,
         resizeHeight: width,
     });
-    let canvas = new OffscreenCanvas(width, width);
-    let ctx = canvas.getContext("2d");
+    const canvas = new OffscreenCanvas(width, width);
+    const ctx = canvas.getContext("2d");
     ctx.save();
     ctx.drawImage(imgBitmap, 0, 0);
     ctx.restore();
@@ -26,9 +26,9 @@ export async function load_icon(path, width) {
 }
 
 export function jwt_get_payload(token) {
-    var base64Url = token.split(".")[1];
-    var base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    var jsonPayload = decodeURIComponent(
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
         atob(base64)
             .split("")
             .map(function (c) {
