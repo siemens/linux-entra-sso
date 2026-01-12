@@ -16,7 +16,7 @@ export class Device {
 }
 
 export class DeviceManager {
-    static DEVICE_REFRESH_INTERVAL_MIN = 30;
+    static DEVICE_REFRESH_INTERVAL_MIN_MS = 30 * 60 * 1000;
 
     #am = null;
     #last_refresh = 0;
@@ -37,8 +37,7 @@ export class DeviceManager {
     async updateDeviceInfo(broker) {
         if (
             Date.now() <
-            this.#last_refresh +
-                DeviceManager.DEVICE_REFRESH_INTERVAL_MIN * 60 * 1000
+            this.#last_refresh + DeviceManager.DEVICE_REFRESH_INTERVAL_MIN_MS
         ) {
             return false;
         }
