@@ -3,8 +3,6 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { Deferred } from "./utils.js";
-
 export class Platform {
     static SSO_URL = "https://login.microsoftonline.com";
 
@@ -62,14 +60,10 @@ export class Platform {
         this.well_known_app_filters = currentPermissions.origins;
 
         // check if we have access to the SSO url
-        const dfd = new Deferred();
         const permissionsToCheck = {
             origins: [Platform.SSO_URL + "/*"],
         };
-        chrome.permissions.contains(permissionsToCheck).then((result) => {
-            this.sso_url_permitted = result;
-            dfd.resolve();
-        });
-        await dfd.promise;
+        const result = await chrome.permissions.contains(permissionsToCheck);
+        this.sso_url_permitted = result;
     }
 }
