@@ -4,7 +4,6 @@
  */
 
 import { ssoLog, load_icon, ssoLogError } from "./utils.js";
-import { Deferred } from "./utils.js";
 
 /* refresh the token if only x time is left */
 const TOKEN_MIN_VALIDITY_MS = 60 * 1000;
@@ -270,31 +269,27 @@ export class AccountManager {
     }
 
     async restore() {
-        let dfd = new Deferred();
-        chrome.storage.local.get("ssostate", (data) => {
-            let active_acc = undefined;
-            if (!data.ssostate) {
-                ssoLog("no preserved state found");
-                // if the SSO is not explicitly disabled, we assume it is on.
-                dfd.resolve(true);
-                return;
-            }
-            const state_active = data.ssostate.state;
-            if (state_active && data.ssostate.accounts) {
-                this.#registered = data.ssostate.accounts.map((a) =>
-                    Account.fromSerial(a),
+        const data = await chrome.storage.local.get("ssostate");
+        let active_acc = undefined;
+        if (!data.ssostate) {
+            ssoLog("no preserved state found");
+            // if the SSO is not explicitly disabled, we assume it is on.
+            return true;
+        }
+        const state_active = data.ssostate.state;
+        if (state_active && data.ssostate.accounts) {
+            this.#registered = data.ssostate.accounts.map((a) =>
+                Account.fromSerial(a),
+            );
+            if (!state_active) this.logout();
+            active_acc = this.getActive();
+            if (active_acc) {
+                ssoLog(
+                    "temporarily using last-known account: " +
+                        active_acc.username(),
                 );
-                if (!state_active) this.logout();
-                active_acc = this.getActive();
-                if (active_acc) {
-                    ssoLog(
-                        "temporarily using last-known account: " +
-                            active_acc.username(),
-                    );
-                }
             }
-            dfd.resolve(state_active);
-        });
-        return dfd.promise;
+        }
+        return state_active;
     }
 }
