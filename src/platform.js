@@ -16,7 +16,6 @@ export class Platform {
     };
 
     /* references needed for PRT injection */
-    broker = null;
     account = null;
     well_known_app_filters = [];
     sso_url_permitted = true;
@@ -55,7 +54,6 @@ export class Platform {
     }
 
     update_request_handlers(enabled, account, broker) {
-        this.broker = broker;
         this.account = account;
     }
 

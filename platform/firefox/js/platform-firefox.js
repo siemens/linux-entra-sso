@@ -13,12 +13,6 @@ export class PlatformFirefox extends Platform {
 
     constructor() {
         super();
-        /*
-         * We need to bind, as the handler is called from a different context.
-         * To be able to deregister the handler, we need to assign it to a
-         * named symbol.
-         */
-        this.#on_before_send_headers = this.#onBeforeSendHeaders.bind(this);
     }
 
     setIconDisabled() {
@@ -29,6 +23,16 @@ export class PlatformFirefox extends Platform {
 
     update_request_handlers(enabled, account, broker) {
         super.update_request_handlers(enabled, account, broker);
+        /*
+         * We need to bind, as the handler is called from a different context.
+         * To be able to deregister the handler, we need to assign it to a
+         * named symbol.
+         */
+        this.#on_before_send_headers = this.#onBeforeSendHeaders.bind(
+            this,
+            broker,
+        );
+
         chrome.webRequest.onBeforeSendHeaders.removeListener(
             this.#on_before_send_headers,
         );
@@ -44,16 +48,13 @@ export class PlatformFirefox extends Platform {
         );
     }
 
-    async #onBeforeSendHeaders(e) {
+    async #onBeforeSendHeaders(broker, e) {
         // filter out requests that are not part of the OAuth2.0 flow
         if (!e.url.startsWith(Platform.SSO_URL)) {
             return { requestHeaders: e.requestHeaders };
         }
         try {
-            let prt = await this.broker.acquirePrtSsoCookie(
-                this.account,
-                e.url,
-            );
+            let prt = await broker.acquirePrtSsoCookie(this.account, e.url);
             // ms-oapxbc OAuth2 protocol extension
             ssoLog("inject PRT SSO into request headers");
             e.requestHeaders.push({
