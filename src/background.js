@@ -44,9 +44,7 @@ async function update_tray(action_needed) {
         let icon_title = account.username();
 
         // shorten the title a bit
-        if (PLATFORM.browser == "Thunderbird")
-            icon_title = icon_title.split("@")[0];
-
+        icon_title = PLATFORM.transform_ui_title(icon_title);
         let color = null;
         chrome.action.setTitle({
             title: icon_title,
@@ -79,7 +77,7 @@ async function update_tray(action_needed) {
         });
     }
     // We have limited space on Thunderbird, hence shorten the title
-    if (PLATFORM.browser == "Thunderbird") title = "EntraID SSO disabled";
+    title = PLATFORM.transform_ui_title(title);
     chrome.action.setTitle({ title: title });
 }
 
