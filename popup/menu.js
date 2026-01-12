@@ -38,7 +38,7 @@ function annotate_body_if(annotation, state) {
 }
 
 function annotate_by_id_if(element_id, annotation, state) {
-    element = document.getElementById(element_id);
+    const element = document.getElementById(element_id);
     if (!element) return;
     if (state) element.classList.add(annotation);
     else element.classList.remove(annotation);
