@@ -102,7 +102,7 @@ function notify_state_change(ui_only = false) {
         );
     }
     if (port_menu === null) return;
-    deviceManager.updateDeviceInfo().then((updated) => {
+    deviceManager.updateDeviceInfo(broker).then((updated) => {
         /* only notify on success to avoid indefinite recursion as errors are not cached */
         if (updated) {
             notify_state_change(true);
@@ -141,9 +141,9 @@ async function on_broker_state_change(online) {
         ssoLog("connection to broker restored");
         // only reload data if we did not see the broker before
         if (!accountManager.hasBrokerData()) {
-            await accountManager.loadAccounts();
+            await accountManager.loadAccounts(broker);
             accountManager.persist();
-            await deviceManager.loadDeviceInfo();
+            await deviceManager.loadDeviceInfo(broker);
             notify_state_change();
         }
     } else {

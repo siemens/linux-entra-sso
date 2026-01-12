@@ -34,7 +34,7 @@ export class DeviceManager {
      * as error states are not cached (to allow recovering after sporadic errors).
      * @returns true if successfully updated
      */
-    async updateDeviceInfo() {
+    async updateDeviceInfo(broker) {
         if (
             Date.now() <
             this.#last_refresh +
@@ -42,18 +42,19 @@ export class DeviceManager {
         ) {
             return false;
         }
-        return await this.loadDeviceInfo();
+        return await this.loadDeviceInfo(broker);
     }
 
     /**
      * Load information about the accessing device (e.g. compliance state)
      * @returns true on success
      */
-    async loadDeviceInfo() {
+    async loadDeviceInfo(broker) {
         if (!this.#am.hasAccounts()) {
             return false;
         }
         const graph_token = await this.#am.getToken(
+            broker,
             this.#am.getRegistered()[0],
         );
         if (!graph_token) {
