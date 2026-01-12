@@ -14,11 +14,11 @@ export class PlatformChrome extends Platform {
 
     constructor() {
         super();
-        this.#update_net_rules_cb = this.#update_net_rules.bind(this);
     }
 
     update_request_handlers(enabled, account, broker) {
         super.update_request_handlers(enabled, account, broker);
+        this.#update_net_rules_cb = this.#update_net_rules.bind(this, broker);
         if (!enabled) {
             chrome.alarms.onAlarm.removeListener(this.#update_net_rules_cb);
             chrome.alarms.clear("prt-sso-refresh");
@@ -26,7 +26,7 @@ export class PlatformChrome extends Platform {
             return;
         }
         this.#ensure_refresh_alarm("prt-sso-refresh");
-        this.#update_net_rules();
+        this.#update_net_rules(broker);
     }
 
     /*
@@ -54,11 +54,11 @@ export class PlatformChrome extends Platform {
         });
     }
 
-    async #update_net_rules(e) {
+    async #update_net_rules(broker, e) {
         ssoLog("update network rules");
         let prt = undefined;
         try {
-            prt = await this.broker.acquirePrtSsoCookie(
+            prt = await broker.acquirePrtSsoCookie(
                 this.account,
                 Platform.SSO_URL,
             );
