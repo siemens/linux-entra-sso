@@ -6,6 +6,9 @@
 import { ssoLog, load_icon, ssoLogError } from "./utils.js";
 import { Deferred } from "./utils.js";
 
+/* refresh the token if only x time is left */
+const TOKEN_MIN_VALIDITY_MS = 60 * 1000;
+
 export class Account {
     #broker_obj = null;
     #avatar_imgdata = null;
@@ -193,7 +196,7 @@ export class AccountManager {
     }
 
     async getToken(broker, account) {
-        if (Date.now() + 60 * 1000 < account.access_token_exp) {
+        if (Date.now() + TOKEN_MIN_VALIDITY_MS < account.access_token_exp) {
             return account.access_token;
         }
         try {
