@@ -117,13 +117,8 @@ export class Account {
 }
 
 export class AccountManager {
-    #broker = null;
     #registered = [];
     #queried = false;
-
-    constructor(broker) {
-        this.#broker = broker;
-    }
 
     hasAccounts() {
         return this.#registered.length != 0;
@@ -165,13 +160,13 @@ export class AccountManager {
         return account;
     }
 
-    async loadAccounts() {
+    async loadAccounts(broker) {
         if (this.hasBrokerData()) return;
 
         ssoLog("loading accounts");
         let _accounts = [];
         try {
-            _accounts = await this.#broker.getAccounts();
+            _accounts = await broker.getAccounts();
         } catch (error) {
             ssoLog(error);
         }
@@ -193,17 +188,16 @@ export class AccountManager {
             ssoLog("select first account: " + this.getActive().username());
         }
         await Promise.all(
-            this.#registered.map((a) => this.loadProfilePicture(a)),
+            this.#registered.map((a) => this.loadProfilePicture(broker, a)),
         );
     }
 
-    async getToken(account) {
+    async getToken(broker, account) {
         if (Date.now() + 60 * 1000 < account.access_token_exp) {
             return account.access_token;
         }
         try {
-            const graph_token =
-                await this.#broker.acquireTokenSilently(account);
+            const graph_token = await broker.acquireTokenSilently(account);
             ssoLog("API token acquired for " + account.username());
             account.access_token = graph_token.accessToken;
             account.access_token_exp = graph_token.expiresOn;
@@ -214,8 +208,8 @@ export class AccountManager {
         }
     }
 
-    async loadProfilePicture(account) {
-        const graph_token = await this.getToken(account);
+    async loadProfilePicture(broker, account) {
+        const graph_token = await this.getToken(broker, account);
         if (!graph_token) return;
         const response = await fetch(
             "https://graph.microsoft.com/v1.0/me/photos/48x48/$value",
