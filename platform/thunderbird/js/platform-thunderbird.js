@@ -7,4 +7,8 @@ import { PlatformFirefox } from "./platform-firefox.js";
 
 export class PlatformThunderbird extends PlatformFirefox {
     browser = "Thunderbird";
+
+    transform_ui_title(title) {
+        return title.split(/[@(]/)[0].trim();
+    }
 }

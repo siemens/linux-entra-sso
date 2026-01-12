@@ -49,6 +49,14 @@ export class Platform {
         });
     }
 
+    /**
+     * Can be overwritten to shorten the title on platforms that print the
+     * title next to the icon (instead of in a tooltip).
+     */
+    transform_ui_title(title) {
+        return title;
+    }
+
     getSsoUrl() {
         return Platform.SSO_URL;
     }
