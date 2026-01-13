@@ -13,11 +13,12 @@ import json
 import struct
 import uuid
 import ctypes
-import time
 from signal import SIGINT
 from threading import Thread, RLock
-from gi.repository import GLib, Gio
+from xml.etree import ElementTree as ET
+from gi.repository import GLib
 from pydbus import SessionBus
+from pydbus.proxy import CompositeInterface
 
 # version is replaced on installation
 LINUX_ENTRA_SSO_VERSION = "0.0.0-dev"
@@ -28,12 +29,46 @@ LINUX_ENTRA_SSO_VERSION = "0.0.0-dev"
 # value can be used, if no real value is provided.
 SSO_URL_DEFAULT = "https://login.microsoftonline.com/"
 EDGE_BROWSER_CLIENT_ID = "d7b530a4-7680-4c23-a8bf-c52c121d2e87"
-BROKER_START_TIMEOUT = 5
 # dbus start service reply codes
 START_REPLY_SUCCESS = 1
 START_REPLY_ALREADY_RUNNING = 2
 # prctl constants
 PR_SET_PDEATHSIG = 1
+
+# stripped down version of the broker dbus interface,
+# as brokers > 2.0.1 do not implement introspection
+BROKER_DBUS_SPEC = r"""<!DOCTYPE node PUBLIC
+"-//freedesktop//DTD D-Bus Object Introspection 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node name="/com/microsoft/identity/broker1">
+ <interface name="com.microsoft.identity.Broker1">
+  <method name="acquireTokenSilently" >
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="out"/>
+  </method>
+  <method name="getAccounts" >
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="out"/>
+  </method>
+  <method name="acquirePrtSsoCookie" >
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="out"/>
+  </method>
+  <method name="getLinuxBrokerVersion" >
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="out"/>
+  </method>
+ </interface>
+</node>
+"""
 
 
 class NativeMessaging:
@@ -82,25 +117,15 @@ class SsoMib:
         self._state_changed_cb = None
         self._last_state_reported = False
         if daemon:
-            self._introspect_broker(fail_on_error=False)
+            self._introspect_broker()
             self._monitor_bus()
 
-    def _introspect_broker(self, fail_on_error=True):
-        timeout = time.time() + BROKER_START_TIMEOUT
-        while not self.broker and time.time() < timeout:
-            try:
-                self.broker = self._bus.get(self.BROKER_NAME, self.BROKER_PATH)
-                self._report_state_change()
-                return
-            except GLib.Error as err:
-                # GDBus.Error:org.freedesktop.dbus.errors.UnknownObject:
-                # Introspecting on non-existant object
-                # See https://github.com/siemens/linux-entra-sso/issues/33
-                if err.matches(Gio.io_error_quark(), Gio.IOErrorEnum.DBUS_ERROR):
-                    time.sleep(0.1)
-                    continue
-            if fail_on_error:
-                raise RuntimeError("Could not start broker")
+    def _introspect_broker(self):
+        introspection = ET.fromstring(BROKER_DBUS_SPEC)
+        self.broker = CompositeInterface(introspection)(
+            self._bus, self.BROKER_NAME, self.BROKER_PATH
+        )
+        self._report_state_change()
 
     def _monitor_bus(self):
         self._bus.subscribe(
@@ -145,7 +170,7 @@ class SsoMib:
             "account": account,
             "additionalQueryParametersForAuthorization": {},
             "authority": "https://login.microsoftonline.com/common",
-            "authorizationType": 8,  # OAUTH2
+            "authorizationType": 8 if sso_url else 1,
             "clientId": EDGE_BROWSER_CLIENT_ID,
             "redirectUri": "https://login.microsoftonline.com"
             "/common/oauth2/nativeclient",
@@ -163,6 +188,7 @@ class SsoMib:
             "clientId": EDGE_BROWSER_CLIENT_ID,
             "redirectUri": str(self.session_id),
         }
+        # pylint: disable=maybe-no-member
         resp = self.broker.getAccounts("0.0", str(self.session_id), json.dumps(context))
         return json.loads(resp)
 
@@ -176,6 +202,7 @@ class SsoMib:
             "mamEnrollment": False,
             "ssoUrl": sso_url,
         }
+        # pylint: disable=maybe-no-member
         token = json.loads(
             self.broker.acquirePrtSsoCookie(
                 "0.0", str(self.session_id), json.dumps(request)
@@ -188,9 +215,9 @@ class SsoMib:
     ):  # pylint: disable=dangerous-default-value
         self._introspect_broker()
         request = {
-            "account": account,
             "authParameters": SsoMib._get_auth_parameters(account, scopes),
         }
+        # pylint: disable=maybe-no-member
         token = json.loads(
             self.broker.acquireTokenSilently(
                 "0.0", str(self.session_id), json.dumps(request)
@@ -201,6 +228,7 @@ class SsoMib:
     def get_broker_version(self):
         self._introspect_broker()
         params = json.dumps({"msalCppVersion": LINUX_ENTRA_SSO_VERSION})
+        # pylint: disable=maybe-no-member
         resp = json.loads(
             self.broker.getLinuxBrokerVersion("0.0", str(self.session_id), params)
         )
