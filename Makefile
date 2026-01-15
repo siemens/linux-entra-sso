@@ -207,7 +207,7 @@ local-install-chromium-based:
 	install -d $(BROWSER_CONFIG_PATH)/NativeMessagingHosts
 	install -m 0644 platform/chrome/linux_entra_sso.json $(BROWSER_CONFIG_PATH)/NativeMessagingHosts
 	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(BROWSER_CONFIG_PATH)'/|' $(BROWSER_CONFIG_PATH)/NativeMessagingHosts/linux_entra_sso.json
-	# compute extension id and and grant permission
+# compute extension id and and grant permission
 	${Q}sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' $(BROWSER_CONFIG_PATH)/NativeMessagingHosts/linux_entra_sso.json
 	install -m 0755 linux-entra-sso.py $(BROWSER_CONFIG_PATH)
 	${Q}sed -i $(UPDATE_VERSION_PY) $(BROWSER_CONFIG_PATH)/linux-entra-sso.py
@@ -239,23 +239,23 @@ local-install-mock: local-install
 
 install:
 	${Q}[ -z "$(python3_bin)" ] && { echo "python3 not found. Please set 'python3_bin'."; exit 1; } || true
-	# Host application
+# Host application
 	install -d $(DESTDIR)/$(libexecdir)/linux-entra-sso
 	install -m 0755 linux-entra-sso.py $(DESTDIR)/$(libexecdir)/linux-entra-sso
 	${Q}sed -i $(UPDATE_VERSION_PY) $(DESTDIR)/$(libexecdir)/linux-entra-sso/linux-entra-sso.py
 	${Q}sed -i $(UPDATE_PYTHON_INTERPRETER) $(DESTDIR)/$(libexecdir)/linux-entra-sso/linux-entra-sso.py
-	# Firefox
+# Firefox
 	install -d $(DESTDIR)/$(firefox_nm_dir)
 	install -m 0644 platform/firefox/linux_entra_sso.json $(DESTDIR)/$(firefox_nm_dir)
 	${Q}sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(firefox_nm_dir)/linux_entra_sso.json
-	# Chrome
+# Chrome
 	install -d $(DESTDIR)/$(chrome_nm_dir)
 	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/$(chrome_nm_dir)
 	${Q}sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(chrome_nm_dir)/linux_entra_sso.json
 	${Q}sed -i '/{extension_id}/d' $(DESTDIR)/$(chrome_nm_dir)/linux_entra_sso.json
 	install -d $(DESTDIR)/$(chrome_ext_dir)
 	install -m 0644 platform/chrome/extension.json $(DESTDIR)/$(chrome_ext_dir)/$(CHROME_EXT_ID_SIGNED).json
-	# Chromium
+# Chromium
 	install -d $(DESTDIR)/$(chromium_nm_dir)
 	install -m 0644 platform/chrome/linux_entra_sso.json $(DESTDIR)/$(chromium_nm_dir)
 	${Q}sed -i 's|/usr/local/lib/|'$(libexecdir)/'|' $(DESTDIR)/$(chromium_nm_dir)/linux_entra_sso.json
