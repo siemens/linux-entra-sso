@@ -27,6 +27,7 @@ brave_lconfig_dir ?= $(HOME)/.config/BraveSoftware/Brave-Browser
 firefox_lconfig_dir ?= $(HOME)/.mozilla
 chrome_lconfig_dir ?= $(HOME)/.config/google-chrome
 chromium_lconfig_dir ?= $(HOME)/.config/chromium
+vivaldi_lconfig_dir ?= $(HOME)/.config/vivaldi
 # python3 system interpreter for global installs
 python3_bin ?= $(shell which python3)
 
@@ -221,7 +222,10 @@ local-install-chrome:
 local-install-chromium:
 	$(MAKE) local-install-chromium-based BROWSER_CONFIG_PATH=$(chromium_lconfig_dir)
 
-local-install: local-install-brave local-install-chrome local-install-chromium local-install-firefox
+local-install-vivaldi:
+	$(MAKE) local-install-chromium-based BROWSER_CONFIG_PATH=$(vivaldi_lconfig_dir)
+
+local-install: local-install-brave local-install-chrome local-install-chromium local-install-firefox local-install-vivaldi
 
 # For testing, we provide a mock implementation of the broker communication
 local-install-mock: local-install
@@ -229,6 +233,7 @@ local-install-mock: local-install
 	install -m 0755 tests/linux_entra_sso_mock.py $(chrome_lconfig_dir)/linux_entra_sso.py
 	install -m 0755 tests/linux_entra_sso_mock.py $(chromium_lconfig_dir)/linux_entra_sso.py
 	install -m 0755 tests/linux_entra_sso_mock.py $(firefox_lconfig_dir)/linux_entra_sso.py
+	install -m 0755 tests/linux_entra_sso_mock.py $(vivaldi_lconfig_dir)/linux_entra_sso.py
 
 ####################################
 # system install / uninstall targets
@@ -285,10 +290,14 @@ local-uninstall-firefox:
 	rm -f $(firefox_lconfig_dir)/native-messaging-hosts/linux_entra_sso.json
 	rm -f $(firefox_lconfig_dir)/linux-entra-sso.py
 
-local-uninstall: local-uninstall-brave local-uninstall-chrome local-uninstall-chromium local-uninstall-firefox
+local-uninstall-vivaldi:
+	rm -f $(vivaldi_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
+	rm -f $(vivaldi_lconfig_dir)/linux-entra-sso.py
+
+local-uninstall: local-uninstall-brave local-uninstall-chrome local-uninstall-chromium local-uninstall-firefox local-uninstall-vivaldi
 
 .PHONY: clean release deb deb_clean
-.PHONY: local-install-firefox local-install-chrome local-install-brave local-install-chromium-based local-install
-.PHONY: local-uninstall-firefox local-uninstall-chromium-based local-uninstall-chrome local-uninstall-brave local-uninstall
+.PHONY: local-install-firefox local-install-chrome local-install-brave local-install-chromium-based local-install-vivaldi local-install
+.PHONY: local-uninstall-firefox local-uninstall-chromium-based local-uninstall-chrome local-uninstall-brave local-uninstall-vivaldi local-uninstall
 .PHONY: local-install-mock
 .PHONY: install uninstall
