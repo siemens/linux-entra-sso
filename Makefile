@@ -266,7 +266,6 @@ local-uninstall-chrome:
 
 local-uninstall-brave:
 	rm -f ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/linux_entra_sso.json ~/.config/BraveSoftware/Brave-Browser/linux-entra-sso.py
-	rm -f ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/linux-entra-sso.py
 
 local-uninstall: local-uninstall-firefox local-uninstall-chrome local-uninstall-brave
 
