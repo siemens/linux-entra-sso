@@ -225,13 +225,10 @@ local-install: local-install-brave local-install-chrome local-install-chromium l
 
 # For testing, we provide a mock implementation of the broker communication
 local-install-mock: local-install
-	install -m 0755 tests/linux_entra_sso_mock.py $(firefox_lconfig_dir)
-	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' $(firefox_lconfig_dir)/native-messaging-hosts/linux_entra_sso.json
-	install -m 0755 tests/linux_entra_sso_mock.py $(chrome_lconfig_dir)
-	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' $(chrome_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
-	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' $(chromium_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
-	install -m 0755 tests/linux_entra_sso_mock.py $(brave_lconfig_dir)
-	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' $(brave_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
+	install -m 0755 tests/linux_entra_sso_mock.py $(brave_lconfig_dir)/linux_entra_sso.py
+	install -m 0755 tests/linux_entra_sso_mock.py $(chrome_lconfig_dir)/linux_entra_sso.py
+	install -m 0755 tests/linux_entra_sso_mock.py $(chromium_lconfig_dir)/linux_entra_sso.py
+	install -m 0755 tests/linux_entra_sso_mock.py $(firefox_lconfig_dir)/linux_entra_sso.py
 
 ####################################
 # system install / uninstall targets
