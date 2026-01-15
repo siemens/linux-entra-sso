@@ -47,7 +47,7 @@ $ cd linux-entra-sso
 $ # Firefox & Thunderbird
 $ make local-install-firefox
 $ # Chromium, Chrome and Brave
-$ make local-install-chrome
+$ make local-install-(brave|chrome|chromium)
 $ # All supported browsers
 $ make local-install
 ```

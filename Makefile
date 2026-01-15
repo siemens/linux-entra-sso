@@ -22,6 +22,11 @@ firefox_nm_dir ?= /usr/lib/mozilla/native-messaging-hosts
 chrome_nm_dir ?= /etc/opt/chrome/native-messaging-hosts
 chrome_ext_dir ?= /usr/share/google-chrome/extensions
 chromium_nm_dir ?= /etc/chromium/native-messaging-hosts
+# local install path
+brave_lconfig_dir ?= $(HOME)/.config/BraveSoftware/Brave-Browser
+firefox_lconfig_dir ?= $(HOME)/.mozilla
+chrome_lconfig_dir ?= $(HOME)/.config/google-chrome
+chromium_lconfig_dir ?= $(HOME)/.config/chromium
 # python3 system interpreter for global installs
 python3_bin ?= $(shell which python3)
 
@@ -185,46 +190,52 @@ release:
 	git commit -s platform/firefox/manifest.json platform/thunderbird/manifest.json platform/chrome/manifest.json -m "Bump version number"
 	git tag -as v$(VERSION) -m "Release v$(VERSION)"
 
-local-install-firefox:
-	install -d ~/.mozilla/native-messaging-hosts
-	install -m 0644 platform/firefox/linux_entra_sso.json ~/.mozilla/native-messaging-hosts
-	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.mozilla/|' ~/.mozilla/native-messaging-hosts/linux_entra_sso.json
-	install -m 0755 linux-entra-sso.py ~/.mozilla
-	${Q}sed -i $(UPDATE_VERSION_PY) ~/.mozilla/linux-entra-sso.py
+#######################
+# local install targets
+#######################
 
-local-install-chrome:
-	install -d ~/.config/google-chrome/NativeMessagingHosts
-	install -d ~/.config/chromium/NativeMessagingHosts
-	install -m 0644 platform/chrome/linux_entra_sso.json ~/.config/google-chrome/NativeMessagingHosts
-	install -m 0644 platform/chrome/linux_entra_sso.json ~/.config/chromium/NativeMessagingHosts
-	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.config/google-chrome/|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
-	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.config/google-chrome/|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
+local-install-firefox:
+	install -d $(firefox_lconfig_dir)/native-messaging-hosts
+	install -m 0644 platform/firefox/linux_entra_sso.json $(firefox_lconfig_dir)/native-messaging-hosts
+	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(firefox_lconfig_dir)'/|' $(firefox_lconfig_dir)/native-messaging-hosts/linux_entra_sso.json
+	install -m 0755 linux-entra-sso.py $(firefox_lconfig_dir)
+	${Q}sed -i $(UPDATE_VERSION_PY) $(firefox_lconfig_dir)/linux-entra-sso.py
+
+# Helper target for installing Chromium-based browsers
+# Usage: make local-install-chromium-based BROWSER_CONFIG_PATH=~/.config/chromium
+local-install-chromium-based:
+	install -d $(BROWSER_CONFIG_PATH)/NativeMessagingHosts
+	install -m 0644 platform/chrome/linux_entra_sso.json $(BROWSER_CONFIG_PATH)/NativeMessagingHosts
+	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(BROWSER_CONFIG_PATH)'/|' $(BROWSER_CONFIG_PATH)/NativeMessagingHosts/linux_entra_sso.json
 	# compute extension id and and grant permission
-	${Q}sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
-	${Q}sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
-	install -m 0755 linux-entra-sso.py ~/.config/google-chrome
-	${Q}sed -i $(UPDATE_VERSION_PY) ~/.config/google-chrome/linux-entra-sso.py
+	${Q}sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' $(BROWSER_CONFIG_PATH)/NativeMessagingHosts/linux_entra_sso.json
+	install -m 0755 linux-entra-sso.py $(BROWSER_CONFIG_PATH)
+	${Q}sed -i $(UPDATE_VERSION_PY) $(BROWSER_CONFIG_PATH)/linux-entra-sso.py
 
 local-install-brave:
-	install -d ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts
-	install -m 0644 platform/chrome/linux_entra_sso.json ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts
-	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(HOME)'/.config/BraveSoftware/Brave-Browser/|' ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/linux_entra_sso.json
-	# compute extension id and and grant permission
-	${Q}sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/linux_entra_sso.json
-	install -m 0755 linux-entra-sso.py ~/.config/BraveSoftware/Brave-Browser
-	${Q}sed -i $(UPDATE_VERSION_PY) ~/.config/BraveSoftware/Brave-Browser/linux-entra-sso.py
+	$(MAKE) local-install-chromium-based BROWSER_CONFIG_PATH=$(brave_lconfig_dir)
 
-local-install: local-install-firefox local-install-chrome local-install-brave
+local-install-chrome:
+	$(MAKE) local-install-chromium-based BROWSER_CONFIG_PATH=$(chrome_lconfig_dir)
+
+local-install-chromium:
+	$(MAKE) local-install-chromium-based BROWSER_CONFIG_PATH=$(chromium_lconfig_dir)
+
+local-install: local-install-brave local-install-chrome local-install-chromium local-install-firefox
 
 # For testing, we provide a mock implementation of the broker communication
 local-install-mock: local-install
-	install -m 0755 tests/linux_entra_sso_mock.py ~/.mozilla
-	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' ~/.mozilla/native-messaging-hosts/linux_entra_sso.json
-	install -m 0755 tests/linux_entra_sso_mock.py ~/.config/google-chrome
-	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json
-	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
-	install -m 0755 tests/linux_entra_sso_mock.py ~/.config/BraveSoftware/Brave-Browser
-	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/linux_entra_sso.json
+	install -m 0755 tests/linux_entra_sso_mock.py $(firefox_lconfig_dir)
+	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' $(firefox_lconfig_dir)/native-messaging-hosts/linux_entra_sso.json
+	install -m 0755 tests/linux_entra_sso_mock.py $(chrome_lconfig_dir)
+	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' $(chrome_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
+	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' $(chromium_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
+	install -m 0755 tests/linux_entra_sso_mock.py $(brave_lconfig_dir)
+	${Q}sed -i 's|linux-entra-sso.py|linux_entra_sso_mock.py|' $(brave_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
+
+####################################
+# system install / uninstall targets
+####################################
 
 install:
 	${Q}[ -z "$(python3_bin)" ] && { echo "python3 not found. Please set 'python3_bin'."; exit 1; } || true
@@ -257,18 +268,28 @@ uninstall:
 	rm -f  $(DESTDIR)/$(chromium_nm_dir)/linux_entra_sso.json
 	rm -f  $(DESTDIR)/$(chrome_ext_dir)/$(CHROME_EXT_ID_SIGNED).json
 
-local-uninstall-firefox:
-	rm -f ~/.mozilla/native-messaging-hosts/linux_entra_sso.json ~/.mozilla/linux-entra-sso.py
-
-local-uninstall-chrome:
-	rm -f ~/.config/google-chrome/NativeMessagingHosts/linux_entra_sso.json ~/.config/google-chrome/linux-entra-sso.py
-	rm -f ~/.config/chromium/NativeMessagingHosts/linux_entra_sso.json
+#########################
+# local uninstall targets
+#########################
 
 local-uninstall-brave:
-	rm -f ~/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts/linux_entra_sso.json ~/.config/BraveSoftware/Brave-Browser/linux-entra-sso.py
+	rm -f $(brave_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
+	rm -f $(brave_lconfig_dir)/linux-entra-sso.py
 
-local-uninstall: local-uninstall-firefox local-uninstall-chrome local-uninstall-brave
+local-uninstall-chrome:
+	rm -f $(chrome_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
+	rm -f $(chrome_lconfig_dir)/linux-entra-sso.py
+
+local-uninstall-chromium:
+	rm -f $(chromium_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
+	rm -f $(chromium_lconfig_dir)/linux-entra-sso.py
+
+local-uninstall-firefox:
+	rm -f $(firefox_lconfig_dir)/native-messaging-hosts/linux_entra_sso.json
+	rm -f $(firefox_lconfig_dir)/linux-entra-sso.py
+
+local-uninstall: local-uninstall-brave local-uninstall-chrome local-uninstall-chromium local-uninstall-firefox
 
 .PHONY: clean release deb deb_clean
-.PHONY: local-install-firefox local-install-chrome local-install-brave local-install local-install-mock install
-.PHONY: local-uninstall-firefox local-uninstall-chrome local-uninstall-brave local-uninstall uninstall
+.PHONY: local-install-firefox local-install-chrome local-install-brave local-install-chromium-based local-install local-install-mock install
+.PHONY: local-uninstall-firefox local-uninstall-chromium-based local-uninstall-chrome local-uninstall-brave local-uninstall uninstall
