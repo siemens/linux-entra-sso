@@ -291,5 +291,7 @@ local-uninstall-firefox:
 local-uninstall: local-uninstall-brave local-uninstall-chrome local-uninstall-chromium local-uninstall-firefox
 
 .PHONY: clean release deb deb_clean
-.PHONY: local-install-firefox local-install-chrome local-install-brave local-install-chromium-based local-install local-install-mock install
-.PHONY: local-uninstall-firefox local-uninstall-chromium-based local-uninstall-chrome local-uninstall-brave local-uninstall uninstall
+.PHONY: local-install-firefox local-install-chrome local-install-brave local-install-chromium-based local-install
+.PHONY: local-uninstall-firefox local-uninstall-chromium-based local-uninstall-chrome local-uninstall-brave local-uninstall
+.PHONY: local-install-mock
+.PHONY: install uninstall
