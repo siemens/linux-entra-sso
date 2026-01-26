@@ -40,7 +40,7 @@ endif
 PACKAGE_NAME=Linux-Entra-SSO
 
 RELEASE_TAG ?= $(shell git describe --match "v[0-9].[0-9]*" --dirty)
-WEBEXT_VERSION=$(shell echo $(RELEASE_TAG) | sed -e s:^v::)
+WEBEXT_VERSION=$(RELEASE_TAG:v%=%)
 ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG)
 
 COMMON_INPUT_FILES= \
@@ -125,7 +125,7 @@ CHROME_EXT_ID=$(shell $(CURDIR)/platform/chrome/get-ext-id.py $(CURDIR)/build/ch
 CHROME_EXT_ID_SIGNED=jlnfnnolkbjieggibinobhkjdfbpcohn
 
 # debian package related vars
-DEBIAN_PV = $(shell echo $(RELEASE_TAG) | sed -e s:^v::)
+DEBIAN_PV = $(RELEASE_TAG:v%=%)
 DEBIAN_PN = linux-entra-sso
 DEBIAN_DESCRIPTION = Entra ID SSO via Microsoft Identity Broker on Linux
 DEBIAN_DESTDIR := $(CURDIR)/debuild.d
