@@ -149,9 +149,9 @@ all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES) $(THUNDERBIRD_IN
 # thunderbird is almost identical to Firefox
 	cp -r build/firefox/icons build/firefox/popup build/thunderbird/
 	cp build/firefox/src/platform-firefox.js build/thunderbird/src/
-	cd build/firefox && zip -r ../$(ARCHIVE_NAME).firefox.xpi $(FIREFOX_PACKAGE_FILES) && cd ../../;
-	cd build/thunderbird && zip -r ../$(ARCHIVE_NAME).thunderbird.xpi $(THUNDERBIRD_PACKAGE_FILES) && cd ../../;
-	cd build/chrome && zip -r ../$(ARCHIVE_NAME).chrome.zip $(CHROME_PACKAGE_FILES) && cd ../../;
+	cd build/firefox && zip -r ../$(ARCHIVE_NAME).firefox.xpi $(FIREFOX_PACKAGE_FILES)
+	cd build/thunderbird && zip -r ../$(ARCHIVE_NAME).thunderbird.xpi $(THUNDERBIRD_PACKAGE_FILES)
+	cd build/chrome && zip -r ../$(ARCHIVE_NAME).chrome.zip $(CHROME_PACKAGE_FILES)
 
 deb:
 	$(MAKE) install DESTDIR=$(DEBIAN_DESTDIR) python3_bin=/usr/bin/python3 prefix=/usr
