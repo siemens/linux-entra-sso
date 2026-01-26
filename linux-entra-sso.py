@@ -8,15 +8,16 @@
 # pylint: enable=invalid-name
 
 import argparse
-from enum import Enum
-import sys
+import ctypes
 import json
 import struct
+import sys
 import uuid
-import ctypes
+from enum import Enum
 from signal import SIGINT
-from threading import Thread, RLock
+from threading import RLock, Thread
 from xml.etree import ElementTree as ET
+
 from gi.repository import GLib
 from pydbus import SessionBus
 from pydbus.proxy import CompositeInterface
