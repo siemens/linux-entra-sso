@@ -4,4 +4,6 @@
 
 Linux-Entra-SSO*.xpi
 __pycache__/
-build
+build/
+debuild.d/
+pkgs/
