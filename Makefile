@@ -40,7 +40,7 @@ endif
 PACKAGE_NAME=Linux-Entra-SSO
 
 RELEASE_TAG ?= $(shell git describe --match "v[0-9].[0-9]*" --dirty)
-WEBEXT_VERSION=$(shell echo $(RELEASE_TAG) | sed -e s:^v::)
+WEBEXT_VERSION=$(RELEASE_TAG:v%=%)
 ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG)
 
 COMMON_INPUT_FILES= \
@@ -125,7 +125,7 @@ CHROME_EXT_ID=$(shell $(CURDIR)/platform/chrome/get-ext-id.py $(CURDIR)/build/ch
 CHROME_EXT_ID_SIGNED=jlnfnnolkbjieggibinobhkjdfbpcohn
 
 # debian package related vars
-DEBIAN_PV = $(shell echo $(RELEASE_TAG) | sed -e s:^v::)
+DEBIAN_PV = $(RELEASE_TAG:v%=%)
 DEBIAN_PN = linux-entra-sso
 DEBIAN_DESCRIPTION = Entra ID SSO via Microsoft Identity Broker on Linux
 DEBIAN_DESTDIR := $(CURDIR)/debuild.d
@@ -149,14 +149,15 @@ all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES) $(THUNDERBIRD_IN
 # thunderbird is almost identical to Firefox
 	cp -r build/firefox/icons build/firefox/popup build/thunderbird/
 	cp build/firefox/src/platform-firefox.js build/thunderbird/src/
-	cd build/firefox && zip -r ../$(ARCHIVE_NAME).firefox.xpi $(FIREFOX_PACKAGE_FILES) && cd ../../;
-	cd build/thunderbird && zip -r ../$(ARCHIVE_NAME).thunderbird.xpi $(THUNDERBIRD_PACKAGE_FILES) && cd ../../;
-	cd build/chrome && zip -r ../$(ARCHIVE_NAME).chrome.zip $(CHROME_PACKAGE_FILES) && cd ../../;
+	cd build/firefox && zip -r ../$(ARCHIVE_NAME).firefox.xpi $(FIREFOX_PACKAGE_FILES)
+	cd build/thunderbird && zip -r ../$(ARCHIVE_NAME).thunderbird.xpi $(THUNDERBIRD_PACKAGE_FILES)
+	cd build/chrome && zip -r ../$(ARCHIVE_NAME).chrome.zip $(CHROME_PACKAGE_FILES)
 
 deb:
+	install --mode 00755 --directory $(DEBIAN_DESTDIR)
 	$(MAKE) install DESTDIR=$(DEBIAN_DESTDIR) python3_bin=/usr/bin/python3 prefix=/usr
 	install --mode 644 -D --target-directory=$(DEBIAN_DESTDIR)/usr/share/doc/$(DEBIAN_PN) README.md CONTRIBUTING.md MAINTAINERS.md PRIVACY.md LICENSES/MPL-2.0.txt
-	install --mode 755 --directory $(DEBIAN_DESTDIR)/DEBIAN
+	install --mode 00755 --directory $(DEBIAN_DESTDIR)/DEBIAN
 	{ \
 		echo Package: $(DEBIAN_PN); \
 		echo Architecture: $(DEBIAN_ARCH); \
