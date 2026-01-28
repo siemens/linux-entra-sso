@@ -154,9 +154,10 @@ all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES) $(THUNDERBIRD_IN
 	cd build/chrome && zip -r ../$(ARCHIVE_NAME).chrome.zip $(CHROME_PACKAGE_FILES)
 
 deb:
+	install --mode 00755 --directory $(DEBIAN_DESTDIR)
 	$(MAKE) install DESTDIR=$(DEBIAN_DESTDIR) python3_bin=/usr/bin/python3 prefix=/usr
 	install --mode 644 -D --target-directory=$(DEBIAN_DESTDIR)/usr/share/doc/$(DEBIAN_PN) README.md CONTRIBUTING.md MAINTAINERS.md PRIVACY.md LICENSES/MPL-2.0.txt
-	install --mode 755 --directory $(DEBIAN_DESTDIR)/DEBIAN
+	install --mode 00755 --directory $(DEBIAN_DESTDIR)/DEBIAN
 	{ \
 		echo Package: $(DEBIAN_PN); \
 		echo Architecture: $(DEBIAN_ARCH); \
