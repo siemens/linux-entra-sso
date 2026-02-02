@@ -8,7 +8,7 @@ import { Broker } from "./broker.js";
 import { AccountManager } from "./account.js";
 import { ssoLog } from "./utils.js";
 import { PolicyManager } from "./policy.js";
-import { Device, DeviceManager } from "./device.js";
+import { DeviceManager } from "./device.js";
 
 const PLATFORM = create_platform();
 let broker = null;
@@ -150,7 +150,7 @@ async function on_broker_state_change(online) {
     notify_state_change(true);
 }
 
-async function on_storage_changed(changes, areaName) {
+async function on_storage_changed(_changes, areaName) {
     if (areaName == "managed") {
         await policyManager.load_policies();
     }
