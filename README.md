@@ -13,9 +13,6 @@ The extension is written for Firefox but provides a limited support for Google C
 > This extension will only work on intune-enabled Linux devices. Please double
 > check this by running the `intune-portal` application and check if your user
 > is logged in (after clicking `sign-in`).
->
-> Only `microsoft-identity-broker` version 2.0.1 and himmelblau are supported.
-> Support for later broker versions is being worked on.
 
 ## Installation
 
