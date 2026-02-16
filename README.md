@@ -139,6 +139,11 @@ Since version `v0.4`, git release tags are signed with one of the following main
 - `AF73F6EF5A53CFE304569F50E648A311F67A50FC` (Felix Moessbauer)
 - `004C647D7572CF7D72BDB4FB699D850A9F417BD8` (Jan Kiszka)
 
+Since version `v1.8.0`, the following keys are used:
+
+- `3785ED68D0F83B7BD7D23D7FE1136CEB2754A0BD` (Felix Moessbauer)
+- `004C647D7572CF7D72BDB4FB699D850A9F417BD8` (Jan Kiszka)
+
 ## License
 
 This project is licensed according to the terms of the Mozilla Public
