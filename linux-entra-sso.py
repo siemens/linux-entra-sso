@@ -8,13 +8,12 @@
 # pylint: enable=invalid-name
 
 import argparse
-import ctypes
 import json
 import struct
 import sys
 import uuid
 from enum import Enum
-from signal import SIGINT
+
 from threading import RLock, Thread
 from xml.etree import ElementTree as ET
 
@@ -34,8 +33,6 @@ EDGE_BROWSER_CLIENT_ID = "d7b530a4-7680-4c23-a8bf-c52c121d2e87"
 # dbus start service reply codes
 START_REPLY_SUCCESS = 1
 START_REPLY_ALREADY_RUNNING = 2
-# prctl constants
-PR_SET_PDEATHSIG = 1
 
 # stripped down version of the broker dbus interface,
 # as brokers > 2.0.1 do not implement introspection
@@ -281,20 +278,14 @@ def run_as_native_messaging():
         loop = GLib.MainLoop()
         loop.run()
 
-    def register_terminate_with_parent():
-        libc = ctypes.CDLL("libc.so.6")
-        libc.prctl(PR_SET_PDEATHSIG, SIGINT, 0, 0, 0)
-
     print("Running as native messaging instance.", file=sys.stderr)
     print("For interactive mode, start with --interactive", file=sys.stderr)
 
-    # on chrome and chromium, the parent process does not reliably
-    # terminate the process when the parent process is killed.
-    register_terminate_with_parent()
-
     ssomib = SsoMib(daemon=True)
     ssomib.on_broker_state_changed(notify_state_change)
-    monitor = Thread(target=run_dbus_monitor)
+    # daemon=True is critical: without it, the GLib main loop thread
+    # keeps the process alive as an orphan after the browser closes stdin.
+    monitor = Thread(target=run_dbus_monitor, daemon=True)
     monitor.start()
     while True:
         received_message = NativeMessaging.get_message()
