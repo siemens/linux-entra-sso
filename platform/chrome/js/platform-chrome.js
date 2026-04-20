@@ -71,7 +71,8 @@ export class PlatformChrome extends Platform {
                 id: 1,
                 priority: 1,
                 condition: {
-                    urlFilter: Platform.SSO_URL + "/*",
+                    urlFilter: "|" + Platform.SSO_URL + "/",
+                    requestDomains: [URL.parse(Platform.SSO_URL).hostname],
                     resourceTypes: ["main_frame", "sub_frame"],
                 },
                 action: {
