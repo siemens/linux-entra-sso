@@ -23,9 +23,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -56,7 +56,7 @@ jobs:
       attestations: write
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -75,21 +75,21 @@ jobs:
           npx web-ext@${{ env.WEB_EXT_VERS }} lint --source-dir build/thunderbird --self-hosted
 
       - name: upload Firefox and Thunderbird extension
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mozilla-xpi
           path: |
             build/**/*.xpi
 
       - name: upload chrome extension zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: chrome-zip
           path: |
             build/chrome/
 
       - name: upload debian package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: debian-package
           path: |

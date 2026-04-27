@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: get git committer
         run: |
@@ -57,14 +57,14 @@ jobs:
             --filename '{name}-{version}.thunderbird.xpi'
 
       - name: upload firefox extension
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: firefox-signed-xpi
           path: |
             build/linux_entra_sso-*.xpi
 
       - name: upload debian package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: debian-package
           path: |
