@@ -78,7 +78,7 @@ jobs:
             pkgs/linux-entra-sso_*.deb
 
       - name: create release
-        uses: softprops/action-gh-release@a74c6b72af54cfa997e81df42d94703d6313a2d0 # v2.0.6
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           files: |
             build/linux_entra_sso-*.xpi
