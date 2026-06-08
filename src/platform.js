@@ -8,6 +8,15 @@ import { ssoLog } from "./utils.js";
 export class Platform {
     static SSO_URL = "https://login.microsoftonline.com";
 
+    /*
+     * Whether the connection to the native messaging backend must be kept
+     * alive permanently. On platforms that rely on a running service worker
+     * (e.g. blocking webRequest), a persistent NM port prevents the MV3
+     * worker from being shut down. Platforms that use declarative mechanisms
+     * (e.g. declarativeNetRequest) can let the worker idle out.
+     */
+    static KEEP_BROKER_CONNECTED = false;
+
     browser;
 
     host_versions = {

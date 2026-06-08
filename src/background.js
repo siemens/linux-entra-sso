@@ -171,7 +171,11 @@ function on_startup() {
     chrome.permissions.onAdded.addListener(on_permissions_changed);
     chrome.permissions.onRemoved.addListener(on_permissions_changed);
 
-    broker = new Broker("linux_entra_sso", on_broker_state_change);
+    broker = new Broker(
+        "linux_entra_sso",
+        on_broker_state_change,
+        PLATFORM.constructor.KEEP_BROKER_CONNECTED,
+    );
     accountManager = new AccountManager(broker);
     deviceManager = new DeviceManager(accountManager);
     Promise.all([

@@ -11,6 +11,11 @@ export class PlatformChrome extends Platform {
     #update_net_rules_cb = null;
 
     static CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
+    /*
+     * PRT injection uses declarativeNetRequest, which does not require a
+     * running service worker, so the NM connection can idle out.
+     */
+    static KEEP_BROKER_CONNECTED = false;
 
     constructor() {
         super();
