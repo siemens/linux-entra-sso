@@ -123,18 +123,25 @@ export class Account {
         return ctx.getImageData(0, 0, width, width);
     }
 
-    toSerial() {
-        return {
+    toSerial(with_secrets = false) {
+        const serial = {
             broker_obj: this.brokerObject(),
             active: this.active,
             avatar: this.avatar,
         };
+        if (with_secrets) {
+            serial.access_token = this.access_token;
+            serial.access_token_exp = this.access_token_exp;
+        }
+        return serial;
     }
 
     static fromSerial(serial) {
         let acc = new Account(serial.broker_obj);
         acc.active = serial.active;
         acc.avatar = serial.avatar ?? null;
+        acc.access_token = serial.access_token ?? null;
+        acc.access_token_exp = serial.access_token_exp ?? 0;
         return acc;
     }
 }
@@ -283,11 +290,34 @@ export class AccountManager {
                 ? this.#registered.map((a) => a.toSerial())
                 : [],
         };
-        return chrome.storage.local.set({ ssostate });
+        const appstate = {
+            broker_queried: this.#queried,
+            accounts: this.#registered.map((a) => a.toSerial(true)),
+        };
+        return Promise.all([
+            chrome.storage.local.set({ ssostate }),
+            chrome.storage.session.set({ account_manager: appstate }),
+        ]);
     }
 
     async restore() {
-        const data = await chrome.storage.local.get("ssostate");
+        const [data, sessionData] = await Promise.all([
+            chrome.storage.local.get("ssostate"),
+            chrome.storage.session.get("account_manager"),
+        ]);
+        if (sessionData.account_manager) {
+            this.#queried = sessionData.account_manager.broker_queried ?? false;
+            this.#registered =
+                sessionData.account_manager.accounts.map((a) =>
+                    Account.fromSerial(a),
+                ) ?? [];
+        }
+        /* restored from session */
+        if (this.#registered.length > 0) {
+            return this.getActive() != null;
+        }
+
+        /* no accounts in session, try restore from local storage */
         let active_acc = undefined;
         if (!data.ssostate) {
             ssoLog("no preserved state found");
