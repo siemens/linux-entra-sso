@@ -31,6 +31,8 @@ export class DeviceManager {
 
     #am = null;
     #last_refresh = 0;
+    /* in-flight device load, to dedup concurrent calls */
+    #refresh_promise = null;
     device = null;
 
     constructor(account_manager) {
@@ -60,6 +62,19 @@ export class DeviceManager {
      * @returns true on success
      */
     async loadDeviceInfo(broker) {
+        /* coalesce concurrent loads into a single request */
+        if (this.#refresh_promise) {
+            return this.#refresh_promise;
+        }
+        this.#refresh_promise = this.#loadDeviceInfo(broker);
+        try {
+            return await this.#refresh_promise;
+        } finally {
+            this.#refresh_promise = null;
+        }
+    }
+
+    async #loadDeviceInfo(broker) {
         if (!this.#am.hasAccounts()) {
             return false;
         }
