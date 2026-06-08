@@ -124,12 +124,17 @@ export class Account {
     }
 
     toSerial() {
-        return { broker_obj: this.brokerObject(), active: this.active };
+        return {
+            broker_obj: this.brokerObject(),
+            active: this.active,
+            avatar: this.avatar,
+        };
     }
 
     static fromSerial(serial) {
         let acc = new Account(serial.broker_obj);
         acc.active = serial.active;
+        acc.avatar = serial.avatar ?? null;
         return acc;
     }
 }
