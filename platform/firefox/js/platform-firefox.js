@@ -8,6 +8,12 @@ import { ssoLog } from "./utils.js";
 
 export class PlatformFirefox extends Platform {
     browser = "Firefox";
+    /*
+     * We use a blocking webRequest handler for PRT injection, which requires a
+     * running service worker. Keep the NM connection alive to prevent the MV3
+     * worker from being shut down.
+     */
+    static KEEP_BROKER_CONNECTED = true;
     /* PRT injection state */
     #on_before_send_headers = null;
     #broker = null;
