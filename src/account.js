@@ -189,6 +189,10 @@ export class AccountManager {
             this.selectAccount();
             ssoLog("select first account: " + this.getActive().username());
         }
+
+        /* we successfully got account data from the broker */
+        this.#queried = true;
+
         await Promise.all(
             this.#registered.map((a) => this.loadProfilePicture(broker, a)),
         );
