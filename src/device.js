@@ -13,6 +13,17 @@ export class Device {
         this.name = name;
         this.compliant = compliant;
     }
+
+    toSerial() {
+        return {
+            name: this.name,
+            compliant: this.compliant,
+        };
+    }
+
+    static fromSerial(serial) {
+        return new Device(serial.name, serial.compliant);
+    }
 }
 
 export class DeviceManager {
@@ -86,5 +97,27 @@ export class DeviceManager {
 
     getDevice() {
         return this.device;
+    }
+
+    /*
+     * Store the current device state in the session storage.
+     */
+    async persist() {
+        const state = {
+            last_refresh: this.#last_refresh,
+            device: this.device ? this.device.toSerial() : null,
+        };
+        return chrome.storage.session.set({ device_manager: state });
+    }
+
+    async restore() {
+        const data = await chrome.storage.session.get("device_manager");
+        if (!data.device_manager) {
+            return;
+        }
+        this.#last_refresh = data.device_manager.last_refresh ?? 0;
+        this.device = data.device_manager.device
+            ? Device.fromSerial(data.device_manager.device)
+            : null;
     }
 }

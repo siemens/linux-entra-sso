@@ -103,6 +103,7 @@ function notify_state_change(ui_only = false) {
     deviceManager.updateDeviceInfo(broker).then((updated) => {
         /* only notify on success to avoid indefinite recursion as errors are not cached */
         if (updated) {
+            deviceManager.persist();
             notify_state_change(true);
         }
     });
@@ -142,6 +143,7 @@ async function on_broker_state_change(online) {
             await accountManager.loadAccounts(broker);
             accountManager.persist();
             await deviceManager.loadDeviceInfo(broker);
+            deviceManager.persist();
             notify_state_change();
         }
     } else {
@@ -178,6 +180,7 @@ function on_startup() {
         accountManager.restore().then((active) => {
             state_active = active;
         }),
+        deviceManager.restore(),
     ]).then(() => {
         broker.connect();
         PLATFORM.setup(broker).then(() => {
