@@ -68,7 +68,7 @@ export class Broker {
         this.#port_native.onMessage.addListener(
             this.#on_message_native.bind(this),
         );
-        ssoLog("Broker created");
+        ssoLog("connected to host tooling");
     }
 
     isConnected() {
