@@ -10,7 +10,9 @@ const TOKEN_MIN_VALIDITY_MS = 60 * 1000;
 
 export class Account {
     #broker_obj = null;
+    /* ImageData cache for the tray icon (not serialized) */
     #avatar_imgdata = null;
+    /* circular avatar as a serializable data URL; null => default icon */
     avatar = null;
     active = false;
     access_token = null;
@@ -42,17 +44,31 @@ export class Account {
     }
 
     async getAvatarImgData() {
-        if (!this.#avatar_imgdata) {
+        if (this.#avatar_imgdata) {
+            return this.#avatar_imgdata;
+        }
+        if (!this.avatar) {
             this.#avatar_imgdata = await load_icon(
                 "/icons/profile-outline_48.png",
                 48,
             );
+            return this.#avatar_imgdata;
         }
+        /* derive ImageData from the serializable data URL */
+        const bitmap = await createImageBitmap(
+            await (await fetch(this.avatar)).blob(),
+        );
+        const canvas = new OffscreenCanvas(48, 48);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(bitmap, 0, 0, 48, 48);
+        this.#avatar_imgdata = ctx.getImageData(0, 0, 48, 48);
         return this.#avatar_imgdata;
     }
 
-    setAvatarImgData(data) {
-        this.#avatar_imgdata = data;
+    setAvatar(dataUrl) {
+        this.avatar = dataUrl;
+        /* clear cache, will be rebuild on next getAvatarImgData */
+        this.#avatar_imgdata = null;
     }
 
     async getDecoratedAvatar(color, width) {
@@ -230,12 +246,10 @@ export class AccountManager {
             let avatar = await createImageBitmap(await response.blob());
             let canvas = new OffscreenCanvas(48, 48);
             let ctx = canvas.getContext("2d");
-            ctx.save();
             ctx.beginPath();
             ctx.arc(24, 24, 24, 0, Math.PI * 2, false);
             ctx.clip();
-            ctx.drawImage(avatar, 0, 0);
-            ctx.restore();
+            ctx.drawImage(avatar, 0, 0, 48, 48);
             /* serialize image to data URL (ugly, but portable) */
             let blob = await canvas.convertToBlob();
             const dataUrl = await new Promise((r) => {
@@ -243,12 +257,7 @@ export class AccountManager {
                 a.onload = r;
                 a.readAsDataURL(blob);
             }).then((e) => e.target.result);
-
-            /* store image data */
-            ctx.clearRect(0, 0, 48, 48);
-            ctx.drawImage(avatar, 0, 0, 48, 48);
-            account.setAvatarImgData(ctx.getImageData(0, 0, 48, 48));
-            account.avatar = dataUrl;
+            account.setAvatar(dataUrl);
         } else {
             ssoLog(
                 "Warning: Could not get profile picture of " +
