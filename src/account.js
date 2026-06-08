@@ -149,6 +149,8 @@ export class Account {
 export class AccountManager {
     #registered = [];
     #queried = false;
+    /* in-flight token requests, keyed by username, to dedup concurrent calls */
+    #token_requests = new Map();
 
     hasAccounts() {
         return this.#registered.length != 0;
@@ -230,6 +232,22 @@ export class AccountManager {
         if (Date.now() + TOKEN_MIN_VALIDITY_MS < account.access_token_exp) {
             return account.access_token;
         }
+        const username = account.username();
+        /* coalesce concurrent requests for the same account */
+        let request = this.#token_requests.get(username);
+        if (request) {
+            return request;
+        }
+        request = this.#acquireToken(broker, account);
+        this.#token_requests.set(username, request);
+        try {
+            return await request;
+        } finally {
+            this.#token_requests.delete(username);
+        }
+    }
+
+    async #acquireToken(broker, account) {
         try {
             const graph_token = await broker.acquireTokenSilently(account);
             ssoLog("API token acquired for " + account.username());
