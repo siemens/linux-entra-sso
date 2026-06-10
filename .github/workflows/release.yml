@@ -14,6 +14,7 @@ permissions: {}
 
 env:
   WEB_EXT_VERS: 10.1.0
+  CRX3_VERS: 2.0.0
 
 jobs:
   release-extension:
@@ -55,6 +56,19 @@ jobs:
             --source-dir build/thunderbird \
             --artifacts-dir build \
             --filename '{name}-{version}.thunderbird.xpi'
+
+      # sign the Chrome extension with our own private key, as the
+      # Chrome Web Store upload requires a packed and signed CRX file
+      - name: pack signed Chrome extension
+        env:
+          CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+        run: |
+          KEY_FILE="$(mktemp)"
+          trap 'shred -u "$KEY_FILE"' EXIT
+          printf '%s' "$CRX_PRIVATE_KEY" > "$KEY_FILE"
+          cat "build/Linux-Entra-SSO-${{ github.ref_name }}.chrome.zip" | npx crx3@${{ env.CRX3_VERS }} \
+            --key "$KEY_FILE" \
+            --crx "build/Linux-Entra-SSO-${{ github.ref_name }}.chrome.crx"
 
       - name: upload firefox extension
         uses: actions/upload-artifact@v7
@@ -131,8 +145,7 @@ jobs:
       - name: release Chrome extension on CWS
         uses: mnao305/chrome-extension-upload@fdfe79400af990f5145a319e834aee64907ccff4 # v6.0.0
         with:
-          file-path: build/Linux-Entra-SSO-*chrome.zip
-          glob: true
+          file-path: build/Linux-Entra-SSO-${{ github.ref_name }}.chrome.crx
           extension-id: jlnfnnolkbjieggibinobhkjdfbpcohn
           client-id: ${{ secrets.CWS_CLIENT_ID }}
           client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
