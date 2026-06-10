@@ -71,7 +71,7 @@ jobs:
             pkgs/linux-entra-sso_*.deb
 
       - name: attest Firefox extension build
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest@v4
         with:
           subject-path: |
             build/linux_entra_sso-*.xpi
