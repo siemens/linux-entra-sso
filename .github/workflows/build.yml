@@ -68,11 +68,17 @@ jobs:
 
       - name: "web-ext lint Firefox"
         run: |
-          npx web-ext@${{ env.WEB_EXT_VERS }} lint --source-dir build/firefox --self-hosted
+          npx web-ext@${{ env.WEB_EXT_VERS }} lint \
+            --source-dir build/firefox \
+            --self-hosted \
+            --warnings-as-errors
 
       - name: "web-ext lint Thunderbird"
         run: |
-          npx web-ext@${{ env.WEB_EXT_VERS }} lint --source-dir build/thunderbird --self-hosted
+          npx web-ext@${{ env.WEB_EXT_VERS }} lint \
+            --source-dir build/thunderbird \
+            --self-hosted \
+            --warnings-as-errors
 
       - name: upload Firefox and Thunderbird extension
         uses: actions/upload-artifact@v7
