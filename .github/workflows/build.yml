@@ -23,11 +23,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
-          python-version: '3.12'
+          python-version: '3.14'
 
       - name: install dependencies
         run: |
@@ -44,7 +44,7 @@ jobs:
         run: black --diff --check .
 
       - name: run prettier
-        uses: creyD/prettier_action@v4.6
+        uses: creyD/prettier_action@8c18391fdc98ed0d884c6345f03975edac71b8f0 # v4.6
         with:
           dry: true
           prettier_options: '--check **/*.{js,html,css}'
@@ -56,7 +56,7 @@ jobs:
       attestations: write
     steps:
       - name: checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
 
@@ -81,28 +81,28 @@ jobs:
             --warnings-as-errors
 
       - name: upload Firefox and Thunderbird extension
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: mozilla-xpi
           path: |
             build/**/*.xpi
 
       - name: upload chrome extension zip
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: chrome-zip
           path: |
             build/chrome/
 
       - name: upload debian package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: debian-package
           path: |
             pkgs/linux-entra-sso_*.deb
 
       - name: attest extension artifacts
-        uses: actions/attest@v4
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
         if: github.event_name == 'push'
         with:
           subject-path: |
