@@ -1,0 +1,20 @@
+// SPDX-FileCopyrightText: Copyright 2026 Siemens AG
+// SPDX-License-Identifier: MPL-2.0
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:best-practices",
+    "group:all",
+    "schedule:monthly",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)",
+    ":prHourlyLimitNone",
+    ":prConcurrentLimitNone",
+  ],
+  minimumReleaseAge: '3 days',
+  lockFileMaintenance: {
+    enabled: false,
+  },
+  assigneesFromCodeOwners: true,
+  separateMajorMinor: false,
+}
