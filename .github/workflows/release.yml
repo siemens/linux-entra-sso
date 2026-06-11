@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: get git committer
         run: |
@@ -71,21 +71,21 @@ jobs:
             --crx "build/Linux-Entra-SSO-${{ github.ref_name }}.chrome.crx"
 
       - name: upload firefox extension
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: firefox-signed-xpi
           path: |
             build/linux_entra_sso-*.xpi
 
       - name: upload debian package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: debian-package
           path: |
             pkgs/linux-entra-sso_*.deb
 
       - name: attest Firefox extension build
-        uses: actions/attest@v4
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
         with:
           subject-path: |
             build/linux_entra_sso-*.xpi
