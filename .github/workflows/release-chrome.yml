@@ -14,6 +14,7 @@ permissions: {}
 
 env:
   CRX3_VERS: 2.0.0
+  CWS_UPLOAD_VERS: 6.0.0
 
 jobs:
   release-chrome:
@@ -44,12 +45,36 @@ jobs:
             --key "$KEY_FILE" \
             --crx "build/Linux-Entra-SSO-${{ github.ref_name }}.chrome.crx"
 
+      # mnao305/chrome-extension-upload does not support uploading .crx files,
+      # so use the chrome-webstore-upload library directly.
+      # https://github.com/mnao305/chrome-extension-upload/issues/32
+      # The extension is only uploaded, not published.
       - name: release Chrome extension on CWS
-        uses: mnao305/chrome-extension-upload@fdfe79400af990f5145a319e834aee64907ccff4 # v6.0.0
-        with:
-          file-path: build/Linux-Entra-SSO-${{ github.ref_name }}.chrome.crx
-          extension-id: jlnfnnolkbjieggibinobhkjdfbpcohn
-          client-id: ${{ secrets.CWS_CLIENT_ID }}
-          client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
-          refresh-token: ${{ secrets.CWS_REFRESH_TOKEN }}
-          publish: false
+        env:
+          CRX_FILE: build/Linux-Entra-SSO-${{ github.ref_name }}.chrome.crx
+          CWS_EXTENSION_ID: jlnfnnolkbjieggibinobhkjdfbpcohn
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: |
+          npm install --no-save chrome-webstore-upload@${{ env.CWS_UPLOAD_VERS }}
+          node --input-type=module <<'EOF'
+          import chromeWebstoreUpload from 'chrome-webstore-upload';
+
+          const store = chromeWebstoreUpload({
+            publisherId: process.env.CWS_PUBLISHER_ID,
+            extensionId: process.env.CWS_EXTENSION_ID,
+            clientId: process.env.CWS_CLIENT_ID,
+            clientSecret: process.env.CWS_CLIENT_SECRET,
+            refreshToken: process.env.CWS_REFRESH_TOKEN,
+          });
+
+          const token = await store.fetchToken();
+          const response = await store.uploadExisting(process.env.CRX_FILE, token);
+          console.log('Upload response:', JSON.stringify(response, null, 2));
+          if (response.uploadState === 'FAILURE') {
+            console.error('Chrome Web Store upload failed');
+            process.exit(1);
+          }
+          EOF
