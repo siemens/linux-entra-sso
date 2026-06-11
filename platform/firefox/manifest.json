@@ -10,7 +10,12 @@
         "gecko": {
             "id": "linux-entra-sso@example.com",
             "strict_min_version": "140.0",
-            "update_url": "https://siemens.github.io/linux-entra-sso/firefox/updates.json"
+            "update_url": "https://siemens.github.io/linux-entra-sso/firefox/updates.json",
+            "data_collection_permissions": {
+                "required": [
+                    "authenticationInfo"
+                ]
+            }
         },
         "gecko_android": {
             "strict_min_version": "142.0"
