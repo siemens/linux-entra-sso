@@ -46,6 +46,11 @@
           "version": "1.9.0",
           "update_link": "https://github.com/siemens/linux-entra-sso/releases/download/v1.9.0/linux_entra_sso-1.9.0.thunderbird.xpi",
           "update_hash": "sha256:f858ada597db0f0668e4d7a3265feaa0cac40ef706c0817cae8e49c349b9891a"
+        },
+        {
+          "version": "1.9.1",
+          "update_link": "https://github.com/siemens/linux-entra-sso/releases/download/v1.9.1/linux_entra_sso-1.9.1.thunderbird.xpi",
+          "update_hash": "sha256:379077c0acd1448cdbd90de84160750d7f54cdb24276d48d6088325658df2eb3"
         }
       ]
     }
