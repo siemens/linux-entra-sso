@@ -17,14 +17,14 @@ let accountManager = null;
 let deviceManager = null;
 
 let initialized = false;
-let state_active = true;
 let port_menu = null;
+let state_restored = false;
 
 /*
  * Check if all conditions for SSO are met
  */
 function is_operational() {
-    return state_active && accountManager.getActive();
+    return accountManager.isActive() && accountManager.getActive();
 }
 
 async function on_permissions_changed() {
@@ -66,7 +66,8 @@ async function update_tray(action_needed) {
     /* inactive states */
     PLATFORM.setIconDisabled();
     let title = "EntraID SSO disabled";
-    if (state_active) title = "EntraID SSO disabled (waiting for broker)";
+    if (accountManager.isActive())
+        title = "EntraID SSO disabled (waiting for broker)";
     if (accountManager.hasAccounts() == 0) {
         title = "EntraID SSO disabled (no accounts registered)";
     }
@@ -86,6 +87,9 @@ async function update_tray(action_needed) {
  * the menu about a state change.
  */
 function notify_state_change(ui_only = false) {
+    // on service worker startup, delay all updates until we restored
+    // the application state from storage.
+    if (!state_restored) return;
     const gpo_update = policyManager.getPolicyUpdate(
         PLATFORM.well_known_app_filters,
     );
@@ -103,6 +107,7 @@ function notify_state_change(ui_only = false) {
     deviceManager.updateDeviceInfo(broker).then((updated) => {
         /* only notify on success to avoid indefinite recursion as errors are not cached */
         if (updated) {
+            deviceManager.persist();
             notify_state_change(true);
         }
     });
@@ -112,7 +117,7 @@ function notify_state_change(ui_only = false) {
         broker_online: broker.isRunning(),
         nm_connected: broker.isConnected(),
         device: deviceManager.getDevice(),
-        enabled: state_active,
+        enabled: accountManager.isActive(),
         host_version: PLATFORM.host_versions.native,
         broker_version: PLATFORM.host_versions.broker,
         sso_url: PLATFORM.getSsoUrl(),
@@ -122,11 +127,11 @@ function notify_state_change(ui_only = false) {
 
 async function on_message_menu(request) {
     if (request.command == "enable") {
-        state_active = true;
+        accountManager.setActive(true);
         const account = accountManager.selectAccount(request.username);
         if (account) ssoLog("select account " + account.username());
     } else if (request.command == "disable") {
-        state_active = false;
+        accountManager.setActive(false);
         accountManager.logout();
         ssoLog("disable SSO");
     }
@@ -142,6 +147,7 @@ async function on_broker_state_change(online) {
             await accountManager.loadAccounts(broker);
             accountManager.persist();
             await deviceManager.loadDeviceInfo(broker);
+            deviceManager.persist();
             notify_state_change();
         }
     } else {
@@ -169,16 +175,20 @@ function on_startup() {
     chrome.permissions.onAdded.addListener(on_permissions_changed);
     chrome.permissions.onRemoved.addListener(on_permissions_changed);
 
-    broker = new Broker("linux_entra_sso", on_broker_state_change);
+    broker = new Broker(
+        "linux_entra_sso",
+        on_broker_state_change,
+        PLATFORM.constructor.KEEP_BROKER_CONNECTED,
+    );
     accountManager = new AccountManager(broker);
     deviceManager = new DeviceManager(accountManager);
     Promise.all([
         PLATFORM.update_host_permissions(),
         policyManager.load_policies(),
-        accountManager.restore().then((active) => {
-            state_active = active;
-        }),
+        accountManager.restore(),
+        deviceManager.restore(),
     ]).then(() => {
+        state_restored = true;
         broker.connect();
         PLATFORM.setup(broker).then(() => {
             notify_state_change(true);

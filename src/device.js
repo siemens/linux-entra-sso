@@ -13,6 +13,17 @@ export class Device {
         this.name = name;
         this.compliant = compliant;
     }
+
+    toSerial() {
+        return {
+            name: this.name,
+            compliant: this.compliant,
+        };
+    }
+
+    static fromSerial(serial) {
+        return new Device(serial.name, serial.compliant);
+    }
 }
 
 export class DeviceManager {
@@ -20,6 +31,8 @@ export class DeviceManager {
 
     #am = null;
     #last_refresh = 0;
+    /* in-flight device load, to dedup concurrent calls */
+    #refresh_promise = null;
     device = null;
 
     constructor(account_manager) {
@@ -49,6 +62,19 @@ export class DeviceManager {
      * @returns true on success
      */
     async loadDeviceInfo(broker) {
+        /* coalesce concurrent loads into a single request */
+        if (this.#refresh_promise) {
+            return this.#refresh_promise;
+        }
+        this.#refresh_promise = this.#loadDeviceInfo(broker);
+        try {
+            return await this.#refresh_promise;
+        } finally {
+            this.#refresh_promise = null;
+        }
+    }
+
+    async #loadDeviceInfo(broker) {
         if (!this.#am.hasAccounts()) {
             return false;
         }
@@ -86,5 +112,27 @@ export class DeviceManager {
 
     getDevice() {
         return this.device;
+    }
+
+    /*
+     * Store the current device state in the session storage.
+     */
+    async persist() {
+        const state = {
+            last_refresh: this.#last_refresh,
+            device: this.device ? this.device.toSerial() : null,
+        };
+        return chrome.storage.session.set({ device_manager: state });
+    }
+
+    async restore() {
+        const data = await chrome.storage.session.get("device_manager");
+        if (!data.device_manager) {
+            return;
+        }
+        this.#last_refresh = data.device_manager.last_refresh ?? 0;
+        this.device = data.device_manager.device
+            ? Device.fromSerial(data.device_manager.device)
+            : null;
     }
 }

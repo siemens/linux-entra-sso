@@ -40,18 +40,32 @@ export class RpcHandlerQueue {
 }
 
 export class Broker {
+    static IDLE_DISCONNECT_MS = 10 * 1000;
+
     #name = null;
     #notify_fn = null;
     #port_native = null;
     #rpc_queue = new RpcHandlerQueue();
-    #online = false;
+    /* assume the broker is running until we know */
+    #online = true;
+    /* track if the NM connection was successful */
+    #conn_error = false;
+    #idle_timer = null;
+    /* if set, the NM connection is kept alive permanently */
+    #keep_connected = false;
 
-    constructor(name, state_change_fn) {
+    constructor(name, state_change_fn, keep_connected = false) {
         this.#name = name;
         this.#notify_fn = state_change_fn;
+        this.#keep_connected = keep_connected;
     }
 
     connect() {
+        if (this.#port_native) {
+            this.#reset_idle_timer();
+            return;
+        }
+        this.#conn_error = false;
         this.#port_native = chrome.runtime.connectNative(this.#name);
         this.#port_native.onDisconnect.addListener(() => {
             this.#port_native = null;
@@ -60,6 +74,7 @@ export class Broker {
                     "Error in native application connection: " +
                         chrome.runtime.lastError.message,
                 );
+                this.#conn_error = true;
             } else {
                 ssoLogError("Native application connection closed.");
             }
@@ -68,23 +83,65 @@ export class Broker {
         this.#port_native.onMessage.addListener(
             this.#on_message_native.bind(this),
         );
+        this.#reset_idle_timer();
         ssoLog("connected to host tooling");
     }
 
+    disconnect() {
+        this.#clear_idle_timer();
+        if (!this.#port_native) return;
+
+        this.#port_native.disconnect();
+        this.#port_native = null;
+    }
+
+    /**
+     * Ensure we are connected to the broker and (re)start the
+     * inactivity timer. Must be called by every broker function.
+     */
+    #keep_alive() {
+        this.connect();
+        this.#reset_idle_timer();
+    }
+
+    #reset_idle_timer() {
+        this.#clear_idle_timer();
+        /* keep the connection alive to prevent the worker from shutting down */
+        if (this.#keep_connected) return;
+        this.#idle_timer = setTimeout(() => {
+            this.#idle_timer = null;
+            ssoLog("disconnecting from host tooling after inactivity");
+            this.disconnect();
+        }, Broker.IDLE_DISCONNECT_MS);
+    }
+
+    #clear_idle_timer() {
+        if (this.#idle_timer !== null) {
+            clearTimeout(this.#idle_timer);
+            this.#idle_timer = null;
+        }
+    }
+
     isConnected() {
-        return this.#port_native !== null;
+        /**
+         * As we internally manage the lifecycle of the connection,
+         * we only let the caller know if we are unable to connect to the host
+         */
+        return !this.#conn_error;
     }
 
     isRunning() {
-        return this.#online;
+        return !this.#conn_error && this.#online;
     }
 
     getAccounts() {
+        this.#keep_alive();
         this.#port_native.postMessage({ command: "getAccounts" });
         return this.#rpc_queue.register_handle("getAccounts");
     }
 
     async acquireTokenSilently(account) {
+        this.#keep_alive();
         this.#port_native.postMessage({
             command: "acquireTokenSilently",
             account: account.brokerObject(),
@@ -93,6 +150,7 @@ export class Broker {
     }
 
     async acquirePrtSsoCookie(account, ssoUrl) {
+        this.#keep_alive();
         this.#port_native.postMessage({
             command: "acquirePrtSsoCookie",
             account: account.brokerObject(),
@@ -102,6 +160,7 @@ export class Broker {
     }
 
     async getVersion() {
+        this.#keep_alive();
         this.#port_native.postMessage({ command: "getVersion" });
         return this.#rpc_queue.register_handle("getVersion");
     }

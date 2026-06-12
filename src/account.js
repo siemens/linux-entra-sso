@@ -10,7 +10,9 @@ const TOKEN_MIN_VALIDITY_MS = 60 * 1000;
 
 export class Account {
     #broker_obj = null;
+    /* ImageData cache for the tray icon (not serialized) */
     #avatar_imgdata = null;
+    /* circular avatar as a serializable data URL; null => default icon */
     avatar = null;
     active = false;
     access_token = null;
@@ -42,17 +44,31 @@ export class Account {
     }
 
     async getAvatarImgData() {
-        if (!this.#avatar_imgdata) {
+        if (this.#avatar_imgdata) {
+            return this.#avatar_imgdata;
+        }
+        if (!this.avatar) {
             this.#avatar_imgdata = await load_icon(
                 "/icons/profile-outline_48.png",
                 48,
             );
+            return this.#avatar_imgdata;
         }
+        /* derive ImageData from the serializable data URL */
+        const bitmap = await createImageBitmap(
+            await (await fetch(this.avatar)).blob(),
+        );
+        const canvas = new OffscreenCanvas(48, 48);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(bitmap, 0, 0, 48, 48);
+        this.#avatar_imgdata = ctx.getImageData(0, 0, 48, 48);
         return this.#avatar_imgdata;
     }
 
-    setAvatarImgData(data) {
-        this.#avatar_imgdata = data;
+    setAvatar(dataUrl) {
+        this.avatar = dataUrl;
+        /* clear cache, will be rebuild on next getAvatarImgData */
+        this.#avatar_imgdata = null;
     }
 
     async getDecoratedAvatar(color, width) {
@@ -107,13 +123,25 @@ export class Account {
         return ctx.getImageData(0, 0, width, width);
     }
 
-    toSerial() {
-        return { broker_obj: this.brokerObject(), active: this.active };
+    toSerial(with_secrets = false) {
+        const serial = {
+            broker_obj: this.brokerObject(),
+            active: this.active,
+            avatar: this.avatar,
+        };
+        if (with_secrets) {
+            serial.access_token = this.access_token;
+            serial.access_token_exp = this.access_token_exp;
+        }
+        return serial;
     }
 
     static fromSerial(serial) {
         let acc = new Account(serial.broker_obj);
         acc.active = serial.active;
+        acc.avatar = serial.avatar ?? null;
+        acc.access_token = serial.access_token ?? null;
+        acc.access_token_exp = serial.access_token_exp ?? 0;
         return acc;
     }
 }
@@ -121,6 +149,10 @@ export class Account {
 export class AccountManager {
     #registered = [];
     #queried = false;
+    /* SSO is active unless the user explicitly logged out */
+    #active = true;
+    /* in-flight token requests, keyed by username, to dedup concurrent calls */
+    #token_requests = new Map();
 
     hasAccounts() {
         return this.#registered.length != 0;
@@ -135,6 +167,17 @@ export class AccountManager {
 
     getActive() {
         return this.#registered.find((a) => a.active);
+    }
+
+    /**
+     * @returns if SSO is active (i.e. the user did not explicitly log out)
+     */
+    isActive() {
+        return this.#active;
+    }
+
+    setActive(active) {
+        this.#active = active;
     }
 
     getRegistered() {
@@ -180,7 +223,14 @@ export class AccountManager {
         // corresponding one from the broker as active.
         const last_username = this.getActive()?.username();
         this.#registered = _accounts;
-        if (last_username && this.selectAccount(last_username)) {
+
+        /* we successfully got account data from the broker */
+        this.#queried = true;
+
+        // only auto-select an account if the user did not explicitly disable SSO
+        if (!this.#active) {
+            ssoLog("SSO is disabled, not selecting an account");
+        } else if (last_username && this.selectAccount(last_username)) {
             ssoLog(
                 "select previously used account: " +
                     this.getActive().username(),
@@ -189,9 +239,6 @@ export class AccountManager {
             this.selectAccount();
             ssoLog("select first account: " + this.getActive().username());
         }
-
-        /* we successfully got account data from the broker */
-        this.#queried = true;
 
         await Promise.all(
             this.#registered.map((a) => this.loadProfilePicture(broker, a)),
@@ -202,6 +249,22 @@ export class AccountManager {
         if (Date.now() + TOKEN_MIN_VALIDITY_MS < account.access_token_exp) {
             return account.access_token;
         }
+        const username = account.username();
+        /* coalesce concurrent requests for the same account */
+        let request = this.#token_requests.get(username);
+        if (request) {
+            return request;
+        }
+        request = this.#acquireToken(broker, account);
+        this.#token_requests.set(username, request);
+        try {
+            return await request;
+        } finally {
+            this.#token_requests.delete(username);
+        }
+    }
+
+    async #acquireToken(broker, account) {
         try {
             const graph_token = await broker.acquireTokenSilently(account);
             ssoLog("API token acquired for " + account.username());
@@ -230,12 +293,10 @@ export class AccountManager {
             let avatar = await createImageBitmap(await response.blob());
             let canvas = new OffscreenCanvas(48, 48);
             let ctx = canvas.getContext("2d");
-            ctx.save();
             ctx.beginPath();
             ctx.arc(24, 24, 24, 0, Math.PI * 2, false);
             ctx.clip();
-            ctx.drawImage(avatar, 0, 0);
-            ctx.restore();
+            ctx.drawImage(avatar, 0, 0, 48, 48);
             /* serialize image to data URL (ugly, but portable) */
             let blob = await canvas.convertToBlob();
             const dataUrl = await new Promise((r) => {
@@ -243,12 +304,7 @@ export class AccountManager {
                 a.onload = r;
                 a.readAsDataURL(blob);
             }).then((e) => e.target.result);
-
-            /* store image data */
-            ctx.clearRect(0, 0, 48, 48);
-            ctx.drawImage(avatar, 0, 0, 48, 48);
-            account.setAvatarImgData(ctx.getImageData(0, 0, 48, 48));
-            account.avatar = dataUrl;
+            account.setAvatar(dataUrl);
         } else {
             ssoLog(
                 "Warning: Could not get profile picture of " +
@@ -269,18 +325,44 @@ export class AccountManager {
                 ? this.#registered.map((a) => a.toSerial())
                 : [],
         };
-        return chrome.storage.local.set({ ssostate });
+        const appstate = {
+            broker_queried: this.#queried,
+            accounts: this.#registered.map((a) => a.toSerial(true)),
+        };
+        return Promise.all([
+            chrome.storage.local.set({ ssostate }),
+            chrome.storage.session.set({ account_manager: appstate }),
+        ]);
     }
 
     async restore() {
-        const data = await chrome.storage.local.get("ssostate");
+        const [data, sessionData] = await Promise.all([
+            chrome.storage.local.get("ssostate"),
+            chrome.storage.session.get("account_manager"),
+        ]);
+        if (sessionData.account_manager) {
+            this.#queried = sessionData.account_manager.broker_queried ?? false;
+            this.#registered =
+                sessionData.account_manager.accounts.map((a) =>
+                    Account.fromSerial(a),
+                ) ?? [];
+        }
+        /* restored from session */
+        if (this.#registered.length > 0) {
+            this.#active = this.getActive() != null;
+            return;
+        }
+
+        /* no accounts in session, try restore from local storage */
         let active_acc = undefined;
         if (!data.ssostate) {
             ssoLog("no preserved state found");
             // if the SSO is not explicitly disabled, we assume it is on.
-            return true;
+            this.#active = true;
+            return;
         }
         const state_active = data.ssostate.state;
+        this.#active = state_active;
         if (state_active && data.ssostate.accounts) {
             this.#registered = data.ssostate.accounts.map((a) =>
                 Account.fromSerial(a),
@@ -294,6 +376,5 @@ export class AccountManager {
                 );
             }
         }
-        return state_active;
     }
 }
