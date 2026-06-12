@@ -149,6 +149,8 @@ export class Account {
 export class AccountManager {
     #registered = [];
     #queried = false;
+    /* SSO is active unless the user explicitly logged out */
+    #active = true;
     /* in-flight token requests, keyed by username, to dedup concurrent calls */
     #token_requests = new Map();
 
@@ -165,6 +167,17 @@ export class AccountManager {
 
     getActive() {
         return this.#registered.find((a) => a.active);
+    }
+
+    /**
+     * @returns if SSO is active (i.e. the user did not explicitly log out)
+     */
+    isActive() {
+        return this.#active;
+    }
+
+    setActive(active) {
+        this.#active = active;
     }
 
     getRegistered() {
@@ -210,7 +223,14 @@ export class AccountManager {
         // corresponding one from the broker as active.
         const last_username = this.getActive()?.username();
         this.#registered = _accounts;
-        if (last_username && this.selectAccount(last_username)) {
+
+        /* we successfully got account data from the broker */
+        this.#queried = true;
+
+        // only auto-select an account if the user did not explicitly disable SSO
+        if (!this.#active) {
+            ssoLog("SSO is disabled, not selecting an account");
+        } else if (last_username && this.selectAccount(last_username)) {
             ssoLog(
                 "select previously used account: " +
                     this.getActive().username(),
@@ -219,9 +239,6 @@ export class AccountManager {
             this.selectAccount();
             ssoLog("select first account: " + this.getActive().username());
         }
-
-        /* we successfully got account data from the broker */
-        this.#queried = true;
 
         await Promise.all(
             this.#registered.map((a) => this.loadProfilePicture(broker, a)),
@@ -332,7 +349,8 @@ export class AccountManager {
         }
         /* restored from session */
         if (this.#registered.length > 0) {
-            return this.getActive() != null;
+            this.#active = this.getActive() != null;
+            return;
         }
 
         /* no accounts in session, try restore from local storage */
@@ -340,9 +358,11 @@ export class AccountManager {
         if (!data.ssostate) {
             ssoLog("no preserved state found");
             // if the SSO is not explicitly disabled, we assume it is on.
-            return true;
+            this.#active = true;
+            return;
         }
         const state_active = data.ssostate.state;
+        this.#active = state_active;
         if (state_active && data.ssostate.accounts) {
             this.#registered = data.ssostate.accounts.map((a) =>
                 Account.fromSerial(a),
@@ -356,6 +376,5 @@ export class AccountManager {
                 );
             }
         }
-        return state_active;
     }
 }
