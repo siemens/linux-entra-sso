@@ -43,11 +43,10 @@ jobs:
       - name: check Python code formatting
         run: black --diff --check .
 
-      - name: run prettier
-        uses: creyD/prettier_action@8c18391fdc98ed0d884c6345f03975edac71b8f0 # v4.6
+      - name: Run biome formatter
+        uses: docker://ghcr.io/biomejs/biome:2.4.16@sha256:e43695cefaf3d3dc0713af731ef3ef150fef5a6bf5aebeb0ee3ffbaffd2ddc5e
         with:
-          dry: true
-          prettier_options: '--check **/*.{js,html,css}'
+          args: ci
 
   build-xpi:
     runs-on: ubuntu-24.04
