@@ -19,6 +19,7 @@ let deviceManager = null;
 let initialized = false;
 let state_active = true;
 let port_menu = null;
+let state_restored = false;
 
 /*
  * Check if all conditions for SSO are met
@@ -86,6 +87,9 @@ async function update_tray(action_needed) {
  * the menu about a state change.
  */
 function notify_state_change(ui_only = false) {
+    // on service worker startup, delay all updates until we restored
+    // the application state from storage.
+    if (!state_restored) return;
     const gpo_update = policyManager.getPolicyUpdate(
         PLATFORM.well_known_app_filters,
     );
@@ -186,6 +190,7 @@ function on_startup() {
         }),
         deviceManager.restore(),
     ]).then(() => {
+        state_restored = true;
         broker.connect();
         PLATFORM.setup(broker).then(() => {
             notify_state_change(true);
