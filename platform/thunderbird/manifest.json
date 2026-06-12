@@ -2,7 +2,7 @@
     "description": "Entra ID SSO via Microsoft Identity Broker",
     "manifest_version": 3,
     "name": "Linux Entra SSO",
-    "version": "1.9.1",
+    "version": "1.8.1",
     "icons": {
         "48": "icons/linux-entra-sso.svg"
     },
@@ -12,9 +12,7 @@
             "strict_min_version": "140.0",
             "update_url": "https://siemens.github.io/linux-entra-sso/thunderbird/updates.json",
             "data_collection_permissions": {
-                "required": [
-                    "authenticationInfo"
-                ]
+                "required": ["authenticationInfo"]
             }
         },
         "gecko_android": {
@@ -35,7 +33,7 @@
         ]
     },
     "background": {
-        "scripts": [ "/src/background.js" ],
+        "scripts": ["/src/background.js"],
         "type": "module"
     },
     "permissions": [
@@ -44,7 +42,5 @@
         "webRequestBlocking",
         "storage"
     ],
-    "host_permissions": [
-        "https://login.microsoftonline.com/*"
-    ]
+    "host_permissions": ["https://login.microsoftonline.com/*"]
 }
