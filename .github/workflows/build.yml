@@ -23,9 +23,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.14'
 
@@ -55,7 +55,7 @@ jobs:
       attestations: write
     steps:
       - name: checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           fetch-depth: 0
 
@@ -101,7 +101,7 @@ jobs:
             pkgs/linux-entra-sso_*.deb
 
       - name: attest extension artifacts
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4
         if: github.event_name == 'push'
         with:
           subject-path: |
