@@ -17,4 +17,27 @@
   },
   assigneesFromCodeOwners: true,
   separateMajorMinor: false,
+  customManagers: [
+    {
+      customType: "regex",
+      managerFilePatterns: ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      matchStrings: ["WEB_EXT_VERS:\\s*(?<currentValue>\\S+)"],
+      depNameTemplate: "web-ext",
+      datasourceTemplate: "npm",
+    },
+    {
+      customType: "regex",
+      managerFilePatterns: ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      matchStrings: ["CRX3_VERS:\\s*(?<currentValue>\\S+)"],
+      depNameTemplate: "crx3",
+      datasourceTemplate: "npm",
+    },
+    {
+      customType: "regex",
+      managerFilePatterns: ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      matchStrings: ["CWS_UPLOAD_VERS:\\s*(?<currentValue>\\S+)"],
+      depNameTemplate: "chrome-webstore-upload",
+      datasourceTemplate: "npm",
+    },
+  ],
 }
