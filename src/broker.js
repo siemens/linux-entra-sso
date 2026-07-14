@@ -50,6 +50,8 @@ export class Broker {
     #online = true;
     /* track if the NM connection was successful */
     #conn_error = false;
+    /* track if we ever had a successful connection to the native app */
+    #had_connection = false;
     #idle_timer = null;
     /* if set, the NM connection is kept alive permanently */
     #keep_connected = false;
@@ -68,6 +70,7 @@ export class Broker {
         this.#conn_error = false;
         this.#port_native = chrome.runtime.connectNative(this.#name);
         this.#port_native.onDisconnect.addListener(() => {
+            /* note, that this is not called on .disconnect(), only on errors */
             this.#port_native = null;
             if (chrome.runtime.lastError) {
                 ssoLogError(
@@ -76,6 +79,7 @@ export class Broker {
                 );
                 this.#conn_error = true;
             } else {
+                /* Connection closed by the native application. */
                 ssoLogError("Native application connection closed.");
             }
             this.#notify_fn(false);
@@ -84,7 +88,6 @@ export class Broker {
             this.#on_message_native.bind(this),
         );
         this.#reset_idle_timer();
-        ssoLog("connected to host tooling");
     }
 
     disconnect() {
@@ -127,11 +130,26 @@ export class Broker {
          * As we internally manage the lifecycle of the connection,
          * we only let the caller know if we are unable to connect to the host
          */
-        return !this.#conn_error;
+        return !this.#conn_error && this.#had_connection;
     }
 
     isRunning() {
         return !this.#conn_error && this.#online;
+    }
+
+    /*
+     * Persist the connection tracking state in the session storage.
+     */
+    async persist() {
+        return chrome.storage.session.set({
+            broker_state: { had_connection: this.#had_connection },
+        });
+    }
+
+    async restore() {
+        const data = await chrome.storage.session.get("broker_state");
+        if (!data.broker_state) return;
+        this.#had_connection = data.broker_state.had_connection ?? false;
     }
 
     getAccounts() {
@@ -166,6 +184,13 @@ export class Broker {
     }
 
     #on_message_native(response) {
+        /* receiving any message proves the connection was successful */
+        if (!this.#had_connection) {
+            this.#had_connection = true;
+            this.persist();
+            ssoLog("connected to host tooling");
+        }
+
         /* handle events (not an RPC response) */
         if (response.command == "brokerStateChanged") {
             if (response.message == "online") this.#online = true;

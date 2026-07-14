@@ -187,6 +187,7 @@ function on_startup() {
         policyManager.load_policies(),
         accountManager.restore(),
         deviceManager.restore(),
+        broker.restore(),
     ]).then(() => {
         state_restored = true;
         broker.connect();
