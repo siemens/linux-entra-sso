@@ -25,11 +25,19 @@ class SsoMibMock(les.SsoMib):
 
     def __init__(self, daemon=False):  # pylint: disable=unused-argument
         self.broker = True
+        self._state_changed_cb = None
 
-    def on_broker_state_changed(self, callback):  # pylint: disable=unused-argument
+    def check_broker_online(self):
         """
-        We do not implement state changes yet.
+        The mock always simulates an available broker.
         """
+        return True
+
+    def on_broker_state_changed(self, callback):
+        """
+        Register a callback to be called when the broker state changes.
+        """
+        self._state_changed_cb = callback
 
     def get_accounts(self):
         """

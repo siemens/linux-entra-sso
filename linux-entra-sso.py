@@ -119,17 +119,18 @@ class SsoMib:
         self.broker = None
         self.session_id = uuid.uuid4()
         self._state_changed_cb = None
-        self._last_state_reported = False
         if daemon:
             self._introspect_broker()
             self._monitor_bus()
+
+    def check_broker_online(self):
+        return bool(self._bus.get(".DBus").NameHasOwner(self.BROKER_NAME))
 
     def _introspect_broker(self):
         introspection = ET.fromstring(BROKER_DBUS_SPEC)
         self.broker = CompositeInterface(introspection)(
             self._bus, self.BROKER_NAME, self.BROKER_PATH
         )
-        self._report_state_change()
 
     def _monitor_bus(self):
         self._bus.subscribe(
@@ -146,19 +147,13 @@ class SsoMib:
         _ = (sender, object, iface, signal)
         # params = (name, old_owner, new_owner)
         new_owner = params[2]
-        if new_owner:
-            self._introspect_broker()
-        else:
-            # we need to ensure that the next dbus call will
-            # wait until the broker is fully initialized again
-            self.broker = None
-            self._report_state_change()
+        # the broker introspection is static, so the proxy object never
+        # needs to be (re)created or dropped here; just report the state.
+        self._report_state_change(bool(new_owner))
 
-    def _report_state_change(self):
-        current_state = bool(self.broker)
-        if self._state_changed_cb and self._last_state_reported != current_state:
-            self._state_changed_cb(current_state)
-        self._last_state_reported = current_state
+    def _report_state_change(self, online):
+        if self._state_changed_cb:
+            self._state_changed_cb(online)
 
     def on_broker_state_changed(self, callback):
         """
@@ -273,8 +268,8 @@ def run_as_native_messaging():
             respond(cmd, ssomib.get_broker_version())
 
     def run_dbus_monitor():
-        # inform other side about initial state
-        notify_state_change(bool(ssomib.broker))
+        # inform other side about the current broker state
+        notify_state_change(ssomib.check_broker_online())
         loop = GLib.MainLoop()
         loop.run()
 
