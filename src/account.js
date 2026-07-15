@@ -219,13 +219,22 @@ export class AccountManager {
             this.#registered = [];
             return;
         }
-        // if we already got an account from storage, select the
-        // corresponding one from the broker as active.
+        // remember the current selection and avatars before replacing the
+        // accounts with the freshly queried ones.
         const last_username = this.getActive()?.username();
-        this.#registered = _accounts;
+        const previous_avatars = new Map(
+            this.#registered.map((a) => [a.username(), a.avatar]),
+        );
 
         /* we successfully got account data from the broker */
+        this.#registered = _accounts;
         this.#queried = true;
+
+        // carry over the avatars so the UI does not flash the default icon
+        // while the profile pictures are refetched below.
+        for (const account of this.#registered) {
+            account.avatar = previous_avatars.get(account.username()) ?? null;
+        }
 
         // only auto-select an account if the user did not explicitly disable SSO
         if (!this.#active) {
