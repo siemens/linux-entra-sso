@@ -118,13 +118,6 @@ Once granted, the application should behave as on a native install.
 
 An alternative is to use the `firefox-esr` Debian package.
 
-### Expired Tokens on Chrome
-
-Due to not having the `WebRequestsBlocking` API on Chrome, the extension needs to use a different mechanism to inject the token.
-While in Firefox the token is requested on-demand when hitting the SSO login URL, in Chrome the token is requested periodically.
-Then, a `declarativeNetRequest` API rule is setup to inject the token. As the lifetime of the tokens is limited and cannot be checked,
-outdated tokens might be injected. Further, a generic SSO URL must be used when requesting the token, instead of the actual one.
-
 ## Troubleshooting
 
 In case the extension is not working, check the following:
