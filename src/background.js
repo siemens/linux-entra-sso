@@ -6,7 +6,7 @@
 import { create_platform } from "./platform-factory.js";
 import { Broker } from "./broker.js";
 import { AccountManager } from "./account.js";
-import { ssoLog } from "./utils.js";
+import { ssoLog, Deferred } from "./utils.js";
 import { PolicyManager } from "./policy.js";
 import { DeviceManager } from "./device.js";
 
@@ -21,10 +21,18 @@ let port_menu = null;
 let state_restored = false;
 
 /*
+ * Resolves once we received the first broker state event from the native
+ * host. This signals that the host is ready and we can load data from the
+ * broker (getAccounts activates the broker on demand, so the current
+ * broker state does not matter).
+ */
+let broker_state_received = new Deferred();
+
+/*
  * Check if all conditions for SSO are met
  */
 function is_operational() {
-    return accountManager.isActive() && accountManager.getActive();
+    return Boolean(accountManager.isActive() && accountManager.getActive());
 }
 
 async function on_permissions_changed() {
@@ -141,19 +149,25 @@ async function on_message_menu(request) {
 
 async function on_broker_state_change(online) {
     if (online) {
-        ssoLog("connection to broker restored");
-        // only reload data if we did not see the broker before
-        if (!accountManager.hasBrokerData()) {
-            await accountManager.loadAccounts(broker);
-            accountManager.persist();
-            await deviceManager.loadDeviceInfo(broker);
-            deviceManager.persist();
-            notify_state_change();
-        }
+        ssoLog("DBus broker is online");
     } else {
-        ssoLog("lost connection to broker");
+        ssoLog("DBus broker is offline");
     }
+    // unblock the initial data loading once the host reported a state.
+    broker_state_received.resolve();
     notify_state_change(true);
+}
+
+async function bootstrap_from_broker() {
+    // wait for the first broker state event before talking to the broker.
+    await broker_state_received.promise;
+    if (accountManager.hasBrokerData()) return;
+    await accountManager.loadAccounts(broker);
+    accountManager.persist();
+    await deviceManager.loadDeviceInfo(broker);
+    deviceManager.persist();
+    await PLATFORM.setup(broker);
+    notify_state_change();
 }
 
 async function on_storage_changed(_changes, areaName) {
@@ -190,11 +204,10 @@ function on_startup() {
         broker.restore(),
     ]).then(() => {
         state_restored = true;
-        broker.connect();
-        PLATFORM.setup(broker).then(() => {
-            notify_state_change(true);
-        });
         notify_state_change();
+        /* asynchronously load external state */
+        broker.connect();
+        bootstrap_from_broker();
     });
 
     chrome.runtime.onConnect.addListener((port) => {
