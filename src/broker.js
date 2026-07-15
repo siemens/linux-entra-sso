@@ -133,10 +133,6 @@ export class Broker {
         return !this.#conn_error && this.#had_connection;
     }
 
-    isRunning() {
-        return !this.#conn_error && this.#online;
-    }
-
     /*
      * Persist the connection tracking state in the session storage.
      */
