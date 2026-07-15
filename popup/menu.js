@@ -88,14 +88,14 @@ bg_port.onMessage.addListener(async (m) => {
             m.broker_online ? "connected" : "disconnected";
         document.getElementById("broker-version").innerText = m.broker_version;
 
-        if (m.host_version) {
-            let pvers = chrome.runtime.getManifest().version;
-            let vstr = "v" + pvers;
-            if (m.host_version !== pvers) {
-                vstr += " (host v" + m.host_version + ")";
-            }
-            document.getElementById("version").innerText = vstr;
+        /* show the app and host version */
+        let pvers = chrome.runtime.getManifest().version;
+        let vstr = "v" + pvers;
+        if (m.host_version !== null && m.host_version !== pvers) {
+            vstr += " (host v" + m.host_version + ")";
         }
+        document.getElementById("version").innerText = vstr;
+
         if (m.device) {
             set_text_cropped(
                 document.getElementById("device-name"),
