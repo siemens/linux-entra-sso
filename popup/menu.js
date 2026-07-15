@@ -107,6 +107,8 @@ bg_port.onMessage.addListener(async (m) => {
                 : "not compliant";
             annotate_body_if("compliant", m.device.compliant);
         }
+        annotate_by_id_if("bg-device-state", "hidden", !m.device);
+
         sso_url = m.sso_url;
         gpo = m.gpo_update;
         check_sso_provider_perms();
