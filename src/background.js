@@ -53,15 +53,11 @@ async function update_tray(action_needed) {
 
         // shorten the title a bit
         icon_title = PLATFORM.transform_ui_title(icon_title);
-        let color = null;
         chrome.action.setTitle({
             title: icon_title,
         });
-        if (!broker.isRunning()) {
-            color = "#cc0000";
-        }
         for (const r of [16, 32, 48]) {
-            imgdata[r] = await account.getDecoratedAvatar(color, r);
+            imgdata[r] = await account.getDecoratedAvatar(r);
         }
         chrome.action.setIcon({
             imageData: imgdata,
@@ -122,7 +118,6 @@ function notify_state_change(ui_only = false) {
     port_menu.postMessage({
         event: "stateChanged",
         accounts: accountManager.getRegistered().map((a) => a.toMenuObject()),
-        broker_online: broker.isRunning(),
         nm_connected: broker.isConnected(),
         device: deviceManager.getDevice(),
         enabled: accountManager.isActive(),

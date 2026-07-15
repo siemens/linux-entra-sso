@@ -71,7 +71,7 @@ export class Account {
         this.#avatar_imgdata = null;
     }
 
-    async getDecoratedAvatar(color, width) {
+    async getDecoratedAvatar(width) {
         let imgdata = await this.getAvatarImgData();
         const sWidth = imgdata.width;
         const lineWidth = Math.min(2, width / 12);
@@ -82,44 +82,11 @@ export class Account {
         let canvas = new OffscreenCanvas(width, width);
         let ctx = canvas.getContext("2d");
         ctx.save();
-        const img_margin = color === null ? 0 : lineWidth + 1;
         ctx.beginPath();
-        ctx.arc(
-            width / 2,
-            width / 2,
-            width / 2 - img_margin,
-            0,
-            Math.PI * 2,
-            false,
-        );
+        ctx.arc(width / 2, width / 2, width / 2, 0, Math.PI * 2, false);
         ctx.clip();
-        ctx.drawImage(
-            buffer,
-            0,
-            0,
-            sWidth,
-            sWidth,
-            img_margin,
-            img_margin,
-            width - img_margin * 2,
-            width - img_margin * 2,
-        );
+        ctx.drawImage(buffer, 0, 0, sWidth, sWidth, 0, 0, width, width);
         ctx.restore();
-        if (color === null) {
-            return ctx.getImageData(0, 0, width, width);
-        }
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-        ctx.arc(
-            width / 2,
-            width / 2,
-            width / 2 - Math.min(1, lineWidth / 2),
-            0,
-            Math.PI * 2,
-            false,
-        );
-        ctx.stroke();
         return ctx.getImageData(0, 0, width, width);
     }
 

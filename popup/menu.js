@@ -83,9 +83,6 @@ bg_port.onMessage.addListener(async (m) => {
         active = m.enabled && m.accounts.length;
         annotate_by_id_if("entity-guest", "active", !active);
 
-        annotate_by_id_if("broker-state", "connected", m.broker_online);
-        document.getElementById("broker-state-value").innerText =
-            m.broker_online ? "connected" : "disconnected";
         document.getElementById("broker-version").innerText = m.broker_version;
 
         /* show the app and host version */
