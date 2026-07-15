@@ -118,6 +118,12 @@ Once granted, the application should behave as on a native install.
 
 An alternative is to use the `firefox-esr` Debian package.
 
+### Flatpak
+
+Browsers installed as Flatpak are not officially supported, as they run in a sandbox that isolates them from the native messaging host.
+They may work when the [`xdg-native-messaging-proxy`](https://github.com/flatpak/xdg-native-messaging-proxy)
+is used to bridge into the sandbox, but this relies on several conditions that are beyond the control of `linux-entra-sso`.
+
 ## Troubleshooting
 
 In case the extension is not working, check the following:
