@@ -46,8 +46,8 @@ export class Broker {
     #notify_fn = null;
     #port_native = null;
     #rpc_queue = new RpcHandlerQueue();
-    /* assume the broker is running until we know */
-    #online = true;
+    /* once connected to host tooling, we get the current state */
+    #online = false;
     /* track if the NM connection was successful */
     #conn_error = false;
     /* track if we ever had a successful connection to the native app */
