@@ -200,8 +200,8 @@ local-install-firefox:
 	install -d $(firefox_lconfig_dir)/native-messaging-hosts
 	install -m 0644 platform/firefox/linux_entra_sso.json $(firefox_lconfig_dir)/native-messaging-hosts
 	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(firefox_lconfig_dir)'/|' $(firefox_lconfig_dir)/native-messaging-hosts/linux_entra_sso.json
-	install -m 0755 linux-entra-sso.py $(firefox_lconfig_dir)
-	${Q}sed -i $(UPDATE_VERSION_PY) $(firefox_lconfig_dir)/linux-entra-sso.py
+	install -m 0755 linux-entra-sso.py $(firefox_lconfig_dir)/linux-entra-sso
+	${Q}sed -i $(UPDATE_VERSION_PY) $(firefox_lconfig_dir)/linux-entra-sso
 
 # Helper target for installing Chromium-based browsers
 # Usage: make local-install-chromium-based BROWSER_CONFIG_PATH=~/.config/chromium
@@ -211,8 +211,8 @@ local-install-chromium-based:
 	${Q}sed -i 's|/usr/local/lib/linux-entra-sso/|'$(BROWSER_CONFIG_PATH)'/|' $(BROWSER_CONFIG_PATH)/NativeMessagingHosts/linux_entra_sso.json
 # compute extension id and and grant permission
 	${Q}sed -i 's|{extension_id}|$(CHROME_EXT_ID)|' $(BROWSER_CONFIG_PATH)/NativeMessagingHosts/linux_entra_sso.json
-	install -m 0755 linux-entra-sso.py $(BROWSER_CONFIG_PATH)
-	${Q}sed -i $(UPDATE_VERSION_PY) $(BROWSER_CONFIG_PATH)/linux-entra-sso.py
+	install -m 0755 linux-entra-sso.py $(BROWSER_CONFIG_PATH)/linux-entra-sso
+	${Q}sed -i $(UPDATE_VERSION_PY) $(BROWSER_CONFIG_PATH)/linux-entra-sso
 
 local-install-brave:
 	$(MAKE) local-install-chromium-based BROWSER_CONFIG_PATH=$(brave_lconfig_dir)
@@ -230,11 +230,11 @@ local-install: local-install-brave local-install-chrome local-install-chromium l
 
 # For testing, we provide a mock implementation of the broker communication
 local-install-mock: local-install
-	install -m 0755 tests/linux_entra_sso_mock.py $(brave_lconfig_dir)/linux_entra_sso.py
-	install -m 0755 tests/linux_entra_sso_mock.py $(chrome_lconfig_dir)/linux_entra_sso.py
-	install -m 0755 tests/linux_entra_sso_mock.py $(chromium_lconfig_dir)/linux_entra_sso.py
-	install -m 0755 tests/linux_entra_sso_mock.py $(firefox_lconfig_dir)/linux_entra_sso.py
-	install -m 0755 tests/linux_entra_sso_mock.py $(vivaldi_lconfig_dir)/linux_entra_sso.py
+	install -m 0755 tests/linux_entra_sso_mock.py $(brave_lconfig_dir)/linux-entra-sso
+	install -m 0755 tests/linux_entra_sso_mock.py $(chrome_lconfig_dir)/linux-entra-sso
+	install -m 0755 tests/linux_entra_sso_mock.py $(chromium_lconfig_dir)/linux-entra-sso
+	install -m 0755 tests/linux_entra_sso_mock.py $(firefox_lconfig_dir)/linux-entra-sso
+	install -m 0755 tests/linux_entra_sso_mock.py $(vivaldi_lconfig_dir)/linux-entra-sso
 
 ####################################
 # system install / uninstall targets
@@ -244,9 +244,9 @@ install:
 	${Q}[ -z "$(python3_bin)" ] && { echo "python3 not found. Please set 'python3_bin'."; exit 1; } || true
 # Host application
 	install -d $(DESTDIR)/$(libexecdir)/linux-entra-sso
-	install -m 0755 linux-entra-sso.py $(DESTDIR)/$(libexecdir)/linux-entra-sso
-	${Q}sed -i $(UPDATE_VERSION_PY) $(DESTDIR)/$(libexecdir)/linux-entra-sso/linux-entra-sso.py
-	${Q}sed -i $(UPDATE_PYTHON_INTERPRETER) $(DESTDIR)/$(libexecdir)/linux-entra-sso/linux-entra-sso.py
+	install -m 0755 linux-entra-sso.py $(DESTDIR)/$(libexecdir)/linux-entra-sso/linux-entra-sso
+	${Q}sed -i $(UPDATE_VERSION_PY) $(DESTDIR)/$(libexecdir)/linux-entra-sso/linux-entra-sso
+	${Q}sed -i $(UPDATE_PYTHON_INTERPRETER) $(DESTDIR)/$(libexecdir)/linux-entra-sso/linux-entra-sso
 # Firefox
 	install -d $(DESTDIR)/$(firefox_nm_dir)
 	install -m 0644 platform/firefox/linux_entra_sso.json $(DESTDIR)/$(firefox_nm_dir)
@@ -277,23 +277,23 @@ uninstall:
 
 local-uninstall-brave:
 	rm -f $(brave_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
-	rm -f $(brave_lconfig_dir)/linux-entra-sso.py
+	rm -f $(brave_lconfig_dir)/linux-entra-sso
 
 local-uninstall-chrome:
 	rm -f $(chrome_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
-	rm -f $(chrome_lconfig_dir)/linux-entra-sso.py
+	rm -f $(chrome_lconfig_dir)/linux-entra-sso
 
 local-uninstall-chromium:
 	rm -f $(chromium_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
-	rm -f $(chromium_lconfig_dir)/linux-entra-sso.py
+	rm -f $(chromium_lconfig_dir)/linux-entra-sso
 
 local-uninstall-firefox:
 	rm -f $(firefox_lconfig_dir)/native-messaging-hosts/linux_entra_sso.json
-	rm -f $(firefox_lconfig_dir)/linux-entra-sso.py
+	rm -f $(firefox_lconfig_dir)/linux-entra-sso
 
 local-uninstall-vivaldi:
 	rm -f $(vivaldi_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
-	rm -f $(vivaldi_lconfig_dir)/linux-entra-sso.py
+	rm -f $(vivaldi_lconfig_dir)/linux-entra-sso
 
 local-uninstall: local-uninstall-brave local-uninstall-chrome local-uninstall-chromium local-uninstall-firefox local-uninstall-vivaldi
 
