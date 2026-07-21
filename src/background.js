@@ -48,7 +48,7 @@ function report_status(text, level = "info") {
 }
 
 function is_in_error_state() {
-    return last_status?.level === "error";
+    return !broker.isConnected() || last_status?.level === "error";
 }
 
 async function on_permissions_changed() {
@@ -62,6 +62,9 @@ async function on_permissions_changed() {
  */
 async function update_tray(action_needed) {
     chrome.action.enable();
+    chrome.action.setBadgeText({
+        text: action_needed ? "1" : null,
+    });
     if (is_operational()) {
         const account = accountManager.getActive();
         const imgdata = {};
@@ -78,9 +81,6 @@ async function update_tray(action_needed) {
         chrome.action.setIcon({
             imageData: imgdata,
         });
-        chrome.action.setBadgeText({
-            text: action_needed ? "1" : null,
-        });
         return;
     }
     /* inactive states */
@@ -93,9 +93,6 @@ async function update_tray(action_needed) {
     }
     if (!broker.isConnected()) {
         title = "EntraID SSO disabled (no connection to host application)";
-        chrome.action.setBadgeText({
-            text: "1",
-        });
     }
     // We have limited space on Thunderbird, hence shorten the title
     title = PLATFORM.transform_ui_title(title);
@@ -144,6 +141,7 @@ function notify_state_change(ui_only = false) {
         broker_version: PLATFORM.host_versions.broker,
         sso_url: PLATFORM.getSsoUrl(),
         gpo_update: gpo_update,
+        status: last_status,
     });
 }
 
@@ -176,11 +174,17 @@ async function bootstrap_from_broker() {
     // wait for the first broker state event before talking to the broker.
     await broker_state_received.promise;
     if (accountManager.hasBrokerData()) return;
-    await accountManager.loadAccounts(broker);
-    accountManager.persist();
-    await deviceManager.loadDeviceInfo(broker);
-    deviceManager.persist();
-    await PLATFORM.setup(broker);
+    report_status("Loading data from broker\u2026", "info");
+    try {
+        await accountManager.loadAccounts(broker);
+        accountManager.persist();
+        await deviceManager.loadDeviceInfo(broker);
+        deviceManager.persist();
+        await PLATFORM.setup(broker);
+        report_status(null);
+    } catch (error) {
+        report_status("Failed to load data from broker: " + error, "error");
+    }
     notify_state_change();
 }
 
