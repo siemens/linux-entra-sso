@@ -34,7 +34,11 @@ let broker_state_received = new Deferred();
  * Check if all conditions for SSO are met
  */
 function is_operational() {
-    return Boolean(accountManager.isActive() && accountManager.getActive());
+    return Boolean(
+        !is_in_error_state() &&
+            accountManager.isActive() &&
+            accountManager.getActive(),
+    );
 }
 
 /*
@@ -146,6 +150,10 @@ function notify_state_change(ui_only = false) {
 }
 
 async function on_message_menu(request) {
+    if (is_in_error_state()) {
+        notify_state_change(true);
+        return;
+    }
     if (request.command == "enable") {
         accountManager.setActive(true);
         const account = accountManager.selectAccount(request.username);
