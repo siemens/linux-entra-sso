@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { ssoLog, load_icon, ssoLogError } from "./utils.js";
+import { ssoLog, load_icon } from "./utils.js";
 
 /* refresh the token if only x time is left */
 const TOKEN_MIN_VALIDITY_MS = 60 * 1000;
@@ -176,12 +176,7 @@ export class AccountManager {
         if (this.hasBrokerData()) return;
 
         ssoLog("loading accounts");
-        let _accounts = [];
-        try {
-            _accounts = await broker.getAccounts();
-        } catch (error) {
-            ssoLog(error);
-        }
+        const _accounts = await broker.getAccounts();
         if (!_accounts || !_accounts.length) {
             this.#registered = [];
             return;
