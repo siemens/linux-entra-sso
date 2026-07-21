@@ -19,6 +19,8 @@ let deviceManager = null;
 let initialized = false;
 let port_menu = null;
 let state_restored = false;
+/* status to surface in the UI: { text, level } or null => no status */
+let last_status = null;
 
 /*
  * Resolves once we received the first broker state event from the native
@@ -33,6 +35,20 @@ let broker_state_received = new Deferred();
  */
 function is_operational() {
     return Boolean(accountManager.isActive() && accountManager.getActive());
+}
+
+/*
+ * Update the status message shown in the UI. Pass null to clear it.
+ * The level ("info" or "error") controls how it is rendered.
+ * The "error" is also used to determine if the extension is in an error state.
+ */
+function report_status(text, level = "info") {
+    last_status = text ? { text, level } : null;
+    notify_state_change(true);
+}
+
+function is_in_error_state() {
+    return last_status?.level === "error";
 }
 
 async function on_permissions_changed() {
@@ -97,7 +113,10 @@ function notify_state_change(ui_only = false) {
     const gpo_update = policyManager.getPolicyUpdate(
         PLATFORM.well_known_app_filters,
     );
-    let action_needed = !PLATFORM.sso_url_permitted || gpo_update.pending;
+    let action_needed =
+        !PLATFORM.sso_url_permitted ||
+        gpo_update.pending ||
+        is_in_error_state();
     update_tray(action_needed);
     if (!ui_only && broker.isConnected()) {
         ssoLog("update handlers");

@@ -33,6 +33,8 @@
     --green-70: #008787;
     --orange-40: #ff8a50;
     --orange-70: #cc3d00;
+    --blue-40: #0090ed;
+    --blue-70: #054096;
 }
 
 /* set color scheme before JS overwrites it to avoid flickering of white page on dark default */
@@ -61,6 +63,7 @@
     --text-red: var(--red-70);
     --text-green: var(--green-70);
     --text-orange: var(--orange-70);
+    --text-blue: var(--blue-70);
 }
 
 :root.dark {
@@ -73,6 +76,7 @@
     --text-red: var(--red-40);
     --text-green: var(--green-40);
     --text-orange: var(--orange-40);
+    --text-blue: var(--blue-40);
 }
 
 html,
@@ -200,6 +204,10 @@ body.nm-connected #nm-error-box {
 
 .warning-text {
     color: var(--text-orange);
+}
+
+.info-text {
+    color: var(--text-blue);
 }
 
 span.link {
