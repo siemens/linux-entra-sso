@@ -191,7 +191,7 @@ async function check_bg_sso_enabled() {
     if (
         !tab?.url ||
         !tab.url.startsWith("https://") ||
-        tab.url.startsWith(sso_url)
+        URL.parse(tab.url)?.origin === URL.parse(sso_url).origin
     ) {
         annotate_by_id_if("bg-sso-state", "hidden", true);
         return;
