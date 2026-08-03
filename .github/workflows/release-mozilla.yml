@@ -13,7 +13,7 @@ on:
 permissions: {}
 
 env:
-  WEB_EXT_VERS: 10.1.0
+  WEB_EXT_VERS: 10.5.0
 
 jobs:
   release-mozilla:
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: get git committer
         run: |
@@ -57,28 +57,28 @@ jobs:
             --filename '{name}-{version}.thunderbird.xpi'
 
       - name: upload firefox extension
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: firefox-signed-xpi
           path: |
             build/linux_entra_sso-*.xpi
 
       - name: upload debian package
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: debian-package
           path: |
             pkgs/linux-entra-sso_*.deb
 
       - name: attest Firefox extension build
-        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
           subject-path: |
             build/linux_entra_sso-*.xpi
             pkgs/linux-entra-sso_*.deb
 
       - name: create release
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           files: |
             build/linux_entra_sso-*.xpi
