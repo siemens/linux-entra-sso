@@ -54,7 +54,11 @@ export class PlatformFirefox extends Platform {
 
     async #onBeforeSendHeaders(e) {
         // filter out requests that are not part of the OAuth2.0 flow
-        if (!e.url.startsWith(Platform.SSO_URL)) {
+        const url = URL.parse(e.url);
+        if (
+            url?.protocol !== "https:" ||
+            url.origin !== URL.parse(Platform.SSO_URL).origin
+        ) {
             return { requestHeaders: e.requestHeaders };
         }
         try {
