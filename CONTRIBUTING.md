@@ -69,9 +69,26 @@ The creation of public releases is a partially automated process:
 
 1. update code and create release tags: `VERSION=<x.x.x> make release`
 2. push to GitHub: `git push origin main && git push origin v<x.x.x>`
-3. wait for release action to finish (public release is created)
-4. add release-notes to public release
-5. manually inspect signed xpi (double check)
-6. merge auto-created MR to enroll Firefox update manifest
-7. publish CWS upload (answer questions on permission changes)
-8. wait for CWS to review and sign extension, upload `.crx` to releases page
+3. wait for release action to finish (public release is created as draft)
+4. manually inspect signed xpi (double check)
+5. publish CWS upload (answer questions on permission changes)
+6. wait for CWS to review and sign extension, upload `.crx` to releases page
+7. add release-notes to public release and release (immutable!)
+8. merge auto-created MR to enroll Firefox update manifest
+
+When creating a bugfix release from a dedicated release branch, extra steps
+are needed:
+
+1. ensure patches have been merged to main
+2. checkout base tag: `git checkout v<x.x.x>`
+3. create release branch: `git checkout -b rel-<x.x>.y`
+4. ensure all needed CI changes are cherry-picked
+5. follow normal release creation process
+
+When creating a security fix release, further ensure:
+
+1. prepare patches on private fork, for review by reporter, add either CVE or GHSA as `Fixes:` tag
+2. do not merge from private fork, as this does not run the CI on the patches
+3. push patches of private fork to public branch, create MR
+4. once merged, create release via normal release process
+5. publish advisory
