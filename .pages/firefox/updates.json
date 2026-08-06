@@ -106,6 +106,11 @@
           "version": "1.10.0",
           "update_link": "https://github.com/siemens/linux-entra-sso/releases/download/v1.10.0/linux_entra_sso-1.10.0.xpi",
           "update_hash": "sha256:28955527c51cd6e1c212710b86c122e8d13d1c011736bf0360d8af072e83d510"
+        },
+        {
+          "version": "1.10.2",
+          "update_link": "https://github.com/siemens/linux-entra-sso/releases/download/v1.10.2/linux_entra_sso-1.10.2.xpi",
+          "update_hash": "sha256:55278d1aa94d7078ac126ff7ddf41a9714c264ab95814d9fa6961d0a4d67d51f"
         }
       ]
     }
