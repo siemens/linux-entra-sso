@@ -88,7 +88,7 @@ jobs:
           body: |
             Release of version ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
-          draft: false
+          draft: true
           prerelease: true
 
       - name: checkout main branch for update manifests
