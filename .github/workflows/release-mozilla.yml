@@ -90,6 +90,11 @@ jobs:
           draft: false
           prerelease: true
 
+      - name: checkout main branch for update manifests
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
       - name: create update manifest for Firefox
         run: |
           VERSION=$(echo ${{ github.ref_name }} | cut -c 2-)
