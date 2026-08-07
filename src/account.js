@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { ssoLog, load_icon, ssoLogError } from "./utils.js";
+import { ssoLog, load_icon } from "./utils.js";
 
 /* refresh the token if only x time is left */
 const TOKEN_MIN_VALIDITY_MS = 60 * 1000;
@@ -71,7 +71,7 @@ export class Account {
         this.#avatar_imgdata = null;
     }
 
-    async getDecoratedAvatar(color, width) {
+    async getDecoratedAvatar(width) {
         let imgdata = await this.getAvatarImgData();
         const sWidth = imgdata.width;
         const lineWidth = Math.min(2, width / 12);
@@ -82,44 +82,11 @@ export class Account {
         let canvas = new OffscreenCanvas(width, width);
         let ctx = canvas.getContext("2d");
         ctx.save();
-        const img_margin = color === null ? 0 : lineWidth + 1;
         ctx.beginPath();
-        ctx.arc(
-            width / 2,
-            width / 2,
-            width / 2 - img_margin,
-            0,
-            Math.PI * 2,
-            false,
-        );
+        ctx.arc(width / 2, width / 2, width / 2, 0, Math.PI * 2, false);
         ctx.clip();
-        ctx.drawImage(
-            buffer,
-            0,
-            0,
-            sWidth,
-            sWidth,
-            img_margin,
-            img_margin,
-            width - img_margin * 2,
-            width - img_margin * 2,
-        );
+        ctx.drawImage(buffer, 0, 0, sWidth, sWidth, 0, 0, width, width);
         ctx.restore();
-        if (color === null) {
-            return ctx.getImageData(0, 0, width, width);
-        }
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-        ctx.arc(
-            width / 2,
-            width / 2,
-            width / 2 - Math.min(1, lineWidth / 2),
-            0,
-            Math.PI * 2,
-            false,
-        );
-        ctx.stroke();
         return ctx.getImageData(0, 0, width, width);
     }
 
@@ -209,23 +176,27 @@ export class AccountManager {
         if (this.hasBrokerData()) return;
 
         ssoLog("loading accounts");
-        let _accounts = [];
-        try {
-            _accounts = await broker.getAccounts();
-        } catch (error) {
-            ssoLog(error);
-        }
+        const _accounts = await broker.getAccounts();
         if (!_accounts || !_accounts.length) {
             this.#registered = [];
             return;
         }
-        // if we already got an account from storage, select the
-        // corresponding one from the broker as active.
+        // remember the current selection and avatars before replacing the
+        // accounts with the freshly queried ones.
         const last_username = this.getActive()?.username();
-        this.#registered = _accounts;
+        const previous_avatars = new Map(
+            this.#registered.map((a) => [a.username(), a.avatar]),
+        );
 
         /* we successfully got account data from the broker */
+        this.#registered = _accounts;
         this.#queried = true;
+
+        // carry over the avatars so the UI does not flash the default icon
+        // while the profile pictures are refetched below.
+        for (const account of this.#registered) {
+            account.avatar = previous_avatars.get(account.username()) ?? null;
+        }
 
         // only auto-select an account if the user did not explicitly disable SSO
         if (!this.#active) {

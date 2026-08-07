@@ -133,10 +133,6 @@ export class Broker {
         return !this.#conn_error && this.#had_connection;
     }
 
-    isRunning() {
-        return !this.#conn_error && this.#online;
-    }
-
     /*
      * Persist the connection tracking state in the session storage.
      */
@@ -183,6 +179,14 @@ export class Broker {
         return this.#rpc_queue.register_handle("getVersion");
     }
 
+    /* Normalize the error from the native message into a readable string. */
+    #stringify_error(error) {
+        if (error !== null && typeof error === "object") {
+            return JSON.stringify(error);
+        }
+        return error;
+    }
+
     #on_message_native(response) {
         /* receiving any message proves the connection was successful */
         if (!this.#had_connection) {
@@ -201,9 +205,10 @@ export class Broker {
 
         /* on rpc messages, reject all responses that have errors */
         if ("error" in response.message) {
-            this.#rpc_queue.reject_handle(response.command, {
-                ...response.message.error,
-            });
+            this.#rpc_queue.reject_handle(
+                response.command,
+                this.#stringify_error(response.message.error),
+            );
             return;
         }
 
@@ -230,9 +235,12 @@ export class Broker {
             });
         } else if (response.command == "acquireTokenSilently") {
             if ("error" in response.message.brokerTokenResponse) {
-                this.#rpc_queue.reject_handle("acquireTokenSilently", {
-                    ...response.message.brokerTokenResponse.error,
-                });
+                this.#rpc_queue.reject_handle(
+                    "acquireTokenSilently",
+                    this.#stringify_error(
+                        response.message.brokerTokenResponse.error,
+                    ),
+                );
             } else {
                 this.#rpc_queue.resolve_handle("acquireTokenSilently", {
                     ...response.message.brokerTokenResponse,

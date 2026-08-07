@@ -22,6 +22,9 @@ SPDX-FileCopyrightText: Copyright 2024 Siemens AG
             </div>
         </div>
         <div class="footer">
+            <div id="status-box" class="footer-block hidden">
+                <span id="status-text"></span>
+            </div>
             <div id="message-box" class="footer-block hidden">
                 <span class="error-text"
                     >No permission to access login provider.</span
@@ -76,12 +79,7 @@ SPDX-FileCopyrightText: Copyright 2024 Siemens AG
                     <span id="broker-state-text" class="left"
                         >Identity broker</span
                     >
-                    <span class="right">
-                        <span id="broker-version"></span>
-                        &#40;
-                        <span class="state-connected-icon">&#9679;</span>
-                        <span id="broker-state-value">unknown</span>&#41;
-                    </span>
+                    <span class="right" id="broker-version"></span>
                 </div>
                 <div>
                     <a

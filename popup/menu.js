@@ -73,6 +73,14 @@ bg_port.onMessage.addListener(async (m) => {
         annotate_body_if("has-account", m.accounts.length);
         annotate_body_if("nm-connected", m.nm_connected);
 
+        if (m.status) {
+            const status = document.getElementById("status-text");
+            status.innerText = m.status.text;
+            status.classList.toggle("error-text", m.status.level === "error");
+            status.classList.toggle("info-text", m.status.level === "info");
+        }
+        annotate_by_id_if("status-box", "hidden", !m.status);
+
         if (m.accounts !== null) {
             const accountsdom = document.getElementById("accountlist");
             const entities = m.accounts.map((a) => create_account_entity(a));
@@ -83,9 +91,6 @@ bg_port.onMessage.addListener(async (m) => {
         active = m.enabled && m.accounts.length;
         annotate_by_id_if("entity-guest", "active", !active);
 
-        annotate_by_id_if("broker-state", "connected", m.broker_online);
-        document.getElementById("broker-state-value").innerText =
-            m.broker_online ? "connected" : "disconnected";
         document.getElementById("broker-version").innerText = m.broker_version;
 
         /* show the app and host version */
