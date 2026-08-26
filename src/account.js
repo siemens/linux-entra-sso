@@ -4,9 +4,86 @@
  */
 
 import { ssoLog, load_icon } from "./utils.js";
+import { StateMachine } from "./state-machine.js";
 
 /* refresh the token if only x time is left */
 const TOKEN_MIN_VALIDITY_MS = 60 * 1000;
+
+/*
+ * Whether the user wants SSO. UNKNOWN means that no explicit choice was
+ * recorded yet, which counts as active.
+ */
+export const SsoState = Object.freeze({
+    UNKNOWN: "unknown",
+    LOGGED_IN: "logged-in",
+    LOGGED_OUT: "logged-out",
+});
+
+const SSO_TRANSITIONS = Object.freeze({
+    [SsoState.UNKNOWN]: [SsoState.LOGGED_IN, SsoState.LOGGED_OUT],
+    [SsoState.LOGGED_IN]: [SsoState.LOGGED_OUT],
+    [SsoState.LOGGED_OUT]: [SsoState.LOGGED_IN],
+});
+
+class SsoStateMachine extends StateMachine {
+    constructor() {
+        super("sso-state", SSO_TRANSITIONS, SsoState.UNKNOWN);
+    }
+
+    is_active() {
+        return !this.is_in(SsoState.LOGGED_OUT);
+    }
+
+    log_in() {
+        return this.transition(SsoState.LOGGED_IN);
+    }
+
+    log_out() {
+        return this.transition(SsoState.LOGGED_OUT);
+    }
+}
+
+/*
+ * Where the registered accounts come from. UNKNOWN means that we did not
+ * determine it yet. PROVISIONAL data is the last-known set restored from
+ * disk, which carries no tokens and is replaced once the broker answers.
+ */
+export const AccountsState = Object.freeze({
+    UNKNOWN: "unknown",
+    PROVISIONAL: "provisional",
+    AUTHORITATIVE: "authoritative",
+});
+
+const ACCOUNTS_TRANSITIONS = Object.freeze({
+    [AccountsState.UNKNOWN]: [
+        AccountsState.PROVISIONAL,
+        AccountsState.AUTHORITATIVE,
+    ],
+    [AccountsState.PROVISIONAL]: [AccountsState.AUTHORITATIVE],
+    [AccountsState.AUTHORITATIVE]: [],
+});
+
+class AccountsStateMachine extends StateMachine {
+    constructor() {
+        super("accounts-state", ACCOUNTS_TRANSITIONS, AccountsState.UNKNOWN);
+    }
+
+    is_authoritative() {
+        return this.is_in(AccountsState.AUTHORITATIVE);
+    }
+
+    is_provisional() {
+        return this.is_in(AccountsState.PROVISIONAL);
+    }
+
+    restored_from_disk() {
+        return this.transition(AccountsState.PROVISIONAL);
+    }
+
+    confirmed_by_broker() {
+        return this.transition(AccountsState.AUTHORITATIVE);
+    }
+}
 
 export class Account {
     #broker_obj = null;
@@ -115,9 +192,8 @@ export class Account {
 
 export class AccountManager {
     #registered = [];
-    #queried = false;
-    /* SSO is active unless the user explicitly logged out */
-    #active = true;
+    #accounts = new AccountsStateMachine();
+    #sso = new SsoStateMachine();
     /* in-flight token requests, keyed by username, to dedup concurrent calls */
     #token_requests = new Map();
 
@@ -129,7 +205,15 @@ export class AccountManager {
      * @returns if we got account data from the broker
      */
     hasBrokerData() {
-        return this.#queried;
+        return this.#accounts.is_authoritative();
+    }
+
+    /**
+     * @returns if the accounts are the last-known set from disk, which is
+     * used until the broker confirms the real one
+     */
+    hasProvisionalData() {
+        return this.#accounts.is_provisional();
     }
 
     getActive() {
@@ -140,11 +224,12 @@ export class AccountManager {
      * @returns if SSO is active (i.e. the user did not explicitly log out)
      */
     isActive() {
-        return this.#active;
+        return this.#sso.is_active();
     }
 
     setActive(active) {
-        this.#active = active;
+        if (active) this.#sso.log_in();
+        else this.#sso.log_out();
     }
 
     getRegistered() {
@@ -175,10 +260,11 @@ export class AccountManager {
     async loadAccounts(broker) {
         if (this.hasBrokerData()) return;
 
-        ssoLog("loading accounts");
         const _accounts = await broker.getAccounts();
-        if (!_accounts || !_accounts.length) {
+        if (!_accounts?.length) {
             this.#registered = [];
+            /* an empty result is still an answer: no account is registered */
+            if (_accounts) this.#accounts.confirmed_by_broker();
             return;
         }
         // remember the current selection and avatars before replacing the
@@ -190,7 +276,7 @@ export class AccountManager {
 
         /* we successfully got account data from the broker */
         this.#registered = _accounts;
-        this.#queried = true;
+        this.#accounts.confirmed_by_broker();
 
         // carry over the avatars so the UI does not flash the default icon
         // while the profile pictures are refetched below.
@@ -199,7 +285,7 @@ export class AccountManager {
         }
 
         // only auto-select an account if the user did not explicitly disable SSO
-        if (!this.#active) {
+        if (!this.isActive()) {
             ssoLog("SSO is disabled, not selecting an account");
         } else if (last_username && this.selectAccount(last_username)) {
             ssoLog(
@@ -291,13 +377,13 @@ export class AccountManager {
     async persist() {
         if (!this.hasAccounts()) return;
         const ssostate = {
-            state: this.getActive() != null,
+            state: this.isActive(),
             accounts: this.getActive()
                 ? this.#registered.map((a) => a.toSerial())
                 : [],
         };
         const appstate = {
-            broker_queried: this.#queried,
+            broker_queried: this.hasBrokerData(),
             accounts: this.#registered.map((a) => a.toSerial(true)),
         };
         return Promise.all([
@@ -306,46 +392,64 @@ export class AccountManager {
         ]);
     }
 
+    /*
+     * Drop account data cached on disk, but keep the logged-out marker.
+     */
+    async #wipeCachedAccounts() {
+        return chrome.storage.local.set({
+            ssostate: { state: false, accounts: [] },
+        });
+    }
+
     async restore() {
         const [data, sessionData] = await Promise.all([
             chrome.storage.local.get("ssostate"),
             chrome.storage.session.get("account_manager"),
         ]);
         if (sessionData.account_manager) {
-            this.#queried = sessionData.account_manager.broker_queried ?? false;
             this.#registered =
                 sessionData.account_manager.accounts.map((a) =>
                     Account.fromSerial(a),
                 ) ?? [];
+            if (sessionData.account_manager.broker_queried) {
+                this.#accounts.confirmed_by_broker();
+            } else if (this.#registered.length > 0) {
+                this.#accounts.restored_from_disk();
+            }
         }
         /* restored from session */
         if (this.#registered.length > 0) {
-            this.#active = this.getActive() != null;
+            this.setActive(this.getActive() != null);
             return;
         }
 
         /* no accounts in session, try restore from local storage */
-        let active_acc = undefined;
         if (!data.ssostate) {
             ssoLog("no preserved state found");
             // if the SSO is not explicitly disabled, we assume it is on.
-            this.#active = true;
             return;
         }
         const state_active = data.ssostate.state;
-        this.#active = state_active;
-        if (state_active && data.ssostate.accounts) {
+        if (!state_active) {
+            this.setActive(false);
+            await this.#wipeCachedAccounts();
+            return;
+        }
+        if (data.ssostate.accounts) {
             this.#registered = data.ssostate.accounts.map((a) =>
                 Account.fromSerial(a),
             );
-            if (!state_active) this.logout();
-            active_acc = this.getActive();
-            if (active_acc) {
-                ssoLog(
-                    "temporarily using last-known account: " +
-                        active_acc.username(),
-                );
+            if (this.#registered.length > 0) {
+                this.#accounts.restored_from_disk();
             }
+        }
+        this.setActive(true);
+        const active_acc = this.getActive();
+        if (active_acc) {
+            ssoLog(
+                "temporarily using last-known account: " +
+                    active_acc.username(),
+            );
         }
     }
 }
