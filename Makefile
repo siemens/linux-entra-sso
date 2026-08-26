@@ -181,6 +181,12 @@ deb_clean:
 clean: deb_clean
 	rm -rf build
 
+test:
+	${Q}for t in tests/*_test.mjs; do		\
+		echo "running $$t";			\
+		node $$t || exit 1;			\
+	done
+
 release:
 	${Q}if [ -z "$(VERSION)" ]; then		\
 		echo "VERSION is not set";		\
@@ -299,7 +305,7 @@ local-uninstall-vivaldi:
 
 local-uninstall: local-uninstall-brave local-uninstall-chrome local-uninstall-chromium local-uninstall-firefox local-uninstall-vivaldi
 
-.PHONY: clean release deb deb_clean
+.PHONY: clean release deb deb_clean test
 .PHONY: local-install-firefox local-install-chrome local-install-brave local-install-chromium-based local-install-vivaldi local-install
 .PHONY: local-uninstall-firefox local-uninstall-chromium-based local-uninstall-chrome local-uninstall-brave local-uninstall-vivaldi local-uninstall
 .PHONY: local-install-mock
