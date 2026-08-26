@@ -150,7 +150,6 @@ async function on_message_menu(request) {
     } else if (request.command == "disable") {
         accountManager.setActive(false);
         accountManager.logout();
-        ssoLog("disable SSO");
     }
     accountManager.persist();
     notify_state_change();
