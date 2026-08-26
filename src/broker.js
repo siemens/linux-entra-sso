@@ -46,8 +46,6 @@ export class Broker {
     #notify_fn = null;
     #port_native = null;
     #rpc_queue = new RpcHandlerQueue();
-    /* once connected to host tooling, we get the current state */
-    #online = false;
     /* track if the NM connection was successful */
     #conn_error = false;
     /* track if we ever had a successful connection to the native app */
@@ -197,9 +195,7 @@ export class Broker {
 
         /* handle events (not an RPC response) */
         if (response.command == "brokerStateChanged") {
-            if (response.message == "online") this.#online = true;
-            else this.#online = false;
-            this.#notify_fn(this.#online);
+            this.#notify_fn(response.message == "online");
             return;
         }
 
