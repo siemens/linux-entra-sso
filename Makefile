@@ -46,11 +46,13 @@ ARCHIVE_NAME=$(PACKAGE_NAME)-$(RELEASE_TAG)
 COMMON_INPUT_FILES= \
 	LICENSES/MPL-2.0.txt \
 	src/account.js \
+	src/app-state.js \
 	src/background.js \
 	src/broker.js \
 	src/device.js \
 	src/platform.js \
 	src/policy.js \
+	src/state-machine.js \
 	src/utils.js \
 	icons/profile-outline_48.png \
 	icons/profile-outline_48.png.license \

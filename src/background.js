@@ -6,9 +6,10 @@
 import { create_platform } from "./platform-factory.js";
 import { Broker } from "./broker.js";
 import { AccountManager } from "./account.js";
-import { ssoLog, Deferred } from "./utils.js";
+import { ssoLog } from "./utils.js";
 import { PolicyManager } from "./policy.js";
 import { DeviceManager } from "./device.js";
+import { AppStateMachine } from "./app-state.js";
 
 const PLATFORM = create_platform();
 let broker = null;
@@ -16,19 +17,10 @@ let policyManager = null;
 let accountManager = null;
 let deviceManager = null;
 
-let initialized = false;
 let port_menu = null;
-let state_restored = false;
+const app_state = new AppStateMachine();
 /* status to surface in the UI: { text, level } or null => no status */
 let last_status = null;
-
-/*
- * Resolves once we received the first broker state event from the native
- * host. This signals that the host is ready and we can load data from the
- * broker (getAccounts activates the broker on demand, so the current
- * broker state does not matter).
- */
-let broker_state_received = new Deferred();
 
 /*
  * Check if all conditions for SSO are met
@@ -44,7 +36,6 @@ function is_operational() {
 /*
  * Update the status message shown in the UI. Pass null to clear it.
  * The level ("info" or "error") controls how it is rendered.
- * The "error" is also used to determine if the extension is in an error state.
  */
 function report_status(text, level = "info") {
     last_status = text ? { text, level } : null;
@@ -52,7 +43,7 @@ function report_status(text, level = "info") {
 }
 
 function is_in_error_state() {
-    return !broker.isConnected() || last_status?.level === "error";
+    return !broker.isConnected() || app_state.has_failed();
 }
 
 async function on_permissions_changed() {
@@ -110,7 +101,7 @@ async function update_tray(action_needed) {
 function notify_state_change(ui_only = false) {
     // on service worker startup, delay all updates until we restored
     // the application state from storage.
-    if (!state_restored) return;
+    if (!app_state.is_restored()) return;
     const gpo_update = policyManager.getPolicyUpdate(
         PLATFORM.well_known_app_filters,
     );
@@ -174,14 +165,12 @@ async function on_broker_state_change(online) {
         ssoLog("DBus broker is offline");
     }
     // unblock the initial data loading once the host reported a state.
-    broker_state_received.resolve();
+    app_state.broker_ready();
     notify_state_change(true);
 }
 
 async function bootstrap_from_broker() {
-    // wait for the first broker state event before talking to the broker.
-    await broker_state_received.promise;
-    if (accountManager.hasBrokerData()) return;
+    if (!(await app_state.begin_bootstrap())) return;
     report_status("Loading data from broker\u2026", "info");
     try {
         await accountManager.loadAccounts(broker);
@@ -189,8 +178,10 @@ async function bootstrap_from_broker() {
         await deviceManager.loadDeviceInfo(broker);
         deviceManager.persist();
         await PLATFORM.setup(broker);
+        app_state.bootstrap_succeeded();
         report_status(null);
     } catch (error) {
+        app_state.bootstrap_failed();
         report_status("Failed to load data from broker: " + error, "error");
     }
     notify_state_change();
@@ -203,11 +194,10 @@ async function on_storage_changed(_changes, areaName) {
 }
 
 function on_startup() {
-    if (initialized) {
+    if (!app_state.initialize()) {
         ssoLog("linux-entra-sso already initialized");
         return;
     }
-    initialized = true;
     ssoLog("start linux-entra-sso on " + PLATFORM.browser);
     policyManager = new PolicyManager();
 
@@ -229,7 +219,7 @@ function on_startup() {
         deviceManager.restore(),
         broker.restore(),
     ]).then(() => {
-        state_restored = true;
+        app_state.restored();
         notify_state_change();
         /* asynchronously load external state */
         broker.connect();
@@ -242,6 +232,8 @@ function on_startup() {
         port_menu.onDisconnect.addListener(() => {
             port_menu = null;
         });
+        broker.connect();
+        bootstrap_from_broker();
         notify_state_change(true);
     });
 }
