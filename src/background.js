@@ -19,7 +19,7 @@ let deviceManager = null;
 
 let port_menu = null;
 const app_state = new AppStateMachine();
-/* status to surface in the UI: { text, level } or null => no status */
+/* status to surface in the UI: { text } or null => no status */
 let last_status = null;
 
 /*
@@ -33,12 +33,9 @@ function is_operational() {
     );
 }
 
-/*
- * Update the status message shown in the UI. Pass null to clear it.
- * The level ("info" or "error") controls how it is rendered.
- */
-function report_status(text, level = "info") {
-    last_status = text ? { text, level } : null;
+/* Update the status message shown in the UI. Pass null to clear it. */
+function report_status(text) {
+    last_status = text ? { text } : null;
     notify_state_change(true);
 }
 
@@ -137,6 +134,7 @@ function notify_state_change(ui_only = false) {
         sso_url: PLATFORM.getSsoUrl(),
         gpo_update: gpo_update,
         status: last_status,
+        app_state: app_state.state,
     });
 }
 
@@ -171,7 +169,7 @@ async function on_broker_state_change(online) {
 
 async function bootstrap_from_broker() {
     if (!(await app_state.begin_bootstrap())) return;
-    report_status("Loading data from broker\u2026", "info");
+    report_status("Loading data from broker\u2026");
     try {
         await accountManager.loadAccounts(broker);
         accountManager.persist();
@@ -182,7 +180,7 @@ async function bootstrap_from_broker() {
         report_status(null);
     } catch (error) {
         app_state.bootstrap_failed();
-        report_status("Failed to load data from broker: " + error, "error");
+        report_status("Failed to load data from broker: " + error);
     }
     notify_state_change();
 }
