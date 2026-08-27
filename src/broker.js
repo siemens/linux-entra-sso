@@ -3,8 +3,10 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { ssoLog, ssoLogError, Deferred } from "./utils.js";
+import { getLogger, Deferred } from "./utils.js";
 import { Account } from "./account.js";
+
+const log = getLogger("broker");
 
 /**
  * Queue to resolve promises, once the data arrives from the
@@ -71,14 +73,14 @@ export class Broker {
             /* note, that this is not called on .disconnect(), only on errors */
             this.#port_native = null;
             if (chrome.runtime.lastError) {
-                ssoLogError(
-                    "Error in native application connection: " +
+                log.error(
+                    "error in native application connection: " +
                         chrome.runtime.lastError.message,
                 );
                 this.#conn_error = true;
             } else {
                 /* Connection closed by the native application. */
-                ssoLogError("Native application connection closed.");
+                log.error("native application connection closed");
             }
             this.#notify_fn(false);
         });
@@ -111,7 +113,7 @@ export class Broker {
         if (this.#keep_connected) return;
         this.#idle_timer = setTimeout(() => {
             this.#idle_timer = null;
-            ssoLog("disconnecting from host tooling after inactivity");
+            log.debug("disconnecting from host tooling after inactivity");
             this.disconnect();
         }, Broker.IDLE_DISCONNECT_MS);
     }
@@ -198,7 +200,7 @@ export class Broker {
         if (!this.#had_connection) {
             this.#had_connection = true;
             this.persist();
-            ssoLog("connected to host tooling");
+            log.info("connected to host tooling");
         }
 
         /* handle events (not an RPC response) */
@@ -251,7 +253,7 @@ export class Broker {
                 });
             }
         } else {
-            ssoLog("unknown command: " + response.command);
+            log.warn("unknown command: " + response.command);
         }
     }
 }

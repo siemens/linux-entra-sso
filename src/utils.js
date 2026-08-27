@@ -3,12 +3,38 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-export function ssoLog(message) {
-    console.log("[Linux Entra SSO]", message);
+const LOG_PREFIX = "[Linux Entra SSO]";
+
+/*
+ * Component scoped logger. The level maps to the matching console
+ * function, so the browser console can filter by severity.
+ */
+class Logger {
+    #tag;
+
+    constructor(component) {
+        this.#tag = `[${component}]`;
+    }
+
+    debug(...args) {
+        console.debug(LOG_PREFIX, this.#tag, ...args);
+    }
+
+    info(...args) {
+        console.info(LOG_PREFIX, this.#tag, ...args);
+    }
+
+    warn(...args) {
+        console.warn(LOG_PREFIX, this.#tag, ...args);
+    }
+
+    error(...args) {
+        console.error(LOG_PREFIX, this.#tag, ...args);
+    }
 }
 
-export function ssoLogError(message) {
-    console.error("[Linux Entra SSO]", message);
+export function getLogger(component) {
+    return new Logger(component);
 }
 
 export async function load_icon(path, width) {

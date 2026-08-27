@@ -4,7 +4,9 @@
  */
 
 import { Platform } from "./platform.js";
-import { ssoLog } from "./utils.js";
+import { getLogger } from "./utils.js";
+
+const log = getLogger("platform");
 
 export class PlatformChrome extends Platform {
     browser = "Chrome";
@@ -69,7 +71,7 @@ export class PlatformChrome extends Platform {
     }
 
     async #clear_net_rules() {
-        ssoLog("clear network rules");
+        log.debug("clear network rules");
         const oldRules = await chrome.declarativeNetRequest.getSessionRules();
         const oldRuleIds = oldRules.map((rule) => rule.id);
         await chrome.declarativeNetRequest.updateSessionRules({
@@ -78,7 +80,7 @@ export class PlatformChrome extends Platform {
     }
 
     async #update_net_rules(broker) {
-        ssoLog("update network rules");
+        log.debug("update network rules");
         let prt = undefined;
         try {
             prt = await broker.acquirePrtSsoCookie(
@@ -86,7 +88,7 @@ export class PlatformChrome extends Platform {
                 Platform.SSO_URL,
             );
         } catch (error) {
-            ssoLog(error);
+            log.error("failed to acquire PRT SSO cookie", error);
             return;
         }
         const newRules = [
@@ -118,6 +120,6 @@ export class PlatformChrome extends Platform {
             removeRuleIds: oldRuleIds,
             addRules: newRules,
         });
-        ssoLog("network rules updated");
+        log.debug("network rules updated");
     }
 }

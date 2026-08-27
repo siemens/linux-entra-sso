@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright 2026 Siemens
  */
 
-import { ssoLog } from "./utils.js";
+import { getLogger } from "./utils.js";
 
 /*
  * States are plain strings, the allowed transitions are declared as a
@@ -11,12 +11,12 @@ import { ssoLog } from "./utils.js";
  * rejected, so the model is the single source of truth.
  */
 export class StateMachine {
-    #name;
+    #log;
     #state;
     #transitions;
 
     constructor(name, transitions, initial) {
-        this.#name = name;
+        this.#log = getLogger(name);
         this.#transitions = transitions;
         this.#state = initial;
     }
@@ -36,7 +36,7 @@ export class StateMachine {
     /* Returns false if the transition is not allowed by the model. */
     transition(next) {
         if (!this.can_enter(next)) return false;
-        ssoLog(`${this.#name}: ${this.#state} -> ${next}`);
+        this.#log.info(`${this.#state} -> ${next}`);
         this.#state = next;
         return true;
     }
