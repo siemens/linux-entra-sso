@@ -43,11 +43,11 @@ export class PlatformFirefox extends Platform {
             this.#on_before_send_headers,
         );
 
-        if (!enabled || this.well_known_app_filters.length == 0) return;
+        if (!enabled) return;
         chrome.webRequest.onBeforeSendHeaders.addListener(
             this.#on_before_send_headers,
             {
-                urls: this.well_known_app_filters,
+                urls: [Platform.SSO_URL + "/*"],
                 types: ["main_frame", "sub_frame"],
             },
             ["blocking", "requestHeaders"],
