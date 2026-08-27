@@ -39,6 +39,15 @@ export class RpcHandlerQueue {
             this.#queue.splice(idx, 1);
         }
     }
+
+    /* Fail all outstanding requests, e.g. when the transport went away. */
+    reject_all(data) {
+        const pending = this.#queue;
+        this.#queue = [];
+        for (const hdl of pending) {
+            hdl.dfd.reject(data);
+        }
+    }
 }
 
 export class Broker {
@@ -82,6 +91,7 @@ export class Broker {
                 /* Connection closed by the native application. */
                 log.error("native application connection closed");
             }
+            this.#rpc_queue.reject_all("lost connection to native application");
             this.#notify_fn(false);
         });
         this.#port_native.onMessage.addListener(
