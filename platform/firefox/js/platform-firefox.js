@@ -60,11 +60,6 @@ class InjectionStateMachine extends StateMachine {
 
 export class PlatformFirefox extends Platform {
     browser = "Firefox";
-    /*
-     * PRT injection uses a persistent webRequest listener that wakes the
-     * event page on demand, so the NM connection can idle out.
-     */
-    static KEEP_BROKER_CONNECTED = false;
     /* how long a blocked request waits for the startup to report a state */
     static STATE_TIMEOUT_MS = 5 * 1000;
 

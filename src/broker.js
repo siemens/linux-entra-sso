@@ -78,13 +78,10 @@ export class Broker {
     /* track if we ever had a successful connection to the native app */
     #had_connection = false;
     #idle_timer = null;
-    /* if set, the NM connection is kept alive permanently */
-    #keep_connected = false;
 
-    constructor(name, state_change_fn, keep_connected = false) {
+    constructor(name, state_change_fn) {
         this.#name = name;
         this.#notify_fn = state_change_fn;
-        this.#keep_connected = keep_connected;
     }
 
     connect() {
@@ -136,7 +133,6 @@ export class Broker {
     #reset_idle_timer() {
         this.#clear_idle_timer();
         /* keep the connection alive to prevent the worker from shutting down */
-        if (this.#keep_connected) return;
         this.#idle_timer = setTimeout(() => {
             this.#idle_timer = null;
             /* never tear down the port while a response is still outstanding */
