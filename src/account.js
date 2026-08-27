@@ -335,6 +335,9 @@ export class AccountManager {
                 "failed to acquire API token for " + account.username(),
                 error,
             );
+            /* do not keep a token the broker refused to renew */
+            account.access_token = null;
+            account.access_token_exp = 0;
             return null;
         }
     }
