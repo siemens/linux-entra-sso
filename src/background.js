@@ -6,10 +6,12 @@
 import { create_platform } from "./platform-factory.js";
 import { Broker } from "./broker.js";
 import { AccountManager } from "./account.js";
-import { ssoLog } from "./utils.js";
+import { getLogger } from "./utils.js";
 import { PolicyManager } from "./policy.js";
 import { DeviceManager } from "./device.js";
 import { AppStateMachine } from "./app-state.js";
+
+const log = getLogger("app");
 
 const PLATFORM = create_platform();
 let broker = null;
@@ -44,7 +46,7 @@ function is_in_error_state() {
 }
 
 async function on_permissions_changed() {
-    ssoLog("permissions changed, reload host_permissions");
+    log.info("permissions changed, reload host_permissions");
     await PLATFORM.update_host_permissions();
     notify_state_change();
 }
@@ -108,7 +110,7 @@ function notify_state_change(ui_only = false) {
         is_in_error_state();
     update_tray(action_needed);
     if (!ui_only && broker.isConnected()) {
-        ssoLog("update handlers");
+        log.debug("update handlers");
         PLATFORM.update_request_handlers(
             is_operational(),
             accountManager.getActive(),
@@ -146,7 +148,7 @@ async function on_message_menu(request) {
     if (request.command == "enable") {
         accountManager.setActive(true);
         const account = accountManager.selectAccount(request.username);
-        if (account) ssoLog("select account " + account.username());
+        if (account) log.info("select account " + account.username());
     } else if (request.command == "disable") {
         accountManager.setActive(false);
         accountManager.logout();
@@ -157,9 +159,9 @@ async function on_message_menu(request) {
 
 async function on_broker_state_change(online) {
     if (online) {
-        ssoLog("DBus broker is online");
+        log.debug("DBus broker is online");
     } else {
-        ssoLog("DBus broker is offline");
+        log.debug("DBus broker is offline");
     }
     // unblock the initial data loading once the host reported a state.
     app_state.broker_ready();
@@ -192,10 +194,10 @@ async function on_storage_changed(_changes, areaName) {
 
 function on_startup() {
     if (!app_state.initialize()) {
-        ssoLog("linux-entra-sso already initialized");
+        log.debug("linux-entra-sso already initialized");
         return;
     }
-    ssoLog("start linux-entra-sso on " + PLATFORM.browser);
+    log.info("start linux-entra-sso on " + PLATFORM.browser);
     policyManager = new PolicyManager();
 
     chrome.storage.onChanged.addListener(on_storage_changed);

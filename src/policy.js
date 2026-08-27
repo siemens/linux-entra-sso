@@ -3,7 +3,9 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { ssoLog, Deferred } from "./utils.js";
+import { getLogger, Deferred } from "./utils.js";
+
+const log = getLogger("policy");
 
 export class PolicyManager {
     static MANAGED_POLICIES_KEY = "wellKnownApps";
@@ -19,7 +21,7 @@ export class PolicyManager {
                     data.hasOwnProperty("wellKnownApps")
                 ) {
                     this.#apps = { ...data.wellKnownApps };
-                    ssoLog("managed policies loaded");
+                    log.debug("managed policies loaded");
                 }
                 dfd.resolve();
             },

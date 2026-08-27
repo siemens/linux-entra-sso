@@ -3,8 +3,10 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { ssoLog, load_icon } from "./utils.js";
+import { getLogger, load_icon } from "./utils.js";
 import { StateMachine } from "./state-machine.js";
+
+const log = getLogger("accounts");
 
 /* refresh the token if only x time is left */
 const TOKEN_MIN_VALIDITY_MS = 60 * 1000;
@@ -249,7 +251,7 @@ export class AccountManager {
         }
         const account = this.#registered.find((a) => a.username() == username);
         if (account === undefined) {
-            ssoLog("no account found with username " + username);
+            log.warn("no account found with username " + username);
             return undefined;
         }
         this.logout();
@@ -286,15 +288,15 @@ export class AccountManager {
 
         // only auto-select an account if the user did not explicitly disable SSO
         if (!this.isActive()) {
-            ssoLog("SSO is disabled, not selecting an account");
+            log.info("SSO is disabled, not selecting an account");
         } else if (last_username && this.selectAccount(last_username)) {
-            ssoLog(
+            log.info(
                 "select previously used account: " +
                     this.getActive().username(),
             );
         } else {
             this.selectAccount();
-            ssoLog("select first account: " + this.getActive().username());
+            log.info("select first account: " + this.getActive().username());
         }
 
         await Promise.all(
@@ -324,12 +326,15 @@ export class AccountManager {
     async #acquireToken(broker, account) {
         try {
             const graph_token = await broker.acquireTokenSilently(account);
-            ssoLog("API token acquired for " + account.username());
+            log.info("API token acquired for " + account.username());
             account.access_token = graph_token.accessToken;
             account.access_token_exp = graph_token.expiresOn;
             return account.access_token;
         } catch (error) {
-            ssoLog(error);
+            log.error(
+                "failed to acquire API token for " + account.username(),
+                error,
+            );
             return null;
         }
     }
@@ -363,10 +368,7 @@ export class AccountManager {
             }).then((e) => e.target.result);
             account.setAvatar(dataUrl);
         } else {
-            ssoLog(
-                "Warning: Could not get profile picture of " +
-                    account.username(),
-            );
+            log.warn("could not get profile picture of " + account.username());
         }
     }
 
@@ -425,7 +427,7 @@ export class AccountManager {
 
         /* no accounts in session, try restore from local storage */
         if (!data.ssostate) {
-            ssoLog("no preserved state found");
+            log.info("no preserved state found");
             // if the SSO is not explicitly disabled, we assume it is on.
             return;
         }
@@ -446,7 +448,7 @@ export class AccountManager {
         this.setActive(true);
         const active_acc = this.getActive();
         if (active_acc) {
-            ssoLog(
+            log.info(
                 "temporarily using last-known account: " +
                     active_acc.username(),
             );

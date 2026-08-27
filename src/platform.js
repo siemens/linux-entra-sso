@@ -3,8 +3,6 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { ssoLog } from "./utils.js";
-
 export class Platform {
     static SSO_URL = "https://login.microsoftonline.com";
 

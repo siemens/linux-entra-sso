@@ -4,7 +4,9 @@
  */
 
 import { Platform } from "./platform.js";
-import { ssoLog } from "./utils.js";
+import { getLogger } from "./utils.js";
+
+const log = getLogger("platform");
 
 export class PlatformFirefox extends Platform {
     browser = "Firefox";
@@ -67,13 +69,13 @@ export class PlatformFirefox extends Platform {
                 e.url,
             );
             // ms-oapxbc OAuth2 protocol extension
-            ssoLog("inject PRT SSO into request headers");
+            log.debug("inject PRT SSO into request headers");
             e.requestHeaders.push({
                 name: prt.cookieName,
                 value: prt.cookieContent,
             });
         } catch (error) {
-            ssoLog(error);
+            log.error("failed to inject PRT SSO cookie", error);
         }
         return { requestHeaders: e.requestHeaders };
     }
