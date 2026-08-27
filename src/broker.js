@@ -25,19 +25,11 @@ export class RpcHandlerQueue {
     }
 
     resolve_handle(id, data) {
-        const idx = this.#queue.findIndex((hdl) => hdl.id == id);
-        if (idx !== -1) {
-            this.#queue[idx].dfd.resolve(data);
-            this.#queue.splice(idx, 1);
-        }
+        this.#take_handle(id)?.dfd.resolve(data);
     }
 
     reject_handle(id, data) {
-        const idx = this.#queue.findIndex((hdl) => hdl.id == id);
-        if (idx !== -1) {
-            this.#queue[idx].dfd.reject(data);
-            this.#queue.splice(idx, 1);
-        }
+        this.#take_handle(id)?.dfd.reject(data);
     }
 
     /* Fail all outstanding requests, e.g. when the transport went away. */
@@ -51,6 +43,13 @@ export class RpcHandlerQueue {
 
     has_pending() {
         return this.#queue.length != 0;
+    }
+
+    /* Take the oldest handle for that id, as responses arrive in order. */
+    #take_handle(id) {
+        const idx = this.#queue.findIndex((hdl) => hdl.id == id);
+        if (idx === -1) return null;
+        return this.#queue.splice(idx, 1)[0];
     }
 }
 
