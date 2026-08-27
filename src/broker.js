@@ -131,6 +131,14 @@ export class Broker {
         return !this.#conn_error && this.#had_connection;
     }
 
+    /**
+     * @returns if connecting to the native application failed. Unlike
+     * isConnected(), this is false while the connection is not established yet.
+     */
+    hasConnectionError() {
+        return this.#conn_error;
+    }
+
     /*
      * Persist the connection tracking state in the session storage.
      */
