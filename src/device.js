@@ -102,7 +102,9 @@ export class DeviceManager {
             },
         );
         if (!response.ok) {
-            log.error("failed to query device state");
+            log.error(
+                `failed to query device state: HTTP ${response.status} ${response.statusText}`,
+            );
             return false;
         }
         const data = await response.json();
