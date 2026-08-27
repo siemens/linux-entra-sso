@@ -13,15 +13,23 @@ const log = getLogger("broker");
  * remote backend.
  */
 export class RpcHandlerQueue {
+    static DEFAULT_TIMEOUT_MS = 15 * 1000;
+
     #queue = [];
 
-    register_handle(id) {
+    register_handle(id, timeout_ms = RpcHandlerQueue.DEFAULT_TIMEOUT_MS) {
         const handle = {
             id: id,
             dfd: new Deferred(),
         };
         this.#queue.push(handle);
-        return handle.dfd.promise;
+        const timeout = new Promise((_, reject) =>
+            setTimeout(() => {
+                this.#drop_handle(handle);
+                reject(`timeout while waiting for ${id} response`);
+            }, timeout_ms),
+        );
+        return Promise.race([handle.dfd.promise, timeout]);
     }
 
     resolve_handle(id, data) {
@@ -50,6 +58,11 @@ export class RpcHandlerQueue {
         const idx = this.#queue.findIndex((hdl) => hdl.id == id);
         if (idx === -1) return null;
         return this.#queue.splice(idx, 1)[0];
+    }
+
+    #drop_handle(handle) {
+        const idx = this.#queue.indexOf(handle);
+        if (idx !== -1) this.#queue.splice(idx, 1);
     }
 }
 
