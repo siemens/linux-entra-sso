@@ -40,7 +40,7 @@ function report_status(text) {
 }
 
 function is_in_error_state() {
-    return !broker.isConnected() || app_state.has_failed();
+    return broker.hasConnectionError() || app_state.has_failed();
 }
 
 async function on_permissions_changed() {
