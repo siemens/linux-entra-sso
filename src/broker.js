@@ -48,6 +48,10 @@ export class RpcHandlerQueue {
             hdl.dfd.reject(data);
         }
     }
+
+    has_pending() {
+        return this.#queue.length != 0;
+    }
 }
 
 export class Broker {
@@ -123,6 +127,11 @@ export class Broker {
         if (this.#keep_connected) return;
         this.#idle_timer = setTimeout(() => {
             this.#idle_timer = null;
+            /* never tear down the port while a response is still outstanding */
+            if (this.#rpc_queue.has_pending()) {
+                this.#reset_idle_timer();
+                return;
+            }
             log.debug("disconnecting from host tooling after inactivity");
             this.disconnect();
         }, Broker.IDLE_DISCONNECT_MS);
