@@ -3,39 +3,66 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { ssoLog, ssoLogError, Deferred } from "./utils.js";
+import { getLogger, Deferred } from "./utils.js";
 import { Account } from "./account.js";
+
+const log = getLogger("broker");
 
 /**
  * Queue to resolve promises, once the data arrives from the
  * remote backend.
  */
 export class RpcHandlerQueue {
+    static DEFAULT_TIMEOUT_MS = 15 * 1000;
+
     #queue = [];
 
-    register_handle(id) {
+    register_handle(id, timeout_ms = RpcHandlerQueue.DEFAULT_TIMEOUT_MS) {
         const handle = {
             id: id,
             dfd: new Deferred(),
         };
         this.#queue.push(handle);
-        return handle.dfd.promise;
+        const timeout = new Promise((_, reject) =>
+            setTimeout(() => {
+                this.#drop_handle(handle);
+                reject(`timeout while waiting for ${id} response`);
+            }, timeout_ms),
+        );
+        return Promise.race([handle.dfd.promise, timeout]);
     }
 
     resolve_handle(id, data) {
-        const idx = this.#queue.findIndex((hdl) => hdl.id == id);
-        if (idx !== -1) {
-            this.#queue[idx].dfd.resolve(data);
-            this.#queue.splice(idx, 1);
-        }
+        this.#take_handle(id)?.dfd.resolve(data);
     }
 
     reject_handle(id, data) {
-        const idx = this.#queue.findIndex((hdl) => hdl.id == id);
-        if (idx !== -1) {
-            this.#queue[idx].dfd.reject(data);
-            this.#queue.splice(idx, 1);
+        this.#take_handle(id)?.dfd.reject(data);
+    }
+
+    /* Fail all outstanding requests, e.g. when the transport went away. */
+    reject_all(data) {
+        const pending = this.#queue;
+        this.#queue = [];
+        for (const hdl of pending) {
+            hdl.dfd.reject(data);
         }
+    }
+
+    has_pending() {
+        return this.#queue.length != 0;
+    }
+
+    /* Take the oldest handle for that id, as responses arrive in order. */
+    #take_handle(id) {
+        const idx = this.#queue.findIndex((hdl) => hdl.id == id);
+        if (idx === -1) return null;
+        return this.#queue.splice(idx, 1)[0];
+    }
+
+    #drop_handle(handle) {
+        const idx = this.#queue.indexOf(handle);
+        if (idx !== -1) this.#queue.splice(idx, 1);
     }
 }
 
@@ -46,20 +73,15 @@ export class Broker {
     #notify_fn = null;
     #port_native = null;
     #rpc_queue = new RpcHandlerQueue();
-    /* once connected to host tooling, we get the current state */
-    #online = false;
     /* track if the NM connection was successful */
     #conn_error = false;
     /* track if we ever had a successful connection to the native app */
     #had_connection = false;
     #idle_timer = null;
-    /* if set, the NM connection is kept alive permanently */
-    #keep_connected = false;
 
-    constructor(name, state_change_fn, keep_connected = false) {
+    constructor(name, state_change_fn) {
         this.#name = name;
         this.#notify_fn = state_change_fn;
-        this.#keep_connected = keep_connected;
     }
 
     connect() {
@@ -73,15 +95,16 @@ export class Broker {
             /* note, that this is not called on .disconnect(), only on errors */
             this.#port_native = null;
             if (chrome.runtime.lastError) {
-                ssoLogError(
-                    "Error in native application connection: " +
+                log.error(
+                    "error in native application connection: " +
                         chrome.runtime.lastError.message,
                 );
                 this.#conn_error = true;
             } else {
                 /* Connection closed by the native application. */
-                ssoLogError("Native application connection closed.");
+                log.error("native application connection closed");
             }
+            this.#rpc_queue.reject_all("lost connection to native application");
             this.#notify_fn(false);
         });
         this.#port_native.onMessage.addListener(
@@ -110,10 +133,14 @@ export class Broker {
     #reset_idle_timer() {
         this.#clear_idle_timer();
         /* keep the connection alive to prevent the worker from shutting down */
-        if (this.#keep_connected) return;
         this.#idle_timer = setTimeout(() => {
             this.#idle_timer = null;
-            ssoLog("disconnecting from host tooling after inactivity");
+            /* never tear down the port while a response is still outstanding */
+            if (this.#rpc_queue.has_pending()) {
+                this.#reset_idle_timer();
+                return;
+            }
+            log.debug("disconnecting from host tooling after inactivity");
             this.disconnect();
         }, Broker.IDLE_DISCONNECT_MS);
     }
@@ -131,6 +158,14 @@ export class Broker {
          * we only let the caller know if we are unable to connect to the host
          */
         return !this.#conn_error && this.#had_connection;
+    }
+
+    /**
+     * @returns if connecting to the native application failed. Unlike
+     * isConnected(), this is false while the connection is not established yet.
+     */
+    hasConnectionError() {
+        return this.#conn_error;
     }
 
     /*
@@ -192,14 +227,12 @@ export class Broker {
         if (!this.#had_connection) {
             this.#had_connection = true;
             this.persist();
-            ssoLog("connected to host tooling");
+            log.info("connected to host tooling");
         }
 
         /* handle events (not an RPC response) */
         if (response.command == "brokerStateChanged") {
-            if (response.message == "online") this.#online = true;
-            else this.#online = false;
-            this.#notify_fn(this.#online);
+            this.#notify_fn(response.message == "online");
             return;
         }
 
@@ -247,7 +280,7 @@ export class Broker {
                 });
             }
         } else {
-            ssoLog("unknown command: " + response.command);
+            log.warn("unknown command: " + response.command);
         }
     }
 }

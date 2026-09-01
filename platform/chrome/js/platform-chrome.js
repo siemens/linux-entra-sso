@@ -4,7 +4,9 @@
  */
 
 import { Platform } from "./platform.js";
-import { ssoLog } from "./utils.js";
+import { getLogger } from "./utils.js";
+
+const log = getLogger("platform");
 
 export class PlatformChrome extends Platform {
     browser = "Chrome";
@@ -13,11 +15,6 @@ export class PlatformChrome extends Platform {
 
     static CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
     static PRT_SSO_REFRESH_ALARM = "prt-sso-refresh";
-    /*
-     * PRT injection uses declarativeNetRequest, which does not require a
-     * running service worker, so the NM connection can idle out.
-     */
-    static KEEP_BROKER_CONNECTED = false;
 
     constructor() {
         super();
@@ -69,16 +66,17 @@ export class PlatformChrome extends Platform {
     }
 
     async #clear_net_rules() {
-        ssoLog("clear network rules");
+        log.debug("clear network rules");
         const oldRules = await chrome.declarativeNetRequest.getSessionRules();
         const oldRuleIds = oldRules.map((rule) => rule.id);
         await chrome.declarativeNetRequest.updateSessionRules({
             removeRuleIds: oldRuleIds,
         });
+        this.clear_error();
     }
 
     async #update_net_rules(broker) {
-        ssoLog("update network rules");
+        log.debug("update network rules");
         let prt = undefined;
         try {
             prt = await broker.acquirePrtSsoCookie(
@@ -86,7 +84,7 @@ export class PlatformChrome extends Platform {
                 Platform.SSO_URL,
             );
         } catch (error) {
-            ssoLog(error);
+            this.report_error("Failed to acquire the SSO token: " + error);
             return;
         }
         const newRules = [
@@ -118,6 +116,7 @@ export class PlatformChrome extends Platform {
             removeRuleIds: oldRuleIds,
             addRules: newRules,
         });
-        ssoLog("network rules updated");
+        this.clear_error();
+        log.debug("network rules updated");
     }
 }

@@ -110,7 +110,8 @@ body.has-account .info-no-account {
     display: none;
 }
 
-body.pending .entity {
+body.pending .entity,
+body[data-app-state="loading"] .entity {
     cursor: wait;
 }
 
@@ -206,8 +207,13 @@ body.nm-connected #nm-error-box {
     color: var(--text-orange);
 }
 
-.info-text {
+#status-text {
     color: var(--text-blue);
+}
+
+#status-text.error-text,
+body[data-app-state="failed"] #status-text {
+    color: var(--text-red);
 }
 
 span.link {

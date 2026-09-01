@@ -4,27 +4,86 @@
  */
 
 import { Platform } from "./platform.js";
-import { ssoLog } from "./utils.js";
+import { getLogger, Deferred } from "./utils.js";
+import { StateMachine } from "./state-machine.js";
+
+const log = getLogger("platform");
+
+/*
+ * Whether PRT injection can be performed. UNKNOWN means that the event page
+ * was just woken and did not restore its state yet.
+ */
+const InjectionState = Object.freeze({
+    UNKNOWN: "unknown",
+    ACTIVE: "active",
+    INACTIVE: "inactive",
+});
+
+const INJECTION_TRANSITIONS = Object.freeze({
+    [InjectionState.UNKNOWN]: [InjectionState.ACTIVE, InjectionState.INACTIVE],
+    [InjectionState.ACTIVE]: [InjectionState.INACTIVE],
+    [InjectionState.INACTIVE]: [InjectionState.ACTIVE],
+});
+
+class InjectionStateMachine extends StateMachine {
+    /* pending until the startup left the UNKNOWN state */
+    #known = new Deferred();
+
+    constructor() {
+        super("injection-state", INJECTION_TRANSITIONS, InjectionState.UNKNOWN);
+    }
+
+    is_active() {
+        return this.is_in(InjectionState.ACTIVE);
+    }
+
+    is_known() {
+        return !this.is_in(InjectionState.UNKNOWN);
+    }
+
+    set_active(active) {
+        this.transition(
+            active ? InjectionState.ACTIVE : InjectionState.INACTIVE,
+        );
+        this.#known?.resolve();
+        this.#known = null;
+    }
+
+    /*
+     * Block the caller until the startup reported a state, but no longer
+     * than the given time.
+     */
+    async await_known(timeout_ms) {
+        if (!this.#known) return;
+        const timeout = new Promise((resolve) =>
+            setTimeout(resolve, timeout_ms),
+        );
+        await Promise.race([this.#known.promise, timeout]);
+    }
+}
 
 export class PlatformFirefox extends Platform {
     browser = "Firefox";
-    /*
-     * We use a blocking webRequest handler for PRT injection, which requires a
-     * running service worker. Keep the NM connection alive to prevent the MV3
-     * worker from being shut down.
-     */
-    static KEEP_BROKER_CONNECTED = true;
-    /* PRT injection state */
-    #on_before_send_headers = null;
+    /* how long a blocked request waits for the startup to report a state */
+    static STATE_TIMEOUT_MS = 5 * 1000;
+
     #broker = null;
+    #injection = new InjectionStateMachine();
 
     constructor() {
         super();
         /*
-         * Bind once to a stable reference so removeListener can actually
-         * deregister the handler.
+         * Register the handler synchronously during page evaluation, as only
+         * such listeners can wake a suspended event page.
          */
-        this.#on_before_send_headers = this.#onBeforeSendHeaders.bind(this);
+        chrome.webRequest.onBeforeSendHeaders.addListener(
+            this.#onBeforeSendHeaders.bind(this),
+            {
+                urls: [Platform.SSO_URL + "/*"],
+                types: ["main_frame", "sub_frame"],
+            },
+            ["blocking", "requestHeaders"],
+        );
     }
 
     setIconDisabled() {
@@ -36,30 +95,32 @@ export class PlatformFirefox extends Platform {
     update_request_handlers(enabled, account, broker) {
         super.update_request_handlers(enabled, account, broker);
         this.#broker = broker;
-
-        chrome.webRequest.onBeforeSendHeaders.removeListener(
-            this.#on_before_send_headers,
-        );
-
-        if (!enabled || this.well_known_app_filters.length == 0) return;
-        chrome.webRequest.onBeforeSendHeaders.addListener(
-            this.#on_before_send_headers,
-            {
-                urls: this.well_known_app_filters,
-                types: ["main_frame", "sub_frame"],
-            },
-            ["blocking", "requestHeaders"],
-        );
+        this.#injection.set_active(Boolean(enabled && account && broker));
+        this.clear_error();
     }
 
     async #onBeforeSendHeaders(e) {
+        const headers = { requestHeaders: e.requestHeaders };
         // filter out requests that are not part of the OAuth2.0 flow
         const url = URL.parse(e.url);
         if (
             url?.protocol !== "https:" ||
             url.origin !== URL.parse(Platform.SSO_URL).origin
         ) {
-            return { requestHeaders: e.requestHeaders };
+            return headers;
+        }
+        /* a woken event page has not restored its state yet */
+        await this.#injection.await_known(PlatformFirefox.STATE_TIMEOUT_MS);
+        if (!this.#injection.is_known()) {
+            this.report_error(
+                "Timed out while restoring the SSO state. " +
+                    "Requests are sent without SSO, please reload the page.",
+            );
+            return headers;
+        }
+        if (!this.#injection.is_active()) {
+            log.warn("SSO not available, pass request unmodified");
+            return headers;
         }
         try {
             let prt = await this.#broker.acquirePrtSsoCookie(
@@ -67,14 +128,15 @@ export class PlatformFirefox extends Platform {
                 e.url,
             );
             // ms-oapxbc OAuth2 protocol extension
-            ssoLog("inject PRT SSO into request headers");
+            log.debug("inject PRT SSO into request headers");
             e.requestHeaders.push({
                 name: prt.cookieName,
                 value: prt.cookieContent,
             });
+            this.clear_error();
         } catch (error) {
-            ssoLog(error);
+            this.report_error("Failed to acquire the SSO token: " + error);
         }
-        return { requestHeaders: e.requestHeaders };
+        return headers;
     }
 }

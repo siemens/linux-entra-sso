@@ -6,9 +6,12 @@
 import { create_platform } from "./platform-factory.js";
 import { Broker } from "./broker.js";
 import { AccountManager } from "./account.js";
-import { ssoLog, Deferred } from "./utils.js";
+import { getLogger } from "./utils.js";
 import { PolicyManager } from "./policy.js";
 import { DeviceManager } from "./device.js";
+import { AppStateMachine } from "./app-state.js";
+
+const log = getLogger("app");
 
 const PLATFORM = create_platform();
 let broker = null;
@@ -16,19 +19,10 @@ let policyManager = null;
 let accountManager = null;
 let deviceManager = null;
 
-let initialized = false;
 let port_menu = null;
-let state_restored = false;
-/* status to surface in the UI: { text, level } or null => no status */
-let last_status = null;
-
-/*
- * Resolves once we received the first broker state event from the native
- * host. This signals that the host is ready and we can load data from the
- * broker (getAccounts activates the broker on demand, so the current
- * broker state does not matter).
- */
-let broker_state_received = new Deferred();
+const app_state = new AppStateMachine();
+/* status messages to surface in the UI, keyed by the reporting source */
+const status_by_source = new Map();
 
 /*
  * Check if all conditions for SSO are met
@@ -42,21 +36,27 @@ function is_operational() {
 }
 
 /*
- * Update the status message shown in the UI. Pass null to clear it.
- * The level ("info" or "error") controls how it is rendered.
- * The "error" is also used to determine if the extension is in an error state.
+ * Update the status message of a source. Pass a null text to withdraw it,
+ * which leaves messages of other sources untouched.
  */
-function report_status(text, level = "info") {
-    last_status = text ? { text, level } : null;
+function report_status(source, text, is_error = false) {
+    if (text) status_by_source.set(source, { text, error: is_error });
+    else status_by_source.delete(source);
     notify_state_change(true);
 }
 
+/* The status shown in the UI, errors take precedence over progress messages. */
+function current_status() {
+    const all = [...status_by_source.values()];
+    return all.find((s) => s.error) ?? all[0] ?? null;
+}
+
 function is_in_error_state() {
-    return !broker.isConnected() || last_status?.level === "error";
+    return broker.hasConnectionError() || app_state.has_failed();
 }
 
 async function on_permissions_changed() {
-    ssoLog("permissions changed, reload host_permissions");
+    log.info("permissions changed, reload host_permissions");
     await PLATFORM.update_host_permissions();
     notify_state_change();
 }
@@ -110,17 +110,19 @@ async function update_tray(action_needed) {
 function notify_state_change(ui_only = false) {
     // on service worker startup, delay all updates until we restored
     // the application state from storage.
-    if (!state_restored) return;
+    if (!app_state.is_restored()) return;
     const gpo_update = policyManager.getPolicyUpdate(
         PLATFORM.well_known_app_filters,
     );
+    const ui_status = current_status();
     let action_needed =
         !PLATFORM.sso_url_permitted ||
         gpo_update.pending ||
+        Boolean(ui_status?.error) ||
         is_in_error_state();
     update_tray(action_needed);
     if (!ui_only && broker.isConnected()) {
-        ssoLog("update handlers");
+        log.debug("update handlers");
         PLATFORM.update_request_handlers(
             is_operational(),
             accountManager.getActive(),
@@ -145,7 +147,8 @@ function notify_state_change(ui_only = false) {
         broker_version: PLATFORM.host_versions.broker,
         sso_url: PLATFORM.getSsoUrl(),
         gpo_update: gpo_update,
-        status: last_status,
+        ui_status: ui_status,
+        app_state: app_state.state,
     });
 }
 
@@ -157,11 +160,10 @@ async function on_message_menu(request) {
     if (request.command == "enable") {
         accountManager.setActive(true);
         const account = accountManager.selectAccount(request.username);
-        if (account) ssoLog("select account " + account.username());
+        if (account) log.info("select account " + account.username());
     } else if (request.command == "disable") {
         accountManager.setActive(false);
         accountManager.logout();
-        ssoLog("disable SSO");
     }
     accountManager.persist();
     notify_state_change();
@@ -169,29 +171,33 @@ async function on_message_menu(request) {
 
 async function on_broker_state_change(online) {
     if (online) {
-        ssoLog("DBus broker is online");
+        log.debug("DBus broker is online");
     } else {
-        ssoLog("DBus broker is offline");
+        log.debug("DBus broker is offline");
     }
     // unblock the initial data loading once the host reported a state.
-    broker_state_received.resolve();
+    app_state.broker_ready();
     notify_state_change(true);
 }
 
 async function bootstrap_from_broker() {
-    // wait for the first broker state event before talking to the broker.
-    await broker_state_received.promise;
-    if (accountManager.hasBrokerData()) return;
-    report_status("Loading data from broker\u2026", "info");
+    if (!(await app_state.begin_bootstrap())) return;
+    report_status("bootstrap", "Loading data from broker\u2026");
     try {
         await accountManager.loadAccounts(broker);
         accountManager.persist();
         await deviceManager.loadDeviceInfo(broker);
         deviceManager.persist();
         await PLATFORM.setup(broker);
-        report_status(null);
+        app_state.bootstrap_succeeded();
+        report_status("bootstrap", null);
     } catch (error) {
-        report_status("Failed to load data from broker: " + error, "error");
+        app_state.bootstrap_failed();
+        report_status(
+            "bootstrap",
+            "Failed to load data from broker: " + error,
+            true,
+        );
     }
     notify_state_change();
 }
@@ -203,23 +209,21 @@ async function on_storage_changed(_changes, areaName) {
 }
 
 function on_startup() {
-    if (initialized) {
-        ssoLog("linux-entra-sso already initialized");
+    if (!app_state.initialize()) {
+        log.debug("linux-entra-sso already initialized");
         return;
     }
-    initialized = true;
-    ssoLog("start linux-entra-sso on " + PLATFORM.browser);
+    log.info("start linux-entra-sso on " + PLATFORM.browser);
+    PLATFORM.set_status_handler((text, is_error) =>
+        report_status("platform", text, is_error),
+    );
     policyManager = new PolicyManager();
 
     chrome.storage.onChanged.addListener(on_storage_changed);
     chrome.permissions.onAdded.addListener(on_permissions_changed);
     chrome.permissions.onRemoved.addListener(on_permissions_changed);
 
-    broker = new Broker(
-        "linux_entra_sso",
-        on_broker_state_change,
-        PLATFORM.constructor.KEEP_BROKER_CONNECTED,
-    );
+    broker = new Broker("linux_entra_sso", on_broker_state_change);
     accountManager = new AccountManager(broker);
     deviceManager = new DeviceManager(accountManager);
     Promise.all([
@@ -229,7 +233,7 @@ function on_startup() {
         deviceManager.restore(),
         broker.restore(),
     ]).then(() => {
-        state_restored = true;
+        app_state.restored();
         notify_state_change();
         /* asynchronously load external state */
         broker.connect();
@@ -242,6 +246,8 @@ function on_startup() {
         port_menu.onDisconnect.addListener(() => {
             port_menu = null;
         });
+        broker.connect();
+        bootstrap_from_broker();
         notify_state_change(true);
     });
 }

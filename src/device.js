@@ -3,7 +3,9 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { ssoLog, ssoLogError, jwt_get_payload } from "./utils.js";
+import { getLogger, jwt_get_payload } from "./utils.js";
+
+const log = getLogger("device");
 
 export class Device {
     name = null;
@@ -87,7 +89,7 @@ export class DeviceManager {
         }
         const grants = jwt_get_payload(graph_token);
         if (!grants["deviceid"]) {
-            ssoLog("access token does not have deviceid grant");
+            log.warn("access token does not have deviceid grant");
             return false;
         }
         const response = await fetch(
@@ -100,13 +102,15 @@ export class DeviceManager {
             },
         );
         if (!response.ok) {
-            ssoLogError("failed to query device state");
+            log.error(
+                `failed to query device state: HTTP ${response.status} ${response.statusText}`,
+            );
             return false;
         }
         const data = await response.json();
         this.#last_refresh = Date.now();
         this.device = new Device(data.displayName, data.isCompliant);
-        ssoLog("updated device information");
+        log.info("updated device information");
         return true;
     }
 
