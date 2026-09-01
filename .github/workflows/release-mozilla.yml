@@ -13,7 +13,7 @@ on:
 permissions: {}
 
 env:
-  WEB_EXT_VERS: 10.5.0
+  WEB_EXT_VERS: 10.6.0
 
 jobs:
   release-mozilla:
@@ -71,7 +71,7 @@ jobs:
             pkgs/linux-entra-sso_*.deb
 
       - name: attest Firefox extension build
-        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: |
             build/linux_entra_sso-*.xpi
