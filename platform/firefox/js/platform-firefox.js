@@ -37,6 +37,10 @@ class InjectionStateMachine extends StateMachine {
         return this.is_in(InjectionState.ACTIVE);
     }
 
+    is_known() {
+        return !this.is_in(InjectionState.UNKNOWN);
+    }
+
     set_active(active) {
         this.transition(
             active ? InjectionState.ACTIVE : InjectionState.INACTIVE,
@@ -92,6 +96,7 @@ export class PlatformFirefox extends Platform {
         super.update_request_handlers(enabled, account, broker);
         this.#broker = broker;
         this.#injection.set_active(Boolean(enabled && account && broker));
+        this.clear_error();
     }
 
     async #onBeforeSendHeaders(e) {
@@ -106,6 +111,13 @@ export class PlatformFirefox extends Platform {
         }
         /* a woken event page has not restored its state yet */
         await this.#injection.await_known(PlatformFirefox.STATE_TIMEOUT_MS);
+        if (!this.#injection.is_known()) {
+            this.report_error(
+                "Timed out while restoring the SSO state. " +
+                    "Requests are sent without SSO, please reload the page.",
+            );
+            return headers;
+        }
         if (!this.#injection.is_active()) {
             log.warn("SSO not available, pass request unmodified");
             return headers;
@@ -121,8 +133,9 @@ export class PlatformFirefox extends Platform {
                 name: prt.cookieName,
                 value: prt.cookieContent,
             });
+            this.clear_error();
         } catch (error) {
-            log.error("failed to inject PRT SSO cookie", error);
+            this.report_error("Failed to acquire the SSO token: " + error);
         }
         return headers;
     }
