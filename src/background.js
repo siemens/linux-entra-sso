@@ -21,8 +21,8 @@ let deviceManager = null;
 
 let port_menu = null;
 const app_state = new AppStateMachine();
-/* status to surface in the UI: { text } or null => no status */
-let last_status = null;
+/* status messages to surface in the UI, keyed by the reporting source */
+const status_by_source = new Map();
 
 /*
  * Check if all conditions for SSO are met
@@ -35,10 +35,20 @@ function is_operational() {
     );
 }
 
-/* Update the status message shown in the UI. Pass null to clear it. */
-function report_status(text) {
-    last_status = text ? { text } : null;
+/*
+ * Update the status message of a source. Pass a null text to withdraw it,
+ * which leaves messages of other sources untouched.
+ */
+function report_status(source, text, is_error = false) {
+    if (text) status_by_source.set(source, { text, error: is_error });
+    else status_by_source.delete(source);
     notify_state_change(true);
+}
+
+/* The status shown in the UI, errors take precedence over progress messages. */
+function current_status() {
+    const all = [...status_by_source.values()];
+    return all.find((s) => s.error) ?? all[0] ?? null;
 }
 
 function is_in_error_state() {
@@ -104,9 +114,11 @@ function notify_state_change(ui_only = false) {
     const gpo_update = policyManager.getPolicyUpdate(
         PLATFORM.well_known_app_filters,
     );
+    const ui_status = current_status();
     let action_needed =
         !PLATFORM.sso_url_permitted ||
         gpo_update.pending ||
+        Boolean(ui_status?.error) ||
         is_in_error_state();
     update_tray(action_needed);
     if (!ui_only && broker.isConnected()) {
@@ -135,7 +147,7 @@ function notify_state_change(ui_only = false) {
         broker_version: PLATFORM.host_versions.broker,
         sso_url: PLATFORM.getSsoUrl(),
         gpo_update: gpo_update,
-        status: last_status,
+        ui_status: ui_status,
         app_state: app_state.state,
     });
 }
@@ -170,7 +182,7 @@ async function on_broker_state_change(online) {
 
 async function bootstrap_from_broker() {
     if (!(await app_state.begin_bootstrap())) return;
-    report_status("Loading data from broker\u2026");
+    report_status("bootstrap", "Loading data from broker\u2026");
     try {
         await accountManager.loadAccounts(broker);
         accountManager.persist();
@@ -178,10 +190,14 @@ async function bootstrap_from_broker() {
         deviceManager.persist();
         await PLATFORM.setup(broker);
         app_state.bootstrap_succeeded();
-        report_status(null);
+        report_status("bootstrap", null);
     } catch (error) {
         app_state.bootstrap_failed();
-        report_status("Failed to load data from broker: " + error);
+        report_status(
+            "bootstrap",
+            "Failed to load data from broker: " + error,
+            true,
+        );
     }
     notify_state_change();
 }

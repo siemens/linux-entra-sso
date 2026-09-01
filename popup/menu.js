@@ -74,10 +74,11 @@ bg_port.onMessage.addListener(async (m) => {
         annotate_body_if("has-account", m.accounts.length);
         annotate_body_if("nm-connected", m.nm_connected);
 
-        if (m.status) {
-            document.getElementById("status-text").innerText = m.status.text;
+        if (m.ui_status) {
+            document.getElementById("status-text").innerText = m.ui_status.text;
         }
-        annotate_by_id_if("status-box", "hidden", !m.status);
+        annotate_by_id_if("status-text", "error-text", m.ui_status?.error);
+        annotate_by_id_if("status-box", "hidden", !m.ui_status);
 
         if (m.accounts !== null) {
             const accountsdom = document.getElementById("accountlist");
