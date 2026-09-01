@@ -214,6 +214,9 @@ function on_startup() {
         return;
     }
     log.info("start linux-entra-sso on " + PLATFORM.browser);
+    PLATFORM.set_status_handler((text, is_error) =>
+        report_status("platform", text, is_error),
+    );
     policyManager = new PolicyManager();
 
     chrome.storage.onChanged.addListener(on_storage_changed);
