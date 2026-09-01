@@ -3,6 +3,10 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
+import { getLogger } from "./utils.js";
+
+const log = getLogger("platform");
+
 export class Platform {
     static SSO_URL = "https://login.microsoftonline.com";
 
@@ -17,6 +21,9 @@ export class Platform {
     account = null;
     well_known_app_filters = [];
     sso_url_permitted = true;
+
+    /* invoked with (text, is_error) to surface platform issues in the UI */
+    #status_handler = null;
 
     constructor() {
         /*
@@ -76,6 +83,21 @@ export class Platform {
 
     getSsoUrl() {
         return Platform.SSO_URL;
+    }
+
+    set_status_handler(handler) {
+        this.#status_handler = handler;
+    }
+
+    /* Surface a platform error in the UI (action badge and menu message). */
+    report_error(text) {
+        log.error(text);
+        this.#status_handler?.(text, true);
+    }
+
+    /* Withdraw a previously reported error. */
+    clear_error() {
+        this.#status_handler?.(null);
     }
 
     update_request_handlers(enabled, account, broker) {
