@@ -72,6 +72,7 @@ export class PlatformChrome extends Platform {
         await chrome.declarativeNetRequest.updateSessionRules({
             removeRuleIds: oldRuleIds,
         });
+        this.clear_error();
     }
 
     async #update_net_rules(broker) {
@@ -83,7 +84,7 @@ export class PlatformChrome extends Platform {
                 Platform.SSO_URL,
             );
         } catch (error) {
-            log.error("failed to acquire PRT SSO cookie", error);
+            this.report_error("Failed to acquire the SSO token: " + error);
             return;
         }
         const newRules = [
@@ -115,6 +116,7 @@ export class PlatformChrome extends Platform {
             removeRuleIds: oldRuleIds,
             addRules: newRules,
         });
+        this.clear_error();
         log.debug("network rules updated");
     }
 }
