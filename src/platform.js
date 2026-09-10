@@ -19,6 +19,8 @@ export class Platform {
 
     /* references needed for PRT injection */
     account = null;
+    /* resolves {active, account} for a cookie store; used for per-container SSO */
+    resolve_injection = null;
     well_known_app_filters = [];
     sso_url_permitted = true;
 
@@ -100,8 +102,9 @@ export class Platform {
         this.#status_handler?.(null);
     }
 
-    update_request_handlers(enabled, account, broker) {
+    update_request_handlers(enabled, account, broker, resolve = null) {
         this.account = account;
+        this.resolve_injection = resolve;
     }
 
     async update_host_permissions() {
