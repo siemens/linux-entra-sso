@@ -77,7 +77,11 @@ await am.restore();
 check("local logged-out isActive", am.isActive(), false);
 check("local logged-out hasAccounts", am.hasAccounts(), false);
 check("cached accounts wiped", store.local.ssostate.accounts, []);
-check("logged-out marker kept", store.local.ssostate.state, false);
+check(
+    "logged-out marker kept",
+    store.local.ssostate.bindings["default"].enabled,
+    false,
+);
 
 /* 6. round trip: logged in -> persist -> restart (session cleared) */
 reset(null, { broker_queried: true, accounts: [acc("a@x", true)] });
@@ -98,7 +102,11 @@ am.setActive(false);
 am.logout();
 await am.persist();
 check("logout persists no accounts", store.local.ssostate.accounts, []);
-check("logout persists state", store.local.ssostate.state, false);
+check(
+    "logout persists state",
+    store.local.ssostate.bindings["default"].enabled,
+    false,
+);
 store.session = {};
 am = new AccountManager();
 await am.restore();
