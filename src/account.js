@@ -116,12 +116,12 @@ export class Account {
         return this.#broker_obj;
     }
 
-    toMenuObject() {
+    toMenuObject(active = this.active) {
         return {
             name: this.name(),
             username: this.username(),
             avatar: this.avatar,
-            active: this.active,
+            active,
         };
     }
 

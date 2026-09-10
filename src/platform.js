@@ -105,6 +105,11 @@ export class Platform {
         return DEFAULT_STORE;
     }
 
+    /* Map a browser cookieStoreId to a neutral store key (default if none). */
+    store_key(cookieStoreId) {
+        return DEFAULT_STORE;
+    }
+
     /* Color of the active tab's container, or null when there is none. */
     get_current_container_color() {
         return null;

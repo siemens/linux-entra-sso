@@ -15,6 +15,8 @@ let active = false;
 let sso_url = null;
 /* current URL filter */
 let current_filter = null;
+/* cookie store of the active tab this popup acts on */
+let current_store = null;
 /* group policy update */
 let gpo = null;
 /* size of avatar images */
@@ -67,6 +69,42 @@ function set_text_cropped(element, str) {
 }
 
 setup_color_scheme();
+
+/*
+ * Tell the background which container (active tab) this popup acts on and
+ * show a badge for it, so enable/disable apply to that container.
+ */
+async function report_active_container() {
+    try {
+        const [tab] = await chrome.tabs.query({
+            active: true,
+            currentWindow: true,
+        });
+        current_store = tab?.cookieStoreId ?? null;
+    } catch {
+        current_store = null;
+    }
+    bg_port.postMessage({ command: "container", store: current_store });
+    await update_container_badge(current_store);
+}
+
+async function update_container_badge(store) {
+    const bar = document.getElementById("container-bar");
+    if (!store || store === "firefox-default" || !chrome.contextualIdentities) {
+        bar.classList.add("hidden");
+        return;
+    }
+    try {
+        const ident = await chrome.contextualIdentities.get(store);
+        document.getElementById("container-name").innerText = ident.name;
+        bar.style.setProperty("--container-color", ident.colorCode);
+        bar.classList.remove("hidden");
+    } catch {
+        bar.classList.add("hidden");
+    }
+}
+
+report_active_container();
 bg_port.onMessage.addListener(async (m) => {
     if (m.event == "stateChanged") {
         clear_inflight();
@@ -167,7 +205,11 @@ function create_account_entity(account) {
     entity.addEventListener("click", (event) => {
         if (account.active) return;
         if (!set_inflight(this)) return;
-        bg_port.postMessage({ command: "enable", username: account.username });
+        bg_port.postMessage({
+            command: "enable",
+            username: account.username,
+            store: current_store,
+        });
     });
     return entity;
 }
@@ -175,7 +217,7 @@ function create_account_entity(account) {
 document.getElementById("entity-guest").addEventListener("click", (event) => {
     if (!active) return;
     if (!set_inflight(this)) return;
-    bg_port.postMessage({ command: "disable" });
+    bg_port.postMessage({ command: "disable", store: current_store });
 });
 
 function check_sso_provider_perms() {

@@ -5,7 +5,7 @@
 
 import { create_platform } from "./platform-factory.js";
 import { Broker } from "./broker.js";
-import { AccountManager } from "./account.js";
+import { AccountManager, DEFAULT_STORE } from "./account.js";
 import { getLogger } from "./utils.js";
 import { PolicyManager } from "./policy.js";
 import { DeviceManager } from "./device.js";
@@ -20,6 +20,8 @@ let accountManager = null;
 let deviceManager = null;
 
 let port_menu = null;
+/* container the open popup is acting on (per its active tab) */
+let menu_store = DEFAULT_STORE;
 const app_state = new AppStateMachine();
 /* status messages to surface in the UI, keyed by the reporting source */
 const status_by_source = new Map();
@@ -161,12 +163,15 @@ function notify_state_change(ui_only = false) {
             notify_state_change(true);
         }
     });
+    const selected = accountManager.getActive(menu_store);
     port_menu.postMessage({
         event: "stateChanged",
-        accounts: accountManager.getRegistered().map((a) => a.toMenuObject()),
+        accounts: accountManager
+            .getRegistered()
+            .map((a) => a.toMenuObject(a === selected)),
         nm_connected: broker.isConnected(),
         device: deviceManager.getDevice(),
-        enabled: accountManager.isActive(),
+        enabled: accountManager.isActive(menu_store),
         host_version: PLATFORM.host_versions.native,
         broker_version: PLATFORM.host_versions.broker,
         sso_url: PLATFORM.getSsoUrl(),
@@ -177,17 +182,23 @@ function notify_state_change(ui_only = false) {
 }
 
 async function on_message_menu(request) {
+    if (request.command == "container") {
+        menu_store = PLATFORM.store_key(request.store);
+        notify_state_change(true);
+        return;
+    }
     if (is_in_error_state()) {
         notify_state_change(true);
         return;
     }
+    const store = PLATFORM.store_key(request.store);
     if (request.command == "enable") {
-        accountManager.setActive(true);
-        const account = accountManager.selectAccount(request.username);
+        accountManager.setActive(true, store);
+        const account = accountManager.selectAccount(request.username, store);
         if (account) log.info("select account " + account.username());
     } else if (request.command == "disable") {
-        accountManager.setActive(false);
-        accountManager.logout();
+        accountManager.setActive(false, store);
+        accountManager.logout(store);
     }
     accountManager.persist();
     notify_state_change();
