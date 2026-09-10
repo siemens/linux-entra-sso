@@ -72,6 +72,8 @@ export class PlatformFirefox extends Platform {
 
     #broker = null;
     #injection = new InjectionStateMachine();
+    /* raw cookieStoreId of the currently active tab */
+    #current_store = PlatformFirefox.FIREFOX_DEFAULT_STORE;
 
     constructor() {
         super();
@@ -87,6 +89,13 @@ export class PlatformFirefox extends Platform {
             },
             ["blocking", "requestHeaders"],
         );
+
+        /* track the active tab's container (Firefox only, not Thunderbird) */
+        if (chrome.contextualIdentities) {
+            const refresh = () => this.#refresh_current_store();
+            chrome.tabs.onActivated.addListener(refresh);
+            chrome.windows.onFocusChanged.addListener(refresh);
+        }
     }
 
     setIconDisabled() {
@@ -108,6 +117,40 @@ export class PlatformFirefox extends Platform {
             cookieStoreId === PlatformFirefox.FIREFOX_DEFAULT_STORE
             ? DEFAULT_STORE
             : cookieStoreId;
+    }
+
+    /* Follow the active tab and notify when its container changes. */
+    async #refresh_current_store() {
+        let store = PlatformFirefox.FIREFOX_DEFAULT_STORE;
+        try {
+            const [tab] = await chrome.tabs.query({
+                active: true,
+                lastFocusedWindow: true,
+            });
+            if (tab?.cookieStoreId) store = tab.cookieStoreId;
+        } catch (error) {
+            log.warn("could not determine active tab container: " + error);
+        }
+        if (store === this.#current_store) return;
+        this.#current_store = store;
+        this.on_container_change?.();
+    }
+
+    get_current_store() {
+        return this.store_key(this.#current_store);
+    }
+
+    async get_current_container_color() {
+        if (this.get_current_store() === DEFAULT_STORE) return null;
+        try {
+            const ident = await chrome.contextualIdentities.get(
+                this.#current_store,
+            );
+            return ident?.colorCode ?? null;
+        } catch (error) {
+            log.warn("could not get container color: " + error);
+            return null;
+        }
     }
 
     async #onBeforeSendHeaders(e) {
