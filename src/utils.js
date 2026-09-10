@@ -51,6 +51,54 @@ export async function load_icon(path, width) {
     return ctx.getImageData(0, 0, width, width);
 }
 
+/*
+ * Render an icon (given as ImageData) into a width x width image, optionally
+ * ringed by a colored circle. A null color returns the icon unchanged.
+ */
+export function decorate_icon(imgdata, width, color = null) {
+    const sWidth = imgdata.width;
+    const lineWidth = Math.min(2, width / 12);
+    const buffer = new OffscreenCanvas(sWidth, sWidth);
+    buffer.getContext("2d").putImageData(imgdata, 0, 0);
+
+    const canvas = new OffscreenCanvas(width, width);
+    const ctx = canvas.getContext("2d");
+    ctx.save();
+    // inset the picture so the ring is drawn around it, not over it
+    const margin = color === null ? 0 : lineWidth + 1;
+    ctx.beginPath();
+    ctx.arc(width / 2, width / 2, width / 2 - margin, 0, Math.PI * 2, false);
+    ctx.clip();
+    ctx.drawImage(
+        buffer,
+        0,
+        0,
+        sWidth,
+        sWidth,
+        margin,
+        margin,
+        width - margin * 2,
+        width - margin * 2,
+    );
+    ctx.restore();
+    if (color === null) {
+        return ctx.getImageData(0, 0, width, width);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    ctx.arc(
+        width / 2,
+        width / 2,
+        width / 2 - Math.min(1, lineWidth / 2),
+        0,
+        Math.PI * 2,
+        false,
+    );
+    ctx.stroke();
+    return ctx.getImageData(0, 0, width, width);
+}
+
 export function jwt_get_payload(token) {
     const base64Url = token.split(".")[1];
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
