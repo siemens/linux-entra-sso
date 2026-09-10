@@ -10,6 +10,11 @@ SPDX-FileCopyrightText: Copyright 2024 Siemens AG
         <link rel="stylesheet" href="menu.css" />
     </head>
     <body>
+        <div id="container-bar" class="hidden">
+            <span class="container-dot"></span>
+            <span id="container-name"></span>
+            <span class="container-suffix">container</span>
+        </div>
         <div id="accountlist"></div>
         <div class="entity" id="entity-guest">
             <div class="avatar">
@@ -47,7 +52,7 @@ SPDX-FileCopyrightText: Copyright 2024 Siemens AG
                 <span id="apply-gpo-update" class="link">(apply)</span>
             </div>
             <div class="footer-block">
-                <div class="block-title">Settings</div>
+                <div id="settings-title" class="block-title">Settings</div>
                 <div id="bg-sso-state">
                     <span>Background SSO</span>
                     <span id="grant-access" class="link">(enable)</span>
