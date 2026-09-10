@@ -164,6 +164,26 @@ body.nm-connected #nm-error-box {
     display: none !important;
 }
 
+#container-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: var(--font-size-smaller);
+    color: var(--text-1);
+    border-bottom: 1px solid var(--border-0);
+}
+#container-bar .container-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--container-color, var(--text-1));
+}
+#container-name {
+    font-weight: bold;
+    color: var(--text-0);
+}
+
 .footer {
     padding-bottom: 5px;
     font-size: var(--font-size-smaller);
