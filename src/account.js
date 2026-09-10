@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { getLogger, load_icon } from "./utils.js";
+import { getLogger, load_icon, decorate_icon } from "./utils.js";
 import { StateMachine } from "./state-machine.js";
 
 const log = getLogger("accounts");
@@ -153,23 +153,9 @@ export class Account {
         this.#avatar_imgdata = null;
     }
 
-    async getDecoratedAvatar(width) {
-        let imgdata = await this.getAvatarImgData();
-        const sWidth = imgdata.width;
-        const lineWidth = Math.min(2, width / 12);
-        let buffer = new OffscreenCanvas(sWidth, sWidth);
-        let ctx_buffer = buffer.getContext("2d");
-        ctx_buffer.putImageData(imgdata, 0, 0);
-
-        let canvas = new OffscreenCanvas(width, width);
-        let ctx = canvas.getContext("2d");
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(width / 2, width / 2, width / 2, 0, Math.PI * 2, false);
-        ctx.clip();
-        ctx.drawImage(buffer, 0, 0, sWidth, sWidth, 0, 0, width, width);
-        ctx.restore();
-        return ctx.getImageData(0, 0, width, width);
+    /* Draw the avatar, optionally ringed by a colored circle (null => none). */
+    async getDecoratedAvatar(width, color = null) {
+        return decorate_icon(await this.getAvatarImgData(), width, color);
     }
 
     toSerial(with_secrets = false) {
