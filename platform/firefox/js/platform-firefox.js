@@ -4,7 +4,7 @@
  */
 
 import { Platform } from "./platform.js";
-import { getLogger, Deferred } from "./utils.js";
+import { getLogger, Deferred, load_icon, decorate_icon } from "./utils.js";
 import { StateMachine } from "./state-machine.js";
 import { DEFAULT_STORE } from "./account.js";
 
@@ -102,6 +102,11 @@ export class PlatformFirefox extends Platform {
         chrome.action.setIcon({
             path: "/icons/linux-entra-sso.svg",
         });
+    }
+
+    async getDisabledIconData(width, color) {
+        const imgdata = await load_icon("/icons/linux-entra-sso_48.png", width);
+        return decorate_icon(imgdata, width, color);
     }
 
     update_request_handlers(enabled, account, broker, resolve) {

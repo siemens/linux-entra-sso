@@ -80,6 +80,8 @@ FIREFOX_INPUT_FILES= \
 	platform/firefox/js/platform-firefox.js \
 	platform/firefox/js/platform-factory.js \
 	icons/linux-entra-sso.svg \
+	icons/linux-entra-sso_48.png \
+	icons/linux-entra-sso_48.png.license \
 	icons/profile-outline.svg
 
 THUNDERBIRD_INPUT_FILES= \
@@ -113,6 +115,8 @@ FIREFOX_PACKAGE_FILES= \
 	manifest.json \
 	manifest.json.license \
 	icons/linux-entra-sso.svg \
+	icons/linux-entra-sso_48.png \
+	icons/linux-entra-sso_48.png.license \
 	popup/profile-outline.svg
 
 THUNDERBIRD_PACKAGE_FILES= \
@@ -144,7 +148,7 @@ all package: clean $(CHROME_INPUT_FILES) $(FIREFOX_INPUT_FILES) $(THUNDERBIRD_IN
 	done
 	cp -r build/firefox/icons build/firefox/popup build/thunderbird/
 	cp platform/chrome/storage* build/chrome/
-	cp icons/*.svg icons/profile-outline_48.* build/firefox/icons/
+	cp icons/*.svg icons/profile-outline_48.* icons/linux-entra-sso_48.* build/firefox/icons/
 	cp icons/*.png* icons/profile-outline.svg build/chrome/icons/
 	cp popup/menu.* icons/linux-entra-sso.svg icons/profile-outline.svg build/firefox/popup/
 	cp popup/menu.* icons/linux-entra-sso.svg icons/profile-outline.svg build/chrome/popup/
