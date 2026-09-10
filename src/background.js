@@ -25,14 +25,25 @@ const app_state = new AppStateMachine();
 const status_by_source = new Map();
 
 /*
- * Check if all conditions for SSO are met
+ * Check if all conditions for SSO are met for the given container.
  */
-function is_operational() {
+function is_operational(store = undefined) {
     return Boolean(
         !is_in_error_state() &&
-            accountManager.isActive() &&
-            accountManager.getActive(),
+            accountManager.isActive(store) &&
+            accountManager.getActive(store),
     );
+}
+
+/*
+ * Resolve whether and with which account to inject SSO for a cookie store.
+ * Passed to the platform so it can decide per request (per container).
+ */
+function resolve_injection(store) {
+    return {
+        active: is_operational(store),
+        account: accountManager.getActive(store),
+    };
 }
 
 /*
@@ -127,6 +138,7 @@ function notify_state_change(ui_only = false) {
             is_operational(),
             accountManager.getActive(),
             broker,
+            resolve_injection,
         );
     }
     if (port_menu === null) return;
