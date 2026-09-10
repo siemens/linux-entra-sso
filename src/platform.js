@@ -4,6 +4,7 @@
  */
 
 import { getLogger } from "./utils.js";
+import { DEFAULT_STORE } from "./account.js";
 
 const log = getLogger("platform");
 
@@ -21,6 +22,8 @@ export class Platform {
     account = null;
     /* resolves {active, account} for a cookie store; used for per-container SSO */
     resolve_injection = null;
+    /* invoked when the active tab's container changes (container platforms only) */
+    on_container_change = null;
     well_known_app_filters = [];
     sso_url_permitted = true;
 
@@ -85,6 +88,22 @@ export class Platform {
 
     getSsoUrl() {
         return Platform.SSO_URL;
+    }
+
+    /* Cookie store of the currently active tab; platforms without containers
+     * always report the default store. */
+    get_current_store() {
+        return DEFAULT_STORE;
+    }
+
+    /* Color of the active tab's container, or null when there is none. */
+    get_current_container_color() {
+        return null;
+    }
+
+    /* Register a callback fired when the active tab's container changes. */
+    set_container_change_handler(handler) {
+        this.on_container_change = handler;
     }
 
     set_status_handler(handler) {
