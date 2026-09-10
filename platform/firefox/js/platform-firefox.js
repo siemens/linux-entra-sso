@@ -6,6 +6,7 @@
 import { Platform } from "./platform.js";
 import { getLogger, Deferred } from "./utils.js";
 import { StateMachine } from "./state-machine.js";
+import { DEFAULT_STORE } from "./account.js";
 
 const log = getLogger("platform");
 
@@ -66,6 +67,8 @@ export class PlatformFirefox extends Platform {
     browser = "Firefox";
     /* how long a blocked request waits for the startup to report a state */
     static STATE_TIMEOUT_MS = 5 * 1000;
+    /* cookie store Firefox reports for tabs without a contextual identity */
+    static FIREFOX_DEFAULT_STORE = "firefox-default";
 
     #broker = null;
     #injection = new InjectionStateMachine();
@@ -92,11 +95,19 @@ export class PlatformFirefox extends Platform {
         });
     }
 
-    update_request_handlers(enabled, account, broker) {
-        super.update_request_handlers(enabled, account, broker);
+    update_request_handlers(enabled, account, broker, resolve) {
+        super.update_request_handlers(enabled, account, broker, resolve);
         this.#broker = broker;
-        this.#injection.set_active(Boolean(enabled && account && broker));
+        this.#injection.set_active(Boolean(enabled && broker));
         this.clear_error();
+    }
+
+    /* Map Firefox's default cookie store to the browser-neutral key. */
+    store_key(cookieStoreId) {
+        return !cookieStoreId ||
+            cookieStoreId === PlatformFirefox.FIREFOX_DEFAULT_STORE
+            ? DEFAULT_STORE
+            : cookieStoreId;
     }
 
     async #onBeforeSendHeaders(e) {
@@ -118,15 +129,14 @@ export class PlatformFirefox extends Platform {
             );
             return headers;
         }
-        if (!this.#injection.is_active()) {
-            log.warn("SSO not available, pass request unmodified");
+        /* resolve SSO for the container the request originates from */
+        const store = this.store_key(e.cookieStoreId);
+        const { active, account } = this.resolve_injection?.(store) ?? {};
+        if (!active || !account) {
             return headers;
         }
         try {
-            let prt = await this.#broker.acquirePrtSsoCookie(
-                this.account,
-                e.url,
-            );
+            let prt = await this.#broker.acquirePrtSsoCookie(account, e.url);
             // ms-oapxbc OAuth2 protocol extension
             log.debug("inject PRT SSO into request headers");
             e.requestHeaders.push({
