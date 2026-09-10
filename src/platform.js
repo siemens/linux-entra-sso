@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { getLogger } from "./utils.js";
+import { getLogger, load_icon, decorate_icon } from "./utils.js";
 import { DEFAULT_STORE } from "./account.js";
 
 const log = getLogger("platform");
@@ -76,6 +76,15 @@ export class Platform {
                 128: "/icons/linux-entra-sso_128.png",
             },
         });
+    }
+
+    /* Disabled icon as ImageData, optionally ringed with a container color. */
+    async getDisabledIconData(width, color) {
+        const imgdata = await load_icon(
+            "/icons/linux-entra-sso_128.png",
+            width,
+        );
+        return decorate_icon(imgdata, width, color);
     }
 
     /**

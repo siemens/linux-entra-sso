@@ -80,8 +80,10 @@ async function update_tray(action_needed) {
     chrome.action.setBadgeText({
         text: action_needed ? "1" : null,
     });
-    if (is_operational()) {
-        const account = accountManager.getActive();
+    const store = PLATFORM.get_current_store();
+    if (is_operational(store)) {
+        const account = accountManager.getActive(store);
+        const color = await PLATFORM.get_current_container_color();
         const imgdata = {};
         let icon_title = account.username();
 
@@ -91,7 +93,7 @@ async function update_tray(action_needed) {
             title: icon_title,
         });
         for (const r of [16, 32, 48]) {
-            imgdata[r] = await account.getDecoratedAvatar(r);
+            imgdata[r] = await account.getDecoratedAvatar(r, color);
         }
         chrome.action.setIcon({
             imageData: imgdata,
@@ -99,9 +101,19 @@ async function update_tray(action_needed) {
         return;
     }
     /* inactive states */
-    PLATFORM.setIconDisabled();
+    const color = await PLATFORM.get_current_container_color();
+    if (color) {
+        /* keep the container ring so the disabled icon still identifies it */
+        const imgdata = {};
+        for (const r of [16, 32, 48]) {
+            imgdata[r] = await PLATFORM.getDisabledIconData(r, color);
+        }
+        chrome.action.setIcon({ imageData: imgdata });
+    } else {
+        PLATFORM.setIconDisabled();
+    }
     let title = "EntraID SSO disabled";
-    if (accountManager.isActive())
+    if (accountManager.isActive(store))
         title = "EntraID SSO disabled (waiting for broker)";
     if (accountManager.hasAccounts() == 0) {
         title = "EntraID SSO disabled (no accounts registered)";
@@ -229,6 +241,8 @@ function on_startup() {
     PLATFORM.set_status_handler((text, is_error) =>
         report_status("platform", text, is_error),
     );
+    /* refresh the UI when the user switches to a tab of another container */
+    PLATFORM.set_container_change_handler(() => notify_state_change(true));
     policyManager = new PolicyManager();
 
     chrome.storage.onChanged.addListener(on_storage_changed);
