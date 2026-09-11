@@ -225,6 +225,7 @@ async function bootstrap_from_broker() {
         deviceManager.persist();
         await PLATFORM.setup(broker);
         app_state.bootstrap_succeeded();
+        await mark_bootstrapped();
         report_status("bootstrap", null);
     } catch (error) {
         app_state.bootstrap_failed();
@@ -241,6 +242,16 @@ async function on_storage_changed(_changes, areaName) {
     if (areaName == "managed") {
         await policyManager.load_policies();
     }
+}
+
+/* whether the broker was already queried during this browser session */
+async function was_bootstrapped() {
+    const data = await chrome.storage.session.get("bootstrap_done");
+    return Boolean(data.bootstrap_done);
+}
+
+function mark_bootstrapped() {
+    return chrome.storage.session.set({ bootstrap_done: true });
 }
 
 function on_startup() {
@@ -265,11 +276,26 @@ function on_startup() {
     deviceManager = new DeviceManager(accountManager);
     Promise.all([
         PLATFORM.update_host_permissions(),
+        PLATFORM.restore(),
+        PLATFORM.refresh_current_store(),
         policyManager.load_policies(),
         accountManager.restore(),
         deviceManager.restore(),
         broker.restore(),
-    ]).then(() => {
+        was_bootstrapped(),
+    ]).then((results) => {
+        const bootstrapped = results[results.length - 1];
+        if (bootstrapped) {
+            app_state.restored_authoritative();
+            PLATFORM.update_request_handlers(
+                is_operational(),
+                accountManager.getActive(),
+                broker,
+                resolve_injection,
+            );
+            notify_state_change();
+            return;
+        }
         app_state.restored();
         notify_state_change();
         /* asynchronously load external state */
@@ -283,8 +309,10 @@ function on_startup() {
         port_menu.onDisconnect.addListener(() => {
             port_menu = null;
         });
-        broker.connect();
-        bootstrap_from_broker();
+        if (app_state.may_bootstrap()) {
+            broker.connect();
+            bootstrap_from_broker();
+        }
         notify_state_change(true);
     });
 }
