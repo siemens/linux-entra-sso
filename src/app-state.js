@@ -27,7 +27,7 @@ export const AppState = Object.freeze({
 /* Successor states, any transition not listed here is rejected. */
 const TRANSITIONS = Object.freeze({
     [AppState.NEW]: [AppState.RESTORING],
-    [AppState.RESTORING]: [AppState.WAITING_FOR_BROKER],
+    [AppState.RESTORING]: [AppState.WAITING_FOR_BROKER, AppState.COMPLETE],
     [AppState.WAITING_FOR_BROKER]: [AppState.LOADING],
     [AppState.LOADING]: [AppState.COMPLETE, AppState.FAILED],
     [AppState.COMPLETE]: [],
@@ -66,6 +66,11 @@ export class AppStateMachine extends StateMachine {
 
     restored() {
         return this.transition(AppState.WAITING_FOR_BROKER);
+    }
+
+    /* Storage already holds authoritative data, so no broker query is needed. */
+    restored_authoritative() {
+        return this.transition(AppState.COMPLETE);
     }
 
     /* Opens the gate that holds back begin_bootstrap() until the host reported a state. */
