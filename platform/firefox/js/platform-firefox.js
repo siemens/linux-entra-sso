@@ -92,7 +92,7 @@ export class PlatformFirefox extends Platform {
 
         /* track the active tab's container (Firefox only, not Thunderbird) */
         if (chrome.contextualIdentities) {
-            const refresh = () => this.#refresh_current_store();
+            const refresh = () => this.refresh_current_store();
             chrome.tabs.onActivated.addListener(refresh);
             chrome.windows.onFocusChanged.addListener(refresh);
         }
@@ -125,7 +125,8 @@ export class PlatformFirefox extends Platform {
     }
 
     /* Follow the active tab and notify when its container changes. */
-    async #refresh_current_store() {
+    async refresh_current_store() {
+        if (!chrome.contextualIdentities) return;
         let store = PlatformFirefox.FIREFOX_DEFAULT_STORE;
         try {
             const [tab] = await chrome.tabs.query({
