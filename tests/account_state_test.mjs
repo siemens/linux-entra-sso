@@ -23,7 +23,9 @@ globalThis.chrome = {
     storage: { local: area("local"), session: area("session") },
 };
 
-const { AccountManager, Account } = await import("../src/account.js");
+const { AccountManager, Account, DEFAULT_STORE } = await import(
+    "../src/account.js"
+);
 
 let failures = 0;
 function check(what, got, want) {
@@ -191,6 +193,78 @@ await am.loadAccounts({
     },
 });
 check("no response is not authoritative", am.hasBrokerData(), false);
+
+/* 13. selecting an account in a container does not affect the default one */
+reset(null, {
+    broker_queried: true,
+    bindings: { [DEFAULT_STORE]: { enabled: true, username: "a@x" } },
+    accounts: [acc("a@x", true), acc("b@y", false)],
+});
+am = new AccountManager();
+await am.restore();
+check("default account", am.getActive()?.username(), "a@x");
+am.selectAccount("b@y", "c1");
+check("container account", am.getActive("c1")?.username(), "b@y");
+check("default unchanged", am.getActive()?.username(), "a@x");
+
+/* 14. an unbound container falls back to the default container */
+check("unbound container active", am.isActive("c9"), true);
+check("unbound container account", am.getActive("c9")?.username(), "a@x");
+
+/* 15. disabling one container leaves the default enabled */
+am.setActive(false, "c9");
+check("container disabled", am.isActive("c9"), false);
+check("default still enabled", am.isActive(), true);
+
+/* 16. per-container bindings survive a restart */
+reset(null, {
+    broker_queried: true,
+    bindings: { [DEFAULT_STORE]: { enabled: true, username: "a@x" } },
+    accounts: [acc("a@x", true), acc("b@y", false)],
+});
+am = new AccountManager();
+await am.restore();
+am.selectAccount("b@y", "c1");
+am.setActive(false, "c2");
+await am.persist();
+store.session = {};
+am = new AccountManager();
+await am.restore();
+check("restart default account", am.getActive()?.username(), "a@x");
+check("restart container account", am.getActive("c1")?.username(), "b@y");
+check("restart container disabled", am.isActive("c2"), false);
+
+/* 17. a broker refresh drops a container selection for a vanished account */
+reset(null, {
+    broker_queried: false,
+    bindings: {
+        [DEFAULT_STORE]: { enabled: true, username: "a@x" },
+        c1: { enabled: true, username: "gone@x" },
+    },
+    accounts: [acc("a@x", true), acc("gone@x", false)],
+});
+am = new AccountManager();
+await am.restore();
+check("container before broker", am.getActive("c1")?.username(), "gone@x");
+am.loadProfilePicture = async () => {};
+await am.loadAccounts({
+    async getAccounts() {
+        return [
+            Account.fromSerial(acc("a@x", false)),
+            Account.fromSerial(acc("b@y", false)),
+        ];
+    },
+});
+check("vanished selection dropped", am.getActive("c1"), undefined);
+check("default account kept", am.getActive()?.username(), "a@x");
+
+/* 18. legacy single-state data migrates to the default and applies everywhere */
+reset({ state: true, accounts: [acc("a@x", true)] });
+am = new AccountManager();
+await am.restore();
+check("legacy migrated enabled", am.isActive(), true);
+check("legacy migrated account", am.getActive()?.username(), "a@x");
+check("legacy applies to any container", am.getActive("cX")?.username(), "a@x");
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);
