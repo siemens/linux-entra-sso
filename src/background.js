@@ -5,7 +5,7 @@
 
 import { create_platform } from "./platform-factory.js";
 import { Broker } from "./broker.js";
-import { AccountManager } from "./account.js";
+import { AccountManager, DEFAULT_STORE } from "./account.js";
 import { getLogger } from "./utils.js";
 import { PolicyManager } from "./policy.js";
 import { DeviceManager } from "./device.js";
@@ -20,19 +20,32 @@ let accountManager = null;
 let deviceManager = null;
 
 let port_menu = null;
+/* container the open popup is acting on (per its active tab) */
+let menu_store = DEFAULT_STORE;
 const app_state = new AppStateMachine();
 /* status messages to surface in the UI, keyed by the reporting source */
 const status_by_source = new Map();
 
 /*
- * Check if all conditions for SSO are met
+ * Check if all conditions for SSO are met for the given container.
  */
-function is_operational() {
+function is_operational(store = undefined) {
     return Boolean(
         !is_in_error_state() &&
-            accountManager.isActive() &&
-            accountManager.getActive(),
+            accountManager.isActive(store) &&
+            accountManager.getActive(store),
     );
+}
+
+/*
+ * Resolve whether and with which account to inject SSO for a cookie store.
+ * Passed to the platform so it can decide per request (per container).
+ */
+function resolve_injection(store) {
+    return {
+        active: is_operational(store),
+        account: accountManager.getActive(store),
+    };
 }
 
 /*
@@ -69,8 +82,10 @@ async function update_tray(action_needed) {
     chrome.action.setBadgeText({
         text: action_needed ? "1" : null,
     });
-    if (is_operational()) {
-        const account = accountManager.getActive();
+    const store = PLATFORM.get_current_store();
+    if (is_operational(store)) {
+        const account = accountManager.getActive(store);
+        const color = await PLATFORM.get_current_container_color();
         const imgdata = {};
         let icon_title = account.username();
 
@@ -80,7 +95,7 @@ async function update_tray(action_needed) {
             title: icon_title,
         });
         for (const r of [16, 32, 48]) {
-            imgdata[r] = await account.getDecoratedAvatar(r);
+            imgdata[r] = await account.getDecoratedAvatar(r, color);
         }
         chrome.action.setIcon({
             imageData: imgdata,
@@ -88,9 +103,19 @@ async function update_tray(action_needed) {
         return;
     }
     /* inactive states */
-    PLATFORM.setIconDisabled();
+    const color = await PLATFORM.get_current_container_color();
+    if (color) {
+        /* keep the container ring so the disabled icon still identifies it */
+        const imgdata = {};
+        for (const r of [16, 32, 48]) {
+            imgdata[r] = await PLATFORM.getDisabledIconData(r, color);
+        }
+        chrome.action.setIcon({ imageData: imgdata });
+    } else {
+        PLATFORM.setIconDisabled();
+    }
     let title = "EntraID SSO disabled";
-    if (accountManager.isActive())
+    if (accountManager.isActive(store))
         title = "EntraID SSO disabled (waiting for broker)";
     if (accountManager.hasAccounts() == 0) {
         title = "EntraID SSO disabled (no accounts registered)";
@@ -127,6 +152,7 @@ function notify_state_change(ui_only = false) {
             is_operational(),
             accountManager.getActive(),
             broker,
+            resolve_injection,
         );
     }
     if (port_menu === null) return;
@@ -137,12 +163,15 @@ function notify_state_change(ui_only = false) {
             notify_state_change(true);
         }
     });
+    const selected = accountManager.getActive(menu_store);
     port_menu.postMessage({
         event: "stateChanged",
-        accounts: accountManager.getRegistered().map((a) => a.toMenuObject()),
+        accounts: accountManager
+            .getRegistered()
+            .map((a) => a.toMenuObject(a === selected)),
         nm_connected: broker.isConnected(),
         device: deviceManager.getDevice(),
-        enabled: accountManager.isActive(),
+        enabled: accountManager.isActive(menu_store),
         host_version: PLATFORM.host_versions.native,
         broker_version: PLATFORM.host_versions.broker,
         sso_url: PLATFORM.getSsoUrl(),
@@ -153,17 +182,23 @@ function notify_state_change(ui_only = false) {
 }
 
 async function on_message_menu(request) {
+    if (request.command == "container") {
+        menu_store = PLATFORM.store_key(request.store);
+        notify_state_change(true);
+        return;
+    }
     if (is_in_error_state()) {
         notify_state_change(true);
         return;
     }
+    const store = PLATFORM.store_key(request.store);
     if (request.command == "enable") {
-        accountManager.setActive(true);
-        const account = accountManager.selectAccount(request.username);
+        accountManager.setActive(true, store);
+        const account = accountManager.selectAccount(request.username, store);
         if (account) log.info("select account " + account.username());
     } else if (request.command == "disable") {
-        accountManager.setActive(false);
-        accountManager.logout();
+        accountManager.setActive(false, store);
+        accountManager.logout(store);
     }
     accountManager.persist();
     notify_state_change();
@@ -190,6 +225,7 @@ async function bootstrap_from_broker() {
         deviceManager.persist();
         await PLATFORM.setup(broker);
         app_state.bootstrap_succeeded();
+        await mark_bootstrapped();
         report_status("bootstrap", null);
     } catch (error) {
         app_state.bootstrap_failed();
@@ -208,6 +244,16 @@ async function on_storage_changed(_changes, areaName) {
     }
 }
 
+/* whether the broker was already queried during this browser session */
+async function was_bootstrapped() {
+    const data = await chrome.storage.session.get("bootstrap_done");
+    return Boolean(data.bootstrap_done);
+}
+
+function mark_bootstrapped() {
+    return chrome.storage.session.set({ bootstrap_done: true });
+}
+
 function on_startup() {
     if (!app_state.initialize()) {
         log.debug("linux-entra-sso already initialized");
@@ -217,6 +263,8 @@ function on_startup() {
     PLATFORM.set_status_handler((text, is_error) =>
         report_status("platform", text, is_error),
     );
+    /* refresh the UI when the user switches to a tab of another container */
+    PLATFORM.set_container_change_handler(() => notify_state_change(true));
     policyManager = new PolicyManager();
 
     chrome.storage.onChanged.addListener(on_storage_changed);
@@ -228,11 +276,26 @@ function on_startup() {
     deviceManager = new DeviceManager(accountManager);
     Promise.all([
         PLATFORM.update_host_permissions(),
+        PLATFORM.restore(),
+        PLATFORM.refresh_current_store(),
         policyManager.load_policies(),
         accountManager.restore(),
         deviceManager.restore(),
         broker.restore(),
-    ]).then(() => {
+        was_bootstrapped(),
+    ]).then((results) => {
+        const bootstrapped = results[results.length - 1];
+        if (bootstrapped) {
+            app_state.restored_authoritative();
+            PLATFORM.update_request_handlers(
+                is_operational(),
+                accountManager.getActive(),
+                broker,
+                resolve_injection,
+            );
+            notify_state_change();
+            return;
+        }
         app_state.restored();
         notify_state_change();
         /* asynchronously load external state */
@@ -246,8 +309,10 @@ function on_startup() {
         port_menu.onDisconnect.addListener(() => {
             port_menu = null;
         });
-        broker.connect();
-        bootstrap_from_broker();
+        if (app_state.may_bootstrap()) {
+            broker.connect();
+            bootstrap_from_broker();
+        }
         notify_state_change(true);
     });
 }

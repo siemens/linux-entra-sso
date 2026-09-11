@@ -3,13 +3,16 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { getLogger, load_icon } from "./utils.js";
+import { getLogger, load_icon, decorate_icon } from "./utils.js";
 import { StateMachine } from "./state-machine.js";
 
 const log = getLogger("accounts");
 
 /* refresh the token if only x time is left */
 const TOKEN_MIN_VALIDITY_MS = 60 * 1000;
+
+/* key for tabs not assigned to any container; platforms map their own value */
+export const DEFAULT_STORE = "default";
 
 /*
  * Whether the user wants SSO. UNKNOWN means that no explicit choice was
@@ -28,8 +31,8 @@ const SSO_TRANSITIONS = Object.freeze({
 });
 
 class SsoStateMachine extends StateMachine {
-    constructor() {
-        super("sso-state", SSO_TRANSITIONS, SsoState.UNKNOWN);
+    constructor(store) {
+        super(`sso-state:${store}`, SSO_TRANSITIONS, SsoState.UNKNOWN);
     }
 
     is_active() {
@@ -113,12 +116,12 @@ export class Account {
         return this.#broker_obj;
     }
 
-    toMenuObject() {
+    toMenuObject(active = this.active) {
         return {
             name: this.name(),
             username: this.username(),
             avatar: this.avatar,
-            active: this.active,
+            active,
         };
     }
 
@@ -150,23 +153,9 @@ export class Account {
         this.#avatar_imgdata = null;
     }
 
-    async getDecoratedAvatar(width) {
-        let imgdata = await this.getAvatarImgData();
-        const sWidth = imgdata.width;
-        const lineWidth = Math.min(2, width / 12);
-        let buffer = new OffscreenCanvas(sWidth, sWidth);
-        let ctx_buffer = buffer.getContext("2d");
-        ctx_buffer.putImageData(imgdata, 0, 0);
-
-        let canvas = new OffscreenCanvas(width, width);
-        let ctx = canvas.getContext("2d");
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(width / 2, width / 2, width / 2, 0, Math.PI * 2, false);
-        ctx.clip();
-        ctx.drawImage(buffer, 0, 0, sWidth, sWidth, 0, 0, width, width);
-        ctx.restore();
-        return ctx.getImageData(0, 0, width, width);
+    /* Draw the avatar, optionally ringed by a colored circle (null => none). */
+    async getDecoratedAvatar(width, color = null) {
+        return decorate_icon(await this.getAvatarImgData(), width, color);
     }
 
     toSerial(with_secrets = false) {
@@ -195,7 +184,10 @@ export class Account {
 export class AccountManager {
     #registered = [];
     #accounts = new AccountsStateMachine();
-    #sso = new SsoStateMachine();
+    /* per cookie store (container) SSO binding: {sso, username} */
+    #bindings = new Map();
+    /* read-only fallback for containers without an explicit binding */
+    #fallback = { sso: new SsoStateMachine(DEFAULT_STORE), username: null };
     /* in-flight token requests, keyed by username, to dedup concurrent calls */
     #token_requests = new Map();
 
@@ -218,44 +210,100 @@ export class AccountManager {
         return this.#accounts.is_provisional();
     }
 
-    getActive() {
-        return this.#registered.find((a) => a.active);
+    /*
+     * Resolve the binding for a container, falling back to the default
+     * container and finally to the implicit "SSO on, nothing selected" state.
+     */
+    #resolve(store = DEFAULT_STORE) {
+        return (
+            this.#bindings.get(store) ??
+            this.#bindings.get(DEFAULT_STORE) ??
+            this.#fallback
+        );
+    }
+
+    /* Build a container binding backed by its own SSO state machine. */
+    #makeBinding(enabled = true, username = null, store = DEFAULT_STORE) {
+        const sso = new SsoStateMachine(store);
+        if (!enabled) sso.log_out();
+        return { sso, username };
+    }
+
+    /* Materialize an explicit binding for a container, seeded from the fallback. */
+    #ensure(store) {
+        let binding = this.#bindings.get(store);
+        if (!binding) {
+            const base = this.#resolve(store);
+            binding = this.#makeBinding(
+                base.sso.is_active(),
+                base.username,
+                store,
+            );
+            this.#bindings.set(store, binding);
+        }
+        return binding;
+    }
+
+    /* Mirror Account.active to the default container for the tray/menu UI. */
+    #syncDefaultActiveFlags() {
+        const selected = this.#resolve(DEFAULT_STORE).username;
+        for (const a of this.#registered) a.active = a.username() == selected;
+    }
+
+    /* Drop selections pointing to accounts the broker no longer knows. */
+    #reconcileBindings() {
+        for (const binding of this.#bindings.values()) {
+            if (
+                binding.username &&
+                !this.#registered.find((a) => a.username() == binding.username)
+            ) {
+                binding.username = null;
+            }
+        }
+    }
+
+    getActive(store = DEFAULT_STORE) {
+        const { username } = this.#resolve(store);
+        if (!username) return undefined;
+        return this.#registered.find((a) => a.username() == username);
     }
 
     /**
-     * @returns if SSO is active (i.e. the user did not explicitly log out)
+     * @returns if SSO is active for the container (i.e. not explicitly disabled)
      */
-    isActive() {
-        return this.#sso.is_active();
+    isActive(store = DEFAULT_STORE) {
+        return this.#resolve(store).sso.is_active();
     }
 
-    setActive(active) {
-        if (active) this.#sso.log_in();
-        else this.#sso.log_out();
+    setActive(active, store = DEFAULT_STORE) {
+        const { sso } = this.#ensure(store);
+        if (active) sso.log_in();
+        else sso.log_out();
     }
 
     getRegistered() {
         return this.#registered;
     }
 
-    logout() {
-        this.#registered.map((a) => (a.active = false));
+    logout(store = DEFAULT_STORE) {
+        this.#ensure(store).username = null;
+        if (store === DEFAULT_STORE) this.#syncDefaultActiveFlags();
     }
 
-    selectAccount(username) {
+    selectAccount(username, store = DEFAULT_STORE) {
+        let account;
         if (!username) {
-            let account = this.#registered[0];
-            this.logout();
-            account.active = true;
-            return account;
+            account = this.#registered[0];
+            if (!account) return undefined;
+        } else {
+            account = this.#registered.find((a) => a.username() == username);
+            if (account === undefined) {
+                log.warn("no account found with username " + username);
+                return undefined;
+            }
         }
-        const account = this.#registered.find((a) => a.username() == username);
-        if (account === undefined) {
-            log.warn("no account found with username " + username);
-            return undefined;
-        }
-        this.logout();
-        account.active = true;
+        this.#ensure(store).username = account.username();
+        if (store === DEFAULT_STORE) this.#syncDefaultActiveFlags();
         return account;
     }
 
@@ -267,6 +315,7 @@ export class AccountManager {
             this.#registered = [];
             /* an empty result is still an answer: no account is registered */
             if (_accounts) this.#accounts.confirmed_by_broker();
+            this.#reconcileBindings();
             return;
         }
         // remember the current selection and avatars before replacing the
@@ -286,9 +335,15 @@ export class AccountManager {
             account.avatar = previous_avatars.get(account.username()) ?? null;
         }
 
-        // only auto-select an account if the user did not explicitly disable SSO
-        if (!this.isActive()) {
+        // drop selections that point to accounts the broker no longer knows
+        this.#reconcileBindings();
+
+        // only auto-select for the default container, and only if not disabled
+        const def = this.#ensure(DEFAULT_STORE);
+        if (!def.sso.is_active()) {
             log.info("SSO is disabled, not selecting an account");
+        } else if (def.username) {
+            log.info("keep selected account: " + def.username);
         } else if (last_username && this.selectAccount(last_username)) {
             log.info(
                 "select previously used account: " +
@@ -298,6 +353,7 @@ export class AccountManager {
             this.selectAccount();
             log.info("select first account: " + this.getActive().username());
         }
+        this.#syncDefaultActiveFlags();
 
         await Promise.all(
             this.#registered.map((a) => this.loadProfilePicture(broker, a)),
@@ -375,20 +431,63 @@ export class AccountManager {
         }
     }
 
+    /* Serialize the per-container bindings to a plain object for storage. */
+    #serializeBindings() {
+        const obj = {};
+        for (const [store, b] of this.#bindings) {
+            obj[store] = { enabled: b.sso.is_active(), username: b.username };
+        }
+        return obj;
+    }
+
+    /*
+     * Rebuild the bindings map from stored data. Understands the new
+     * per-container format and migrates the legacy single-state format
+     * (a global `state` flag plus a selected account) to the default
+     * container. For legacy session data the enabled flag is derived from
+     * whether an account was selected, matching the previous behavior.
+     */
+    #restoreBindings(obj, enabledFromSelection) {
+        const map = new Map();
+        if (obj.bindings) {
+            for (const [store, b] of Object.entries(obj.bindings)) {
+                map.set(
+                    store,
+                    this.#makeBinding(
+                        Boolean(b.enabled),
+                        b.username ?? null,
+                        store,
+                    ),
+                );
+            }
+            return map;
+        }
+        const selected =
+            obj.accounts?.find((s) => s.active)?.broker_obj?.username ?? null;
+        const enabled = enabledFromSelection
+            ? selected != null
+            : (obj.state ?? true);
+        map.set(DEFAULT_STORE, this.#makeBinding(enabled, selected));
+        return map;
+    }
+
     /*
      * Store the current state in the local storage.
      * To not leak account data in disabled state, we clear the account object.
      */
     async persist() {
         if (!this.hasAccounts()) return;
+        const bindings = this.#serializeBindings();
+        const in_use = [...this.#bindings.values()].some(
+            (b) => b.sso.is_active() && b.username,
+        );
         const ssostate = {
-            state: this.isActive(),
-            accounts: this.getActive()
-                ? this.#registered.map((a) => a.toSerial())
-                : [],
+            bindings,
+            accounts: in_use ? this.#registered.map((a) => a.toSerial()) : [],
         };
         const appstate = {
             broker_queried: this.hasBrokerData(),
+            bindings,
             accounts: this.#registered.map((a) => a.toSerial(true)),
         };
         return Promise.all([
@@ -398,11 +497,16 @@ export class AccountManager {
     }
 
     /*
-     * Drop account data cached on disk, but keep the logged-out marker.
+     * Drop account data cached on disk, but keep the disabled default binding.
      */
     async #wipeCachedAccounts() {
         return chrome.storage.local.set({
-            ssostate: { state: false, accounts: [] },
+            ssostate: {
+                bindings: {
+                    [DEFAULT_STORE]: { enabled: false, username: null },
+                },
+                accounts: [],
+            },
         });
     }
 
@@ -411,12 +515,13 @@ export class AccountManager {
             chrome.storage.local.get("ssostate"),
             chrome.storage.session.get("account_manager"),
         ]);
-        if (sessionData.account_manager) {
-            this.#registered =
-                sessionData.account_manager.accounts.map((a) =>
-                    Account.fromSerial(a),
-                ) ?? [];
-            if (sessionData.account_manager.broker_queried) {
+        const sess = sessionData.account_manager;
+        if (sess) {
+            this.#registered = (sess.accounts ?? []).map((a) =>
+                Account.fromSerial(a),
+            );
+            this.#bindings = this.#restoreBindings(sess, true);
+            if (sess.broker_queried) {
                 this.#accounts.confirmed_by_broker();
             } else if (this.#registered.length > 0) {
                 this.#accounts.restored_from_disk();
@@ -424,31 +529,30 @@ export class AccountManager {
         }
         /* restored from session */
         if (this.#registered.length > 0) {
-            this.setActive(this.getActive() != null);
+            this.#syncDefaultActiveFlags();
             return;
         }
 
         /* no accounts in session, try restore from local storage */
-        if (!data.ssostate) {
+        const ss = data.ssostate;
+        if (!ss) {
             log.info("no preserved state found");
             // if the SSO is not explicitly disabled, we assume it is on.
             return;
         }
-        const state_active = data.ssostate.state;
-        if (!state_active) {
-            this.setActive(false);
+        this.#bindings = this.#restoreBindings(ss, false);
+        const any_enabled = [...this.#bindings.values()].some((b) =>
+            b.sso.is_active(),
+        );
+        if (!any_enabled) {
             await this.#wipeCachedAccounts();
             return;
         }
-        if (data.ssostate.accounts) {
-            this.#registered = data.ssostate.accounts.map((a) =>
-                Account.fromSerial(a),
-            );
-            if (this.#registered.length > 0) {
-                this.#accounts.restored_from_disk();
-            }
+        if (ss.accounts?.length) {
+            this.#registered = ss.accounts.map((a) => Account.fromSerial(a));
+            this.#accounts.restored_from_disk();
         }
-        this.setActive(true);
+        this.#syncDefaultActiveFlags();
         const active_acc = this.getActive();
         if (active_acc) {
             log.info(
