@@ -46,7 +46,7 @@ export class Platform {
         // If we already know the versions for this session (restored from
         // session storage), do not query the broker again: getVersion is a
         // broker RPC that would re-activate the broker via D-Bus.
-        await this.#restore();
+        await this.restore();
         if (this.host_versions.native !== null) {
             return;
         }
@@ -63,7 +63,8 @@ export class Platform {
         });
     }
 
-    async #restore() {
+    /* Restore the cached host versions from the session (no broker query). */
+    async restore() {
         const data = await chrome.storage.session.get("host_versions");
         if (!data.host_versions) return;
         this.host_versions = data.host_versions;
@@ -104,6 +105,9 @@ export class Platform {
     get_current_store() {
         return DEFAULT_STORE;
     }
+
+    /* Determine the active tab's container; no-op without container support. */
+    async refresh_current_store() {}
 
     /* Map a browser cookieStoreId to a neutral store key (default if none). */
     store_key(cookieStoreId) {
