@@ -85,6 +85,14 @@ After installing the extension, you might need to manually grant the following p
 If you want to disable the SSO for this session, click on the tray icon and select the guest account.
 In case you are already logged in, you might need to clear all cookies on `login.microsoftonline.com`.
 
+### Tab Containers
+
+On Firefox, SSO is handled per [tab container](https://support.mozilla.org/en-US/kb/containers).
+It is enabled by default in the global (default) container only; in every other
+container it is off until you explicitly enable it. Click the tray icon to
+enable or disable SSO and select the account for the container of the active
+tab. The popup always shows which container it is acting on.
+
 ### Single Page Applications
 
 For single-page applications (SPAs, like the Teams PWA) that perform automated re-logins in the background,
