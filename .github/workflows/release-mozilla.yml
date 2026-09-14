@@ -47,7 +47,8 @@ jobs:
             --api-secret ${{ secrets.AMO_API_SECRET }} \
             --source-dir build/firefox \
             --artifacts-dir build \
-            --amo-metadata platform/firefox/amo-metadata.json
+            --amo-metadata platform/firefox/amo-metadata.json \
+            --approval-timeout 0
 
       # self distributed extensions on Thunderbird are not signed
       - name: build Thunderbird extension
@@ -57,10 +58,10 @@ jobs:
             --artifacts-dir build \
             --filename '{name}-{version}.thunderbird.xpi'
 
-      - name: upload firefox extension
+      - name: upload Thunderbird extension
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: firefox-signed-xpi
+          name: thunderbird-xpi
           path: |
             build/linux_entra_sso-*.xpi
 
@@ -71,7 +72,7 @@ jobs:
           path: |
             pkgs/linux-entra-sso_*.deb
 
-      - name: attest Firefox extension build
+      - name: attest Mozilla extension build
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: |
