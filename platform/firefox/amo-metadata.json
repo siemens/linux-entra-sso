@@ -1,0 +1,15 @@
+{
+    "summary": {
+        "en-US": "Browser plugin for Linux to SSO on Microsoft Entra ID using a locally running microsoft identity broker (Intune)."
+    },
+    "description": {
+        "en-US": "This extension will only work on intune-enabled Linux devices. Please double check this by running the intune-portal application and check if your user is logged in (after clicking sign-in). The plugin also needs a host script that communicates with the microsoft-identity-broker via DBus. For details, see the plugin <a href=\"https://github.com/siemens/linux-entra-sso\">documentation</a>."
+    },
+    "website": {
+        "en-US": "https://github.com/siemens/linux-entra-sso"
+    },
+    "categories": ["privacy-security"],
+    "version": {
+        "license": "MPL-2.0"
+    }
+}
