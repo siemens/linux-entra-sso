@@ -3,7 +3,8 @@
  * SPDX-FileCopyrightText: Copyright 2025 Siemens
  */
 
-import { getLogger } from "./utils.js";
+import { getLogger, load_icon, decorate_icon } from "./utils.js";
+import { DEFAULT_STORE } from "./account.js";
 
 const log = getLogger("platform");
 
@@ -19,6 +20,10 @@ export class Platform {
 
     /* references needed for PRT injection */
     account = null;
+    /* resolves {active, account} for a cookie store; used for per-container SSO */
+    resolve_injection = null;
+    /* invoked when the active tab's container changes (container platforms only) */
+    on_container_change = null;
     well_known_app_filters = [];
     sso_url_permitted = true;
 
@@ -41,7 +46,7 @@ export class Platform {
         // If we already know the versions for this session (restored from
         // session storage), do not query the broker again: getVersion is a
         // broker RPC that would re-activate the broker via D-Bus.
-        await this.#restore();
+        await this.restore();
         if (this.host_versions.native !== null) {
             return;
         }
@@ -58,7 +63,8 @@ export class Platform {
         });
     }
 
-    async #restore() {
+    /* Restore the cached host versions from the session (no broker query). */
+    async restore() {
         const data = await chrome.storage.session.get("host_versions");
         if (!data.host_versions) return;
         this.host_versions = data.host_versions;
@@ -73,6 +79,15 @@ export class Platform {
         });
     }
 
+    /* Disabled icon as ImageData, optionally ringed with a container color. */
+    async getDisabledIconData(width, color) {
+        const imgdata = await load_icon(
+            "/icons/linux-entra-sso_128.png",
+            width,
+        );
+        return decorate_icon(imgdata, width, color);
+    }
+
     /**
      * Can be overwritten to shorten the title on platforms that print the
      * title next to the icon (instead of in a tooltip).
@@ -83,6 +98,30 @@ export class Platform {
 
     getSsoUrl() {
         return Platform.SSO_URL;
+    }
+
+    /* Cookie store of the currently active tab; platforms without containers
+     * always report the default store. */
+    get_current_store() {
+        return DEFAULT_STORE;
+    }
+
+    /* Determine the active tab's container; no-op without container support. */
+    async refresh_current_store() {}
+
+    /* Map a browser cookieStoreId to a neutral store key (default if none). */
+    store_key(cookieStoreId) {
+        return DEFAULT_STORE;
+    }
+
+    /* Color of the active tab's container, or null when there is none. */
+    get_current_container_color() {
+        return null;
+    }
+
+    /* Register a callback fired when the active tab's container changes. */
+    set_container_change_handler(handler) {
+        this.on_container_change = handler;
     }
 
     set_status_handler(handler) {
@@ -100,8 +139,9 @@ export class Platform {
         this.#status_handler?.(null);
     }
 
-    update_request_handlers(enabled, account, broker) {
+    update_request_handlers(enabled, account, broker, resolve = null) {
         this.account = account;
+        this.resolve_injection = resolve;
     }
 
     async update_host_permissions() {
