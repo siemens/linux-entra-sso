@@ -70,11 +70,11 @@ The creation of public releases is a partially automated process:
 1. update code and create release tags: `VERSION=<x.x.x> make release`
 2. push to GitHub: `git push origin main && git push origin v<x.x.x>`
 3. wait for release action to finish (public release is created as draft)
-4. manually inspect signed xpi (double check)
+4. wait for AMO to review and sign the Firefox extension, upload the `.xpi` to releases page
 5. publish CWS upload (answer questions on permission changes)
 6. wait for CWS to review and sign extension, upload `.crx` to releases page
 7. add release-notes to public release and release (immutable!)
-8. merge auto-created MR to enroll Firefox update manifest
+8. merge auto-created MR to enroll Thunderbird update manifest
 
 When creating a bugfix release from a dedicated release branch, extra steps
 are needed:
