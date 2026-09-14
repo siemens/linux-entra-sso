@@ -41,12 +41,13 @@ jobs:
       - name: sign Firefox extension by Mozilla
         run: |
           npx web-ext@${{ env.WEB_EXT_VERS }} sign \
-            --channel unlisted \
+            --channel listed \
             --approval-timeout 900000 \
             --api-key ${{ secrets.AMO_API_KEY }} \
             --api-secret ${{ secrets.AMO_API_SECRET }} \
             --source-dir build/firefox \
-            --artifacts-dir build
+            --artifacts-dir build \
+            --amo-metadata platform/firefox/amo-metadata.json
 
       # self distributed extensions on Thunderbird are not signed
       - name: build Thunderbird extension
@@ -95,16 +96,6 @@ jobs:
         with:
           ref: main
 
-      - name: create update manifest for Firefox
-        run: |
-          VERSION=$(echo ${{ github.ref_name }} | cut -c 2-)
-          DIGEST="sha256:$(sha256sum build/linux_entra_sso-${VERSION}.xpi | cut -d ' ' -f 1)"
-          LINK="https://github.com/siemens/linux-entra-sso/releases/download/v${VERSION}/linux_entra_sso-${VERSION}.xpi"
-          jq --arg version "${VERSION}" --arg digest "${DIGEST}" --arg link "${LINK}" \
-            '."addons"."linux-entra-sso@example.com"."updates" += [{"version":$version, "update_link":$link, "update_hash":$digest}]' \
-            .pages/firefox/updates.json \
-            > .pages/firefox/updates.json.tmp && mv .pages/firefox/updates.json.tmp .pages/firefox/updates.json
-
       - name: create update manifest for Thunderbird
         run: |
           VERSION=$(echo ${{ github.ref_name }} | cut -c 2-)
@@ -115,20 +106,19 @@ jobs:
             .pages/thunderbird/updates.json \
             > .pages/thunderbird/updates.json.tmp && mv .pages/thunderbird/updates.json.tmp .pages/thunderbird/updates.json
 
-      - name: prepare PR for Mozilla update manifests
+      - name: prepare PR for Thunderbird update manifests
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           add-paths: |
-            .pages/firefox/updates.json
             .pages/thunderbird/updates.json
-          commit-message: "chore: release Mozilla update manifests"
+          commit-message: "chore: release Thunderbird update manifests"
           branch: ci/release-firefox-update-manifest
           base: main
-          title: "chore: release Mozilla update manifests [bot]"
+          title: "chore: release Thunderbird update manifests [bot]"
           assignees: fmoessbauer
           reviewers: jan-kiszka
           author: ${{ env.GIT_COMMITTER }}
           committer: ${{ env.GIT_COMMITTER }}
           signoff: true
           body: |
-            Publish update manifest for Mozilla extensions, version ${{ github.ref_name }}.
+            Publish update manifest for Thunderbird extensions, version ${{ github.ref_name }}.
