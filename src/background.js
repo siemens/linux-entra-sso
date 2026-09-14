@@ -223,7 +223,7 @@ async function on_broker_state_change(online) {
 
 async function bootstrap_from_broker() {
     if (!(await app_state.begin_bootstrap())) return;
-    report_status("bootstrap", "Loading data from broker\u2026");
+    report_status("bootstrap", "Refreshing broker data\u2026");
     try {
         await accountManager.loadAccounts(broker);
         accountManager.persist();
