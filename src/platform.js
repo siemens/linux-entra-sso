@@ -37,28 +37,27 @@ export class Platform {
     /**
      * Load platform information from backend.
      */
-    async setup(broker) {
+    async loadBrokerVersions(broker) {
         // If we already know the versions for this session (restored from
         // session storage), do not query the broker again: getVersion is a
         // broker RPC that would re-activate the broker via D-Bus.
-        await this.#restore();
         if (this.host_versions.native !== null) {
-            return;
+            return false;
         }
         this.host_versions = await broker.getVersion();
-        await this.#persist();
+        return true;
     }
 
     /*
      * Persist the host and broker versions in the session storage.
      */
-    async #persist() {
+    async persist() {
         return chrome.storage.session.set({
             host_versions: this.host_versions,
         });
     }
 
-    async #restore() {
+    async restore() {
         const data = await chrome.storage.session.get("host_versions");
         if (!data.host_versions) return;
         this.host_versions = data.host_versions;
