@@ -56,14 +56,6 @@ export class DeviceManager {
         ) {
             return false;
         }
-        return await this.loadDeviceInfo(broker);
-    }
-
-    /**
-     * Load information about the accessing device (e.g. compliance state)
-     * @returns true on success
-     */
-    async loadDeviceInfo(broker) {
         /* coalesce concurrent loads into a single request */
         if (this.#refresh_promise) {
             return this.#refresh_promise;
