@@ -137,6 +137,12 @@ function notify_state_change(ui_only = false) {
             notify_state_change(true);
         }
     });
+    PLATFORM.loadBrokerVersions(broker).then((updated) => {
+        if (updated) {
+            PLATFORM.persist();
+            notify_state_change(true);
+        }
+    });
     port_menu.postMessage({
         event: "stateChanged",
         accounts: accountManager.getRegistered().map((a) => a.toMenuObject()),
@@ -188,7 +194,6 @@ async function bootstrap_from_broker() {
         accountManager.persist();
         await deviceManager.loadDeviceInfo(broker);
         deviceManager.persist();
-        await PLATFORM.setup(broker);
         app_state.bootstrap_succeeded();
         report_status("bootstrap", null);
     } catch (error) {
@@ -228,6 +233,7 @@ function on_startup() {
     deviceManager = new DeviceManager(accountManager);
     Promise.all([
         PLATFORM.update_host_permissions(),
+        PLATFORM.restore(),
         policyManager.load_policies(),
         accountManager.restore(),
         deviceManager.restore(),
