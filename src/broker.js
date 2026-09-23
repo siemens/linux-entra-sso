@@ -29,14 +29,17 @@ export class RpcHandlerQueue {
                 reject(`timeout while waiting for ${id} response`);
             }, timeout_ms),
         );
+        log.debug(`registered handle for: ${id}`);
         return Promise.race([handle.dfd.promise, timeout]);
     }
 
     resolve_handle(id, data) {
+        log.debug(`resolving handle for: ${id}`);
         this.#take_handle(id)?.dfd.resolve(data);
     }
 
     reject_handle(id, data) {
+        log.debug(`rejecting handle for: ${id}`);
         this.#take_handle(id)?.dfd.reject(data);
     }
 
