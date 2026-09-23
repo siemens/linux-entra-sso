@@ -90,7 +90,8 @@ bg_port.onMessage.addListener(async (m) => {
         active = m.enabled && m.accounts.length;
         annotate_by_id_if("entity-guest", "active", !active);
 
-        document.getElementById("broker-version").innerText = m.broker_version;
+        document.getElementById("broker-version").innerText =
+            m.broker_version ?? "loading\u2026";
 
         /* show the app and host version */
         let pvers = chrome.runtime.getManifest().version;
