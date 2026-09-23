@@ -192,8 +192,6 @@ async function bootstrap_from_broker() {
     try {
         await accountManager.loadAccounts(broker);
         accountManager.persist();
-        await deviceManager.loadDeviceInfo(broker);
-        deviceManager.persist();
         app_state.bootstrap_succeeded();
         report_status("bootstrap", null);
     } catch (error) {
