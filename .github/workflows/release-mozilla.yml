@@ -42,7 +42,6 @@ jobs:
         run: |
           npx web-ext@${{ env.WEB_EXT_VERS }} sign \
             --channel listed \
-            --approval-timeout 900000 \
             --api-key ${{ secrets.AMO_API_KEY }} \
             --api-secret ${{ secrets.AMO_API_SECRET }} \
             --source-dir build/firefox \
