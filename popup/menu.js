@@ -126,11 +126,38 @@ bg_port.onMessage.addListener(async (m) => {
 
         sso_url = m.sso_url;
         gpo = m.gpo_update;
+        update_feature_toggles(m.features);
         check_sso_provider_perms();
         check_bg_sso_enabled();
         check_gpo_update();
     }
 });
+
+function update_feature_toggles(features) {
+    for (const feature of features ?? []) {
+        const element = document.querySelector(
+            `.feature-toggle[data-feature="${feature.name}"]`,
+        );
+        if (!element) continue;
+        element.classList.toggle("enabled", feature.enabled);
+        element.classList.toggle("immutable", feature.managed);
+    }
+}
+
+for (const element of document.querySelectorAll(".feature-toggle")) {
+    const post = (enabled) =>
+        bg_port.postMessage({
+            command: "set-feature",
+            feature: element.dataset.feature,
+            enabled: enabled,
+        });
+    element
+        .querySelector(".toggle-enable")
+        .addEventListener("click", () => post(true));
+    element
+        .querySelector(".toggle-disable")
+        .addEventListener("click", () => post(false));
+}
 
 function create_account_entity(account) {
     const entity = document.createElement("div");
