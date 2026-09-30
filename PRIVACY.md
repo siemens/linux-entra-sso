@@ -19,8 +19,15 @@ To fulfill its purpose, the extension interfaces with the following services:
 ## Microsoft Graph API
 
 To show data about the currently logged in user (e.g. the profile picture in
-the app icon), we request an access token for the `graph.microsoft.com` API.
+the app icon) and the device (display name and compliance state), we request an
+access token for the `graph.microsoft.com` API.
 The token is acquired from the locally running broker.
+
+Both queries can be disabled independently via the `loadProfilePicture` and
+`checkDeviceCompliance` managed settings, see [Global Install](docs/global_install.md).
+If `loadProfilePicture` is disabled, the avatar is neither fetched nor displayed next to the user name or as the extension icon.
+If `checkDeviceCompliance` is disabled, the device name and its compliance state are no longer displayed.
+If both settings are disabled, no access token is requested from the broker and the Graph API is not contacted at all.
 
 ## Microsoft Identity Broker DBus service (broker)
 
