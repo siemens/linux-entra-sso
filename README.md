@@ -85,6 +85,10 @@ After installing the extension, you might need to manually grant the following p
 If you want to disable the SSO for this session, click on the tray icon and select the guest account.
 In case you are already logged in, you might need to clear all cookies on `login.microsoftonline.com`.
 
+The extension menu further allows to disable the queries to the Microsoft Graph API, which
+provide the profile picture shown in the toolbar icon and the compliance state of the device.
+Both can be pinned by an administrator, see [Global Install](docs/global_install.md).
+
 ### Single Page Applications
 
 For single-page applications (SPAs, like the Teams PWA) that perform automated re-logins in the background,
