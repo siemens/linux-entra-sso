@@ -10,12 +10,14 @@ import { getLogger } from "./utils.js";
 import { PolicyManager } from "./policy.js";
 import { DeviceManager } from "./device.js";
 import { AppStateMachine } from "./app-state.js";
+import { Feature, SettingsManager } from "./settings.js";
 
 const log = getLogger("app");
 
 const PLATFORM = create_platform();
 let broker = null;
 let policyManager = null;
+let settingsManager = null;
 let accountManager = null;
 let deviceManager = null;
 
@@ -155,10 +157,25 @@ function notify_state_change(ui_only = false) {
         gpo_update: gpo_update,
         ui_status: ui_status,
         app_state: app_state.state,
+        features: Object.values(Feature).map((f) => ({
+            name: f,
+            enabled: settingsManager.isEnabled(f),
+            managed: settingsManager.isManaged(f),
+        })),
     });
 }
 
 async function on_message_menu(request) {
+    if (request.command == "set-feature") {
+        if (await settingsManager.set(request.feature, request.enabled)) {
+            if (request.feature == Feature.PROFILE_PICTURE) {
+                await accountManager.reloadProfilePictures(broker);
+                accountManager.persist();
+            }
+        }
+        notify_state_change();
+        return;
+    }
     if (is_in_error_state()) {
         notify_state_change(true);
         return;
@@ -208,6 +225,7 @@ async function bootstrap_from_broker() {
 async function on_storage_changed(_changes, areaName) {
     if (areaName == "managed") {
         await policyManager.load_policies();
+        notify_state_change();
     }
 }
 
@@ -221,18 +239,20 @@ function on_startup() {
         report_status("platform", text, is_error),
     );
     policyManager = new PolicyManager();
+    settingsManager = new SettingsManager(policyManager);
 
     chrome.storage.onChanged.addListener(on_storage_changed);
     chrome.permissions.onAdded.addListener(on_permissions_changed);
     chrome.permissions.onRemoved.addListener(on_permissions_changed);
 
     broker = new Broker("linux_entra_sso", on_broker_state_change);
-    accountManager = new AccountManager(broker);
-    deviceManager = new DeviceManager(accountManager);
+    accountManager = new AccountManager(settingsManager);
+    deviceManager = new DeviceManager(accountManager, settingsManager);
     Promise.all([
         PLATFORM.update_host_permissions(),
         PLATFORM.restore(),
         policyManager.load_policies(),
+        settingsManager.restore(),
         accountManager.restore(),
         deviceManager.restore(),
         broker.restore(),
