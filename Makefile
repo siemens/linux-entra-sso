@@ -52,6 +52,7 @@ COMMON_INPUT_FILES= \
 	src/device.js \
 	src/platform.js \
 	src/policy.js \
+	src/settings.js \
 	src/state-machine.js \
 	src/utils.js \
 	icons/profile-outline_48.png \
