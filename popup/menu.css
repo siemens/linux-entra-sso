@@ -160,6 +160,13 @@ body.nm-connected #nm-error-box {
     color: var(--text-green);
 }
 
+.state-enabled-icon {
+    color: var(--text-red);
+}
+.feature-toggle.enabled .state-enabled-icon {
+    color: var(--text-green);
+}
+
 .hidden {
     display: none !important;
 }
@@ -252,5 +259,24 @@ span.link {
     display: none;
 }
 #bg-sso-state.immutable.connected .info-text-immutable.enabled {
+    display: inline-block;
+}
+
+.feature-toggle .link,
+.feature-toggle .info-text-immutable,
+.feature-toggle .state-enabled-value {
+    display: none;
+}
+.feature-toggle.enabled .toggle-disable,
+.feature-toggle:not(.enabled) .toggle-enable,
+.feature-toggle.enabled .state-enabled-value.enabled,
+.feature-toggle:not(.enabled) .state-enabled-value.disabled {
+    display: inline-block;
+}
+/* a managed feature is reported, but cannot be changed */
+.feature-toggle.immutable .link {
+    display: none;
+}
+.feature-toggle.immutable .info-text-immutable {
     display: inline-block;
 }
