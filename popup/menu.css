@@ -182,6 +182,13 @@ body.nm-connected #nm-error-box {
     clear: both;
 }
 
+.footer .block-title {
+    font-size: var(--font-size-xsmall);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: 3px;
+}
+
 .footer a,
 .footer a:visited {
     color: var(--text-1);
