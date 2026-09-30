@@ -116,3 +116,30 @@ supported.
   }
 }
 ```
+
+#### `loadProfilePicture`
+
+The extension queries the profile picture of the logged in user from the Microsoft Graph
+API (`https://graph.microsoft.com`) and uses it as the toolbar icon. Set this to `false`
+to disable that query. In this case, a generic icon is shown instead.
+
+Value: Boolean. Default: `true`.
+
+#### `checkDeviceCompliance`
+
+The extension queries the display name and the Intune compliance state of the device from
+the Microsoft Graph API (`https://graph.microsoft.com`) and shows them in the extension
+menu. Set this to `false` to disable that query. In this case, the device entry is hidden.
+
+Value: Boolean. Default: `true`.
+
+```json
+{
+  "loadProfilePicture": false,
+  "checkDeviceCompliance": false
+}
+```
+
+Both settings can also be toggled by the user in the extension menu. If the setting is
+configured by policy, the policy wins and the menu shows the state as `enabled` or
+`disabled` by policy instead of offering a toggle.
