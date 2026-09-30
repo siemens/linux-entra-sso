@@ -5,6 +5,7 @@
 
 import { getLogger, load_icon } from "./utils.js";
 import { StateMachine } from "./state-machine.js";
+import { Feature } from "./settings.js";
 
 const log = getLogger("accounts");
 
@@ -198,6 +199,11 @@ export class AccountManager {
     #sso = new SsoStateMachine();
     /* in-flight token requests, keyed by username, to dedup concurrent calls */
     #token_requests = new Map();
+    #settings = null;
+
+    constructor(settings = null) {
+        this.#settings = settings;
+    }
 
     hasAccounts() {
         return this.#registered.length != 0;
@@ -343,6 +349,12 @@ export class AccountManager {
     }
 
     async loadProfilePicture(broker, account) {
+        if (this.#settings?.isEnabled(Feature.PROFILE_PICTURE) === false) {
+            log.debug("profile picture disabled");
+            /* drop a picture that was cached while it was still enabled */
+            account.setAvatar(null);
+            return;
+        }
         const graph_token = await this.getToken(broker, account);
         if (!graph_token) return;
         const response = await fetch(
@@ -373,6 +385,12 @@ export class AccountManager {
         } else {
             log.warn("could not get profile picture of " + account.username());
         }
+    }
+
+    async reloadProfilePictures(broker) {
+        await Promise.all(
+            this.#registered.map((a) => this.loadProfilePicture(broker, a)),
+        );
     }
 
     /*

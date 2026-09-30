@@ -4,6 +4,7 @@
  */
 
 import { getLogger, jwt_get_payload } from "./utils.js";
+import { Feature } from "./settings.js";
 
 const log = getLogger("device");
 
@@ -32,13 +33,15 @@ export class DeviceManager {
     static DEVICE_REFRESH_INTERVAL_MIN_MS = 30 * 60 * 1000;
 
     #am = null;
+    #settings = null;
     #last_refresh = 0;
     /* in-flight device load, to dedup concurrent calls */
     #refresh_promise = null;
     device = null;
 
-    constructor(account_manager) {
+    constructor(account_manager, settings = null) {
         this.#am = account_manager;
+        this.#settings = settings;
         this.device = null;
     }
 
@@ -50,6 +53,14 @@ export class DeviceManager {
      * @returns true if successfully updated
      */
     async updateDeviceInfo(broker) {
+        if (this.#settings?.isEnabled(Feature.DEVICE_COMPLIANCE) === false) {
+            /* report an update once, to drop data cached while it was enabled */
+            if (!this.device) return false;
+            log.debug("device compliance check disabled");
+            this.device = null;
+            this.#last_refresh = 0;
+            return true;
+        }
         if (
             Date.now() <
             this.#last_refresh + DeviceManager.DEVICE_REFRESH_INTERVAL_MIN_MS
