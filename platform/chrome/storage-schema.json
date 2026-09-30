@@ -7,6 +7,14 @@
             "additionalProperties": {
                 "type": "boolean"
             }
+        },
+        "loadProfilePicture": {
+            "description": "Query the profile picture of the logged in user from the Microsoft Graph API.",
+            "type": "boolean"
+        },
+        "checkDeviceCompliance": {
+            "description": "Query the name and the compliance state of the device from the Microsoft Graph API.",
+            "type": "boolean"
         }
     }
 }
