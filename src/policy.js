@@ -8,25 +8,42 @@ import { getLogger, Deferred } from "./utils.js";
 const log = getLogger("policy");
 
 export class PolicyManager {
-    static MANAGED_POLICIES_KEY = "wellKnownApps";
+    static MANAGED_POLICIES_KEYS = [
+        "wellKnownApps",
+        "loadProfilePicture",
+        "checkDeviceCompliance",
+    ];
     #apps = null;
+    /* managed feature toggles, undefined means "not configured" */
+    #features = {};
 
     async load_policies() {
         const dfd = new Deferred();
         chrome.storage.managed.get(
-            PolicyManager.MANAGED_POLICIES_KEY,
+            PolicyManager.MANAGED_POLICIES_KEYS,
             (data) => {
-                if (
-                    typeof data === "object" &&
-                    data.hasOwnProperty("wellKnownApps")
-                ) {
-                    this.#apps = { ...data.wellKnownApps };
+                if (typeof data === "object") {
+                    if (data.hasOwnProperty("wellKnownApps")) {
+                        this.#apps = { ...data.wellKnownApps };
+                    }
+                    this.#features = {
+                        loadProfilePicture: data.loadProfilePicture,
+                        checkDeviceCompliance: data.checkDeviceCompliance,
+                    };
                     log.debug("managed policies loaded");
                 }
                 dfd.resolve();
             },
         );
         return dfd.promise;
+    }
+
+    /**
+     * @returns the value a managed policy pins the feature to, or undefined
+     * if the feature is not managed
+     */
+    getFeature(feature) {
+        return this.#features[feature];
     }
 
     getPolicyUpdate(active_app_filters) {
