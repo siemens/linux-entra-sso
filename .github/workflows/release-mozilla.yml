@@ -62,6 +62,37 @@ jobs:
             --amo-metadata platform/firefox/amo-metadata.json \
             --approval-timeout 0
 
+      # The self distributed Firefox extension is identical to the one on AMO,
+      # except that it knows where to fetch its updates from. As AMO requires
+      # unique version numbers per add-on, it is released as <<version>>.1
+      # which compares higher according to the Mozilla toolkit version comparison rules.
+      - name: prepare self distributed Firefox extension
+        run: |
+          cp -r build/firefox build/firefox-self-distributed
+          # drop the state web-ext left behind from the listed submission
+          rm -f build/firefox-self-distributed/.amo-upload-uuid build/firefox-self-distributed/.web-extension-id
+          jq --arg version "${REL_VERSION}.1" \
+            '.version = $version | .browser_specific_settings.gecko.update_url = "https://siemens.github.io/linux-entra-sso/firefox/updates.json"' \
+            build/firefox/manifest.json > build/firefox-self-distributed/manifest.json
+
+      # wait up to 30 minutes for the signed file, as giving up here burns the
+      # version number on AMO and requires a re-tagged release
+      - name: sign self distributed Firefox extension by Mozilla
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_API_SECRET }}
+        run: |
+          npx web-ext@${{ env.WEB_EXT_VERS }} sign \
+            --channel unlisted \
+            --source-dir build/firefox-self-distributed \
+            --artifacts-dir build/signed \
+            --approval-timeout 1800000
+          # the file name is chosen by AMO, but existing download tooling expects
+          # the release version without the self distribution suffix
+          mv build/signed/*.xpi "build/linux_entra_sso-${REL_VERSION}.xpi"
+          # a later checkout cleans the workspace, so record the digest here
+          echo "FF_DIGEST=sha256:$(sha256sum build/linux_entra_sso-${REL_VERSION}.xpi | cut -d ' ' -f 1)" >> $GITHUB_ENV
+
       # self distributed extensions on Thunderbird are not signed
       - name: build Thunderbird extension
         run: |
@@ -72,10 +103,10 @@ jobs:
           # a later checkout cleans the workspace, so record the digest here
           echo "TB_DIGEST=sha256:$(sha256sum build/linux_entra_sso-${REL_VERSION}.thunderbird.xpi | cut -d ' ' -f 1)" >> $GITHUB_ENV
 
-      - name: upload Thunderbird extension
+      - name: upload Mozilla extensions
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: thunderbird-xpi
+          name: mozilla-xpi
           path: |
             build/linux_entra_sso-*.xpi
 
@@ -111,27 +142,33 @@ jobs:
         with:
           ref: main
 
-      - name: create update manifest for Thunderbird
+      - name: create update manifest for Mozilla
         run: |
           LINK="https://github.com/siemens/linux-entra-sso/releases/download/v${REL_VERSION}/linux_entra_sso-${REL_VERSION}.thunderbird.xpi"
           jq --arg version "${REL_VERSION}" --arg digest "${TB_DIGEST}" --arg link "${LINK}" \
             '."addons"."@linux-entra-sso.tb"."updates" += [{"version":$version, "update_link":$link, "update_hash":$digest}]' \
             .pages/thunderbird/updates.json \
             > .pages/thunderbird/updates.json.tmp && mv .pages/thunderbird/updates.json.tmp .pages/thunderbird/updates.json
+          FF_LINK="https://github.com/siemens/linux-entra-sso/releases/download/v${REL_VERSION}/linux_entra_sso-${REL_VERSION}.xpi"
+          jq --arg version "${REL_VERSION}.1" --arg digest "${FF_DIGEST}" --arg link "${FF_LINK}" \
+            '."addons"."linux-entra-sso@example.com"."updates" += [{"version":$version, "update_link":$link, "update_hash":$digest}]' \
+            .pages/firefox/updates.json \
+            > .pages/firefox/updates.json.tmp && mv .pages/firefox/updates.json.tmp .pages/firefox/updates.json
 
-      - name: prepare PR for Thunderbird update manifests
+      - name: prepare PR for Mozilla update manifests
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           add-paths: |
+            .pages/firefox/updates.json
             .pages/thunderbird/updates.json
-          commit-message: "chore: release Thunderbird update manifests"
-          branch: ci/release-firefox-update-manifest
+          commit-message: "chore: release Mozilla update manifests"
+          branch: ci/release-mozilla-update-manifest
           base: main
-          title: "chore: release Thunderbird update manifests [bot]"
+          title: "chore: release Mozilla update manifests [bot]"
           assignees: fmoessbauer
           reviewers: jan-kiszka
           author: ${{ env.GIT_COMMITTER }}
           committer: ${{ env.GIT_COMMITTER }}
           signoff: true
           body: |
-            Publish update manifest for Thunderbird extensions, version ${{ github.ref_name }}.
+            Publish update manifest for Mozilla extensions, version ${{ github.ref_name }}.
