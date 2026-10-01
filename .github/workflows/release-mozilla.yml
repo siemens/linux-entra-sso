@@ -36,15 +36,19 @@ jobs:
           echo "GIT_COMMITTER=$(git show -s --format='%cn <%ce>')" >> $GITHUB_ENV
 
       - name: get release version
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
-          echo "REL_VERSION=$(echo ${{ github.ref_name }} | cut -c 2-)" >> $GITHUB_ENV
+          echo "REL_VERSION=$(echo "${TAG}" | cut -c 2-)" >> $GITHUB_ENV
 
       - name: install dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y make git zip
 
       - name: build packages
-        run: RELEASE_TAG=${{ github.ref_name }} make package deb
+        env:
+          TAG: ${{ github.ref_name }}
+        run: RELEASE_TAG="${TAG}" make package deb
 
       - name: sign Firefox extension by Mozilla
         run: |
