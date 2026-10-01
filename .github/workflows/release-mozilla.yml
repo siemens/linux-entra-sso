@@ -35,6 +35,10 @@ jobs:
         run: |
           echo "GIT_COMMITTER=$(git show -s --format='%cn <%ce>')" >> $GITHUB_ENV
 
+      - name: get release version
+        run: |
+          echo "REL_VERSION=$(echo ${{ github.ref_name }} | cut -c 2-)" >> $GITHUB_ENV
+
       - name: install dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y make git zip
@@ -61,9 +65,7 @@ jobs:
             --artifacts-dir build \
             --filename '{name}-{version}.thunderbird.xpi'
           # a later checkout cleans the workspace, so record the digest here
-          VERSION=$(echo ${{ github.ref_name }} | cut -c 2-)
-          echo "TB_VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "TB_DIGEST=sha256:$(sha256sum build/linux_entra_sso-${VERSION}.thunderbird.xpi | cut -d ' ' -f 1)" >> $GITHUB_ENV
+          echo "TB_DIGEST=sha256:$(sha256sum build/linux_entra_sso-${REL_VERSION}.thunderbird.xpi | cut -d ' ' -f 1)" >> $GITHUB_ENV
 
       - name: upload Thunderbird extension
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -106,8 +108,8 @@ jobs:
 
       - name: create update manifest for Thunderbird
         run: |
-          LINK="https://github.com/siemens/linux-entra-sso/releases/download/v${TB_VERSION}/linux_entra_sso-${TB_VERSION}.thunderbird.xpi"
-          jq --arg version "${TB_VERSION}" --arg digest "${TB_DIGEST}" --arg link "${LINK}" \
+          LINK="https://github.com/siemens/linux-entra-sso/releases/download/v${REL_VERSION}/linux_entra_sso-${REL_VERSION}.thunderbird.xpi"
+          jq --arg version "${REL_VERSION}" --arg digest "${TB_DIGEST}" --arg link "${LINK}" \
             '."addons"."@linux-entra-sso.tb"."updates" += [{"version":$version, "update_link":$link, "update_hash":$digest}]' \
             .pages/thunderbird/updates.json \
             > .pages/thunderbird/updates.json.tmp && mv .pages/thunderbird/updates.json.tmp .pages/thunderbird/updates.json
