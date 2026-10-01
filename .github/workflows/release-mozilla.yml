@@ -51,11 +51,12 @@ jobs:
         run: RELEASE_TAG="${TAG}" make package deb
 
       - name: sign Firefox extension by Mozilla
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_API_SECRET }}
         run: |
           npx web-ext@${{ env.WEB_EXT_VERS }} sign \
             --channel listed \
-            --api-key ${{ secrets.AMO_API_KEY }} \
-            --api-secret ${{ secrets.AMO_API_SECRET }} \
             --source-dir build/firefox \
             --artifacts-dir build \
             --amo-metadata platform/firefox/amo-metadata.json \
