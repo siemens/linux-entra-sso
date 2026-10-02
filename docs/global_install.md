@@ -17,6 +17,11 @@ The Python interpreter (shebang) is determined at install time to avoid runtime 
 This can be adjusted by setting `python3_bin`.
 The default values are suitable for a Debian system. For more information, refer to the `Makefile`.
 
+Run `linux-entra-sso --version` to print the version of the host tooling.
+Note, that the host application is installed to `$(libexecdir)/linux-entra-sso/linux-entra-sso` which is usually not on `$PATH`.
+The command does not require a running D-Bus session or an available broker,
+but still needs the Python runtime dependencies to be installed.
+
 ## Webextension
 
 On Chrome, the `make install` target takes care of registering the extension to be auto-installed when starting the browser.
