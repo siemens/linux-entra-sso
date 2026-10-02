@@ -120,7 +120,9 @@ class SsoMibMock(les.SsoMib):
 les.SsoMib = SsoMibMock
 
 if __name__ == "__main__":
-    if "--interactive" in sys.argv or "-i" in sys.argv:
+    if "--version" in sys.argv:
+        print(les.LINUX_ENTRA_SSO_VERSION)
+    elif "--interactive" in sys.argv or "-i" in sys.argv:
         les.run_interactive()
     else:
         les.run_as_native_messaging()

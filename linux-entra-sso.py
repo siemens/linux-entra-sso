@@ -327,6 +327,12 @@ def run_interactive():
         help="ssoUrl part of SSO PRT cookie request",
     )
     parser.add_argument(
+        "--version",
+        action="version",
+        version=LINUX_ENTRA_SSO_VERSION,
+        help="print host tooling version and exit",
+    )
+    parser.add_argument(
         "command",
         choices=[
             "getAccounts",
@@ -371,7 +377,9 @@ def run_interactive():
 
 
 if __name__ == "__main__":
-    if "--interactive" in sys.argv or "-i" in sys.argv:
+    if "--version" in sys.argv:
+        print(LINUX_ENTRA_SSO_VERSION)
+    elif "--interactive" in sys.argv or "-i" in sys.argv:
         run_interactive()
     else:
         run_as_native_messaging()
