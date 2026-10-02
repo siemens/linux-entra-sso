@@ -66,6 +66,13 @@ function set_text_cropped(element, str) {
     }
 }
 
+/**
+ * Reduce a version to major.minor.patch, dropping any build suffix.
+ */
+function normalize_version(version) {
+    return version ? String(version).split(".").slice(0, 3).join(".") : version;
+}
+
 setup_color_scheme();
 bg_port.onMessage.addListener(async (m) => {
     if (m.event == "stateChanged") {
@@ -94,10 +101,13 @@ bg_port.onMessage.addListener(async (m) => {
             m.broker_version ?? "loading\u2026";
 
         /* show the app and host version */
-        let pvers = chrome.runtime.getManifest().version;
-        let vstr = "v" + pvers;
-        if (m.host_version !== null && m.host_version !== pvers) {
-            vstr += " (host v" + m.host_version + ")";
+        const app_version = normalize_version(
+            chrome.runtime.getManifest().version,
+        );
+        const host_version = normalize_version(m.host_version);
+        let vstr = "v" + app_version;
+        if (host_version && host_version !== app_version) {
+            vstr += " (host v" + host_version + ")";
         }
         document.getElementById("version").innerText = vstr;
 
