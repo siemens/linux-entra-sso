@@ -39,7 +39,7 @@ URL. On Chrome and Chromium, the `PRT SSO Cookie` is requested periodically
 with a generic URL. The returned token is injected into all http requests
 hitting the Entra ID login URL.
 
-### Note on required and optional host permissions
+### Note on required and optional permissions
 
 We use the `WebRequest` (Firefox) or `declarativeNetRequest` (Chrome) API to
 inject the `PRT SSO Cookie` into requests targeting the login provider. To support
@@ -51,6 +51,13 @@ refreshes in the background, we further need the permission to access your data 
 the corresponding domains. To minimize the number of permissions we request, we provide users
 with the ability to grant these permissions on a case-by-case basis via the extension's UI or policy settings.
 Granted permissions can also be revoked through the same interface.
+
+On Firefox, SSO can be enabled per tab container, so that different containers can use
+different accounts or no account at all. Telling containers apart requires two further
+required permissions: `cookies` exposes the cookie store ID of a tab and of an outgoing
+request, and `contextualIdentities` resolves that ID to the container name and color
+shown in the extension's UI. We neither read nor modify any cookies, and we do not
+enumerate or change your containers.
 
 ## Privacy statement for Microsoft services
 
