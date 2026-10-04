@@ -18,6 +18,13 @@
   },
   assigneesFromCodeOwners: true,
   separateMajorMinor: false,
+  packageRules: [
+    {
+      matchDatasources: ["docker", "github-runners"],
+      matchPackageNames: ["ghcr.io/biomejs/biome", "ubuntu"],
+      minimumReleaseAgeBehaviour: "timestamp-optional",
+    },
+  ],
   customManagers: [
     {
       customType: "regex",
