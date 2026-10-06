@@ -17,11 +17,11 @@ permissions:
   contents: read
 
 env:
-  WEB_EXT_VERS: 10.6.0
+  WEB_EXT_VERS: 10.7.0
 
 jobs:
   reuse-and-codestyle:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -45,12 +45,12 @@ jobs:
         run: black --diff --check .
 
       - name: Run biome formatter
-        uses: docker://ghcr.io/biomejs/biome:2.4.16@sha256:e43695cefaf3d3dc0713af731ef3ef150fef5a6bf5aebeb0ee3ffbaffd2ddc5e
+        uses: docker://ghcr.io/biomejs/biome:2.5.15@sha256:deef100144b7293af92eb7f953a67942bad85966ccf0ad2fe391034fdf9ae49a
         with:
           args: ci
 
   unit-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -59,7 +59,7 @@ jobs:
         run: make test
 
   build-xpi:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       id-token: write
       attestations: write

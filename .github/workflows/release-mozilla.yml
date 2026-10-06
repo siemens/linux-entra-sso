@@ -13,7 +13,7 @@ on:
 permissions: {}
 
 env:
-  WEB_EXT_VERS: 10.6.0
+  WEB_EXT_VERS: 10.7.0
 
 jobs:
   release-mozilla:
@@ -22,7 +22,7 @@ jobs:
       pull-requests: write
       id-token: write
       attestations: write
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     defaults:
       run:
         # enables pipefail, so the digest computations cannot silently succeed
