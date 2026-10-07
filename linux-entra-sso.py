@@ -143,7 +143,7 @@ class SsoMib:
 
     def _broker_state_changed(
         self, sender, object, iface, signal, params
-    ):  # pylint: disable=redefined-builtin,too-many-arguments
+    ):  # pylint: disable=redefined-builtin,too-many-arguments,too-many-positional-arguments
         _ = (sender, object, iface, signal)
         # params = (name, old_owner, new_owner)
         new_owner = params[2]
