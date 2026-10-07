@@ -20,9 +20,10 @@
   separateMajorMinor: false,
   packageRules: [
     {
+      // these datasources provide no release timestamps
       matchDatasources: ["docker", "github-runners"],
       matchPackageNames: ["ghcr.io/biomejs/biome", "ubuntu"],
-      minimumReleaseAgeBehaviour: "timestamp-optional",
+      minimumReleaseAge: null,
     },
   ],
   customManagers: [
