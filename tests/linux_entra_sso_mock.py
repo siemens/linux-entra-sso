@@ -11,7 +11,6 @@ import sys
 import time
 import jwt
 
-
 les = importlib.import_module("linux-entra-sso")
 
 
