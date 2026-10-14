@@ -226,6 +226,9 @@ export class Broker {
     }
 
     #on_message_native(response) {
+        /* an answer is activity as well, so the idle window starts over */
+        this.#reset_idle_timer();
+
         /* receiving any message proves the connection was successful */
         if (!this.#had_connection) {
             this.#had_connection = true;
