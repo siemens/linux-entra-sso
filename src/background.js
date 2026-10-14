@@ -148,7 +148,7 @@ function notify_state_change(ui_only = false) {
         Boolean(ui_status?.error) ||
         is_in_error_state();
     update_tray(action_needed);
-    if (!ui_only && broker.isConnected()) {
+    if (!ui_only && !broker.hasConnectionError()) {
         log.debug("update handlers");
         PLATFORM.update_request_handlers(
             is_operational(),
