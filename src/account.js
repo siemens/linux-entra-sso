@@ -190,7 +190,7 @@ export class AccountManager {
     /* read-only default-container fallback (SSO on, nothing selected) */
     #fallback = { sso: new SsoStateMachine(DEFAULT_STORE), username: null };
     /* read-only fallback for other containers (SSO off, nothing selected) */
-    #inactive = { sso: new SsoStateMachine(DEFAULT_STORE), username: null };
+    #inactive = { sso: new SsoStateMachine("unbound"), username: null };
     /* in-flight token requests, keyed by username, to dedup concurrent calls */
     #token_requests = new Map();
     #settings = null;
