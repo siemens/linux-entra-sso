@@ -29,6 +29,8 @@ export class Platform {
 
     /* invoked with (text, is_error) to surface platform issues in the UI */
     #status_handler = null;
+    /* in-flight version load, to dedup concurrent calls */
+    #versions_request = null;
 
     constructor() {
         /*
@@ -43,6 +45,19 @@ export class Platform {
      * Load platform information from backend.
      */
     async loadBrokerVersions(broker) {
+        /* coalesce concurrent loads into a single request */
+        if (this.#versions_request) {
+            return this.#versions_request;
+        }
+        this.#versions_request = this.#loadBrokerVersions(broker);
+        try {
+            return await this.#versions_request;
+        } finally {
+            this.#versions_request = null;
+        }
+    }
+
+    async #loadBrokerVersions(broker) {
         // If we already know the versions for this session (restored from
         // session storage), do not query the broker again: getVersion is a
         // broker RPC that would re-activate the broker via D-Bus.
