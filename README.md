@@ -132,9 +132,11 @@ An alternative is to use the `firefox-esr` Debian package.
 
 ### Flatpak
 
-Browsers installed as Flatpak are not officially supported, as they run in a sandbox that isolates them from the native messaging host.
-They may work when the [`xdg-native-messaging-proxy`](https://github.com/flatpak/xdg-native-messaging-proxy)
-is used to bridge into the sandbox, but this relies on several conditions that are beyond the control of `linux-entra-sso`.
+Running the extension as Flatpak is supported but requires the [`xdg-native-messaging-proxy`](https://github.com/flatpak/xdg-native-messaging-proxy) host package and at least Firefox 158.
+Until the Flatpak configuration is updated, it may be necessary to explicitly allow Firefox access to the bridge:
+`flatpak override --user --talk-name=org.freedesktop.NativeMessagingProxy org.mozilla.firefox`
+It also may be necessary to manually enable the bridge in Firefox's `about:config`:
+`widget.use-xdg-desktop-portal.native-messaging-proxy=2`
 
 ## Troubleshooting
 
