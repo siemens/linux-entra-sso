@@ -24,6 +24,7 @@ chrome_ext_dir ?= /usr/share/google-chrome/extensions
 chromium_nm_dir ?= /etc/chromium/native-messaging-hosts
 # local install path
 brave_lconfig_dir ?= $(HOME)/.config/BraveSoftware/Brave-Browser
+brave_origin_lconfig_dir ?= $(HOME)/.config/BraveSoftware/Brave-Origin
 firefox_lconfig_dir ?= $(HOME)/.mozilla
 chrome_lconfig_dir ?= $(HOME)/.config/google-chrome
 chromium_lconfig_dir ?= $(HOME)/.config/chromium
@@ -229,6 +230,7 @@ local-install-chromium-based:
 
 local-install-brave:
 	$(MAKE) local-install-chromium-based BROWSER_CONFIG_PATH=$(brave_lconfig_dir)
+	$(MAKE) local-install-chromium-based BROWSER_CONFIG_PATH=$(brave_origin_lconfig_dir)
 
 local-install-chrome:
 	$(MAKE) local-install-chromium-based BROWSER_CONFIG_PATH=$(chrome_lconfig_dir)
@@ -244,6 +246,7 @@ local-install: local-install-brave local-install-chrome local-install-chromium l
 # For testing, we provide a mock implementation of the broker communication
 local-install-mock: local-install
 	install -m 0755 tests/linux_entra_sso_mock.py $(brave_lconfig_dir)/linux-entra-sso
+	install -m 0755 tests/linux_entra_sso_mock.py $(brave_origin_lconfig_dir)/linux-entra-sso
 	install -m 0755 tests/linux_entra_sso_mock.py $(chrome_lconfig_dir)/linux-entra-sso
 	install -m 0755 tests/linux_entra_sso_mock.py $(chromium_lconfig_dir)/linux-entra-sso
 	install -m 0755 tests/linux_entra_sso_mock.py $(firefox_lconfig_dir)/linux-entra-sso
@@ -291,6 +294,8 @@ uninstall:
 local-uninstall-brave:
 	rm -f $(brave_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
 	rm -f $(brave_lconfig_dir)/linux-entra-sso
+	rm -f $(brave_origin_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
+	rm -f $(brave_origin_lconfig_dir)/linux-entra-sso
 
 local-uninstall-chrome:
 	rm -f $(chrome_lconfig_dir)/NativeMessagingHosts/linux_entra_sso.json
