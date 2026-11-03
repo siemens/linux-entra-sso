@@ -11,17 +11,16 @@ steps.
 
 ## Contribution Checklist
 
-- use git to manage your changes [*recommended*]
+- use git to manage your changes [**recommended**]
 - follow Python coding style outlined in pep8 [**required**]
 - add signed-off to all patches [**required**]
-    - to certify the "Developer's Certificate of Origin", see below
-    - check with your employer when not working on your own!
+  - to certify the "Developer's Certificate of Origin", see below
+  - check with your employer when not working on your own!
 - post follow-up version(s) if feedback requires this
 - send reminder if nothing happened after about a week
 - when adding new files, add a license header (see existing files) [**required**]
 
-Developer's Certificate of Origin 1.1
--------------------------------------
+## Developer's Certificate of Origin 1.1
 
 When signing-off a patch for this project like this
 
