@@ -7,8 +7,8 @@ name: release Chrome extension
 on:
   push:
     tags:
-      - 'v*.*'
-      - 'v*.*.*'
+      - "v*.*"
+      - "v*.*.*"
 
 permissions: {}
 

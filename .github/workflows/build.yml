@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.14'
+          python-version: "3.14"
 
       - name: install dependencies
         run: |
@@ -45,7 +45,7 @@ jobs:
         run: black --diff --check .
 
       - name: Run biome formatter
-        uses: docker://ghcr.io/biomejs/biome:2.5.15@sha256:deef100144b7293af92eb7f953a67942bad85966ccf0ad2fe391034fdf9ae49a
+        uses: docker://ghcr.io/biomejs/biome:2.6.4@sha256:4352a2ede349bc0459b8fd600c9a1ef146e36fb1ab09dc506f3fb917906f3506
         with:
           args: ci
 
