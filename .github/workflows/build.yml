@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 env:
-  WEB_EXT_VERS: 10.7.0
+  WEB_EXT_VERS: 10.8.0
 
 jobs:
   reuse-and-codestyle:
@@ -26,9 +26,9 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: "3.14"
+          python-version: "3.15"
 
       - name: install dependencies
         run: |
@@ -90,21 +90,21 @@ jobs:
             --warnings-as-errors
 
       - name: upload Firefox and Thunderbird extension
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mozilla-xpi
           path: |
             build/**/*.xpi
 
       - name: upload chrome extension zip
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: chrome-zip
           path: |
             build/chrome/
 
       - name: upload debian package
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: debian-package
           path: |

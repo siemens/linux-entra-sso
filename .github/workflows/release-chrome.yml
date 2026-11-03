@@ -14,7 +14,7 @@ permissions: {}
 
 env:
   CRX3_VERS: 2.0.0
-  CWS_UPLOAD_VERS: 6.0.0
+  CWS_UPLOAD_VERS: 6.0.1
 
 jobs:
   release-chrome:
