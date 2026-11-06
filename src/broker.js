@@ -13,47 +13,58 @@ const log = getLogger("broker");
  * remote backend.
  */
 export class RpcHandlerQueue {
+    /* how long the host may stay silent while requests are outstanding */
     static DEFAULT_TIMEOUT_MS = 15 * 1000;
 
     #queue = [];
+    #timeout_ms;
+    #watchdog = null;
 
-    register_handle(id, timeout_ms = RpcHandlerQueue.DEFAULT_TIMEOUT_MS) {
+    constructor(timeout_ms = RpcHandlerQueue.DEFAULT_TIMEOUT_MS) {
+        this.#timeout_ms = timeout_ms;
+    }
+
+    /*
+     * The host answers strictly in order, so a request can be queued behind
+     * arbitrarily slow ones. Hence all outstanding requests share a watchdog
+     * that is restarted on every answer, instead of each request carrying its
+     * own deadline that already expires while the host still makes progress.
+     */
+    register_handle(id) {
         const handle = {
             id: id,
             dfd: new Deferred(),
         };
         this.#queue.push(handle);
-        const timeout = new Promise((_, reject) =>
-            setTimeout(() => {
-                this.#drop_handle(handle);
-                reject(`timeout while waiting for ${id} response`);
-            }, timeout_ms),
-        );
+        this.#kick_watchdog();
         log.debug(`registered handle for: ${id}`);
-        return Promise.race([handle.dfd.promise, timeout]);
+        return handle.dfd.promise;
     }
 
     resolve_handle(id, data) {
         log.debug(`resolving handle for: ${id}`);
         this.#take_handle(id)?.dfd.resolve(data);
+        this.#kick_watchdog();
     }
 
     reject_handle(id, data) {
         log.debug(`rejecting handle for: ${id}`);
         this.#take_handle(id)?.dfd.reject(data);
+        this.#kick_watchdog();
     }
 
     /* Fail all outstanding requests, e.g. when the transport went away. */
     reject_all(data) {
         const pending = this.#queue;
         this.#queue = [];
+        this.#kick_watchdog();
         for (const hdl of pending) {
             hdl.dfd.reject(data);
         }
     }
 
     has_pending() {
-        return this.#queue.length != 0;
+        return this.#queue.some((hdl) => !hdl.expired);
     }
 
     /* Take the oldest handle for that id, as responses arrive in order. */
@@ -63,9 +74,22 @@ export class RpcHandlerQueue {
         return this.#queue.splice(idx, 1)[0];
     }
 
-    #drop_handle(handle) {
-        const idx = this.#queue.indexOf(handle);
-        if (idx !== -1) this.#queue.splice(idx, 1);
+    #kick_watchdog() {
+        if (this.#watchdog !== null) clearTimeout(this.#watchdog);
+        this.#watchdog = null;
+        if (!this.has_pending()) return;
+        this.#watchdog = setTimeout(() => {
+            this.#watchdog = null;
+            /*
+             * Responses are correlated by command only, so expired handles
+             * stay queued to absorb the answers that might still arrive.
+             * Dropping them would misalign all later ones.
+             */
+            for (const hdl of this.#queue) {
+                hdl.expired = true;
+                hdl.dfd.reject(`timeout while waiting for ${hdl.id} response`);
+            }
+        }, this.#timeout_ms);
     }
 }
 
@@ -122,6 +146,8 @@ export class Broker {
 
         this.#port_native.disconnect();
         this.#port_native = null;
+        /* the next connection starts a host with a fresh response stream */
+        this.#rpc_queue.reject_all("disconnected from native application");
     }
 
     /**
@@ -226,6 +252,9 @@ export class Broker {
     }
 
     #on_message_native(response) {
+        /* an answer is activity as well, so the idle window starts over */
+        this.#reset_idle_timer();
+
         /* receiving any message proves the connection was successful */
         if (!this.#had_connection) {
             this.#had_connection = true;
