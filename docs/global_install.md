@@ -110,8 +110,26 @@ domain, as well as for the login provider. Hereby, the app domain can be anythin
 usually known to the company managing the devices.
 
 Value: Dictionary of key-value pairs (string, bool), where the key is the domain and the
-value denotes if SSO is enabled. The domain must precisely match. Wildcards are not (yet)
-supported.
+value denotes if SSO is enabled. Domains must precisely match. Alternatively, a sole
+`"*": true` entry requests background SSO for **all HTTPS sites**. The user still
+approves the optional host permission in the browser; this policy does not bypass
+that prompt. Partial wildcards are not supported.
+
+```json
+{
+  "wellKnownApps": { "*": true }
+}
+```
+
+This broader site access is appropriate only when administrators deliberately trust
+the extension on every HTTPS application. It does not disable Conditional Access or
+MFA. Do not combine `"*": true` with per-site entries: browser host permissions cannot
+express exclusions from an all-sites grant. Mixed policies are processed as exact-site
+policies, removing any all-sites grant. Removing or setting `"*"` to false also requests
+removal of an existing all-sites grant. An absent `wellKnownApps` policy leaves user
+grants alone.
+
+For an exact-site policy:
 
 ```json
 {
