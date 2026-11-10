@@ -15,6 +15,7 @@ export class PlatformChrome extends Platform {
 
     static CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
     static PRT_SSO_REFRESH_ALARM = "prt-sso-refresh";
+    static SSO_RECOVERY_DONE = "sso_recovery_done";
 
     constructor() {
         super();
@@ -118,5 +119,30 @@ export class PlatformChrome extends Platform {
         });
         this.clear_error();
         log.debug("network rules updated");
+        await this.#recover_missed_navigations();
+    }
+
+    /*
+     * Session rules do not survive a browser restart. Top-level sign-in
+     * requests sent before the first rule of this browser session existed
+     * went out without the SSO header and Entra fell back to interactive
+     * sign-in. Re-request them once.
+     */
+    async #recover_missed_navigations() {
+        const flag = PlatformChrome.SSO_RECOVERY_DONE;
+        const data = await chrome.storage.session.get(flag);
+        if (data[flag]) return;
+        await chrome.storage.session.set({ [flag]: true });
+        const queryOptions = {
+            url: Platform.SSO_URL + "/*",
+        };
+        for (const tab of await chrome.tabs.query(queryOptions)) {
+            const url = URL.parse(tab.url || "");
+            if (!url) continue;
+            if (!/\/oauth2\/(v2\.0\/)?authorize$|\/saml2$/.test(url.pathname))
+                continue;
+            log.info("re-requesting sign-in tab that missed SSO");
+            chrome.tabs.update(tab.id, { url: url.href });
+        }
     }
 }
