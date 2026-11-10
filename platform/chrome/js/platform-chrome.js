@@ -15,6 +15,8 @@ export class PlatformChrome extends Platform {
 
     static CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
     static PRT_SSO_REFRESH_ALARM = "prt-sso-refresh";
+    static PRT_SSO_RETRY_ALARM = "prt-sso-retry";
+    static PRT_SSO_RETRY_DELAY_MIN = 1;
     static SSO_RECOVERY_DONE = "sso_recovery_done";
 
     constructor() {
@@ -33,6 +35,7 @@ export class PlatformChrome extends Platform {
         this.#broker = broker;
         if (!enabled) {
             chrome.alarms.clear(PlatformChrome.PRT_SSO_REFRESH_ALARM);
+            chrome.alarms.clear(PlatformChrome.PRT_SSO_RETRY_ALARM);
             this.#clear_net_rules();
             return;
         }
@@ -46,7 +49,11 @@ export class PlatformChrome extends Platform {
      * refresh the rules, so we can safely skip here.
      */
     #on_alarm(alarm) {
-        if (alarm.name !== PlatformChrome.PRT_SSO_REFRESH_ALARM) return;
+        if (
+            alarm.name !== PlatformChrome.PRT_SSO_REFRESH_ALARM &&
+            alarm.name !== PlatformChrome.PRT_SSO_RETRY_ALARM
+        )
+            return;
         if (!this.#broker || !this.account) return;
         this.#update_net_rules(this.#broker);
     }
@@ -86,6 +93,10 @@ export class PlatformChrome extends Platform {
             );
         } catch (error) {
             this.report_error("Failed to acquire the SSO token: " + error);
+            // e.g. the broker refuses while the screen is locked after a wakeup
+            chrome.alarms.create(PlatformChrome.PRT_SSO_RETRY_ALARM, {
+                delayInMinutes: PlatformChrome.PRT_SSO_RETRY_DELAY_MIN,
+            });
             return;
         }
         const newRules = [
