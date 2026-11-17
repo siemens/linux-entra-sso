@@ -36,7 +36,11 @@ locally running `com.microsoft.identity.broker1` DBus service. In the Firefox
 version, whenever an URL starting with `https://login.microsoftonline.com/`
 (Entra ID login URL) is accessed, a token is requested with the full request
 URL. On Chrome and Chromium, the `PRT SSO Cookie` is requested periodically
-with a generic URL. The returned token is injected into all http requests
+with a generic URL. In addition, when Entra ID asks for a fresh, request-bound
+cookie (a login URL carrying an `sso_nonce` parameter), a token is requested
+once for that full URL and is only injected into requests of the tab that
+issued the request. That tab's sign-in request is then repeated once so that it
+carries the new token. The returned token is injected into all http requests
 hitting the Entra ID login URL.
 
 ### Note on required and optional permissions
@@ -45,6 +49,15 @@ We use the `WebRequest` (Firefox) or `declarativeNetRequest` (Chrome) API to
 inject the `PRT SSO Cookie` into requests targeting the login provider. To support
 this, we need the permission to access your data on `https://login.microsoftonline.com/`.
 This permission is (usually) requested at extension install time (required permission).
+
+On Chrome and Chromium, we additionally require the `webRequest` permission. It is
+used only to observe (not block or modify) top-level and frame navigations to
+`https://login.microsoftonline.com/`, so that we can react to Entra ID requesting a
+request-bound cookie (e.g. when a Conditional Access sign-in frequency policy requires
+re-authentication). We do not observe requests to any other site. Observed URLs are
+only passed to the local broker to request the token and are not stored. Only the
+`sso_nonce` values are kept in memory for the current browser session to avoid
+duplicate requests.
 
 For single-page applications (SPAs, like the Teams PWA) that perform automated token
 refreshes in the background, we further need the permission to access your data on
