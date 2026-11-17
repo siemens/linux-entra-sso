@@ -22,6 +22,7 @@
     },
     "permissions": [
         "alarms",
+        "webRequest",
         "nativeMessaging",
         "declarativeNetRequest",
         "storage",
