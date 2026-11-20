@@ -11,13 +11,16 @@ const log = getLogger("platform");
 export class PlatformChrome extends Platform {
     browser = "Chrome";
     #broker = null;
+    #enabled = false;
     #on_alarm_cb = null;
+    #seen_nonces = new Set();
 
     static CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
     static PRT_SSO_REFRESH_ALARM = "prt-sso-refresh";
     static PRT_SSO_RETRY_ALARM = "prt-sso-retry";
     static PRT_SSO_RETRY_DELAY_MIN = 1;
     static SSO_RECOVERY_DONE = "sso_recovery_done";
+    static NONCE_RULE_ID = 2;
 
     constructor() {
         super();
@@ -28,11 +31,90 @@ export class PlatformChrome extends Platform {
          */
         this.#on_alarm_cb = this.#on_alarm.bind(this);
         chrome.alarms.onAlarm.addListener(this.#on_alarm_cb);
+        chrome.webRequest.onBeforeRequest.addListener(
+            this.#on_sso_request.bind(this),
+            {
+                urls: [Platform.SSO_URL + "/*"],
+                types: ["main_frame", "sub_frame"],
+            },
+        );
+    }
+
+    /*
+     * Entra requests a cookie bound to an sso_nonce, e.g. to satisfy a
+     * sign-in frequency policy. Acquire one for that exact URL, inject it
+     * into requests of the issuing tab and re-request the sign-in once.
+     */
+    async #on_sso_request(details) {
+        if (!this.#enabled || details.tabId < 0) return;
+        if (!(await this.#update_nonce_rule(details))) return;
+        if (details.type === "main_frame") {
+            log.info("re-requesting sign-in with nonce-bound SSO token");
+            await this.#update_tab(details.tabId, details.url);
+        }
+    }
+
+    async #update_nonce_rule(details) {
+        const nonce = URL.parse(details.url)?.searchParams.get("sso_nonce");
+        if (!nonce || this.#seen_nonces.has(nonce)) return false;
+        this.#seen_nonces.add(nonce);
+        let prt = undefined;
+        try {
+            prt = await this.#broker.acquirePrtSsoCookie(
+                this.account,
+                details.url,
+            );
+        } catch (error) {
+            log.warn("Failed to acquire nonce-bound SSO token: " + error);
+            return false;
+        }
+        await chrome.declarativeNetRequest.updateSessionRules({
+            removeRuleIds: [PlatformChrome.NONCE_RULE_ID],
+            addRules: [
+                this.#sso_rule(PlatformChrome.NONCE_RULE_ID, prt, {
+                    priority: 2,
+                    tabIds: [details.tabId],
+                }),
+            ],
+        });
+        return true;
+    }
+
+    async #update_tab(tabId, url) {
+        try {
+            await chrome.tabs.update(tabId, { url });
+        } catch (error) {
+            log.warn("Failed to re-request sign-in: " + error);
+        }
+    }
+
+    #sso_rule(id, prt, { priority = 1, tabIds } = {}) {
+        return {
+            id: id,
+            priority: priority,
+            condition: {
+                urlFilter: "|" + Platform.SSO_URL + "/",
+                requestDomains: [URL.parse(Platform.SSO_URL).hostname],
+                resourceTypes: ["main_frame", "sub_frame"],
+                ...(tabIds && { tabIds }),
+            },
+            action: {
+                type: "modifyHeaders",
+                requestHeaders: [
+                    {
+                        header: prt.cookieName,
+                        operation: "set",
+                        value: prt.cookieContent,
+                    },
+                ],
+            },
+        };
     }
 
     update_request_handlers(enabled, account, broker) {
         super.update_request_handlers(enabled, account, broker);
         this.#broker = broker;
+        this.#enabled = enabled;
         if (!enabled) {
             chrome.alarms.clear(PlatformChrome.PRT_SSO_REFRESH_ALARM);
             chrome.alarms.clear(PlatformChrome.PRT_SSO_RETRY_ALARM);
@@ -80,6 +162,7 @@ export class PlatformChrome extends Platform {
         await chrome.declarativeNetRequest.updateSessionRules({
             removeRuleIds: oldRuleIds,
         });
+        this.#seen_nonces.clear();
         this.clear_error();
     }
 
@@ -99,33 +182,9 @@ export class PlatformChrome extends Platform {
             });
             return;
         }
-        const newRules = [
-            {
-                id: 1,
-                priority: 1,
-                condition: {
-                    urlFilter: "|" + Platform.SSO_URL + "/",
-                    requestDomains: [URL.parse(Platform.SSO_URL).hostname],
-                    resourceTypes: ["main_frame", "sub_frame"],
-                },
-                action: {
-                    type: "modifyHeaders",
-                    requestHeaders: [
-                        {
-                            header: prt.cookieName,
-                            operation: "set",
-                            value: prt.cookieContent,
-                        },
-                    ],
-                },
-            },
-        ];
-        const oldRules = await chrome.declarativeNetRequest.getSessionRules();
-        const oldRuleIds = oldRules.map((rule) => rule.id);
-
-        // Use the arrays to update the dynamic rules
+        const newRules = [this.#sso_rule(1, prt)];
         await chrome.declarativeNetRequest.updateSessionRules({
-            removeRuleIds: oldRuleIds,
+            removeRuleIds: [1],
             addRules: newRules,
         });
         this.clear_error();
@@ -152,8 +211,12 @@ export class PlatformChrome extends Platform {
             if (!url) continue;
             if (!/\/oauth2\/(v2\.0\/)?authorize$|\/saml2$/.test(url.pathname))
                 continue;
+            await this.#update_nonce_rule({
+                tabId: tab.id,
+                url: url.href,
+            });
             log.info("re-requesting sign-in tab that missed SSO");
-            chrome.tabs.update(tab.id, { url: url.href });
+            await this.#update_tab(tab.id, url.href);
         }
     }
 }
