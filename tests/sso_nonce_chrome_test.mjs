@@ -11,16 +11,22 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const on_request = [];
+const on_updated = [];
+const on_removed = [];
 const on_finished = { redirect: [], completed: [], error: [] };
 const alarms = new Map();
 const reloads = [];
 const tabReloads = [];
 const tabUrls = new Map();
+const tabStatuses = new Map();
+const tabPendingUrls = new Map();
 let recoveryDone = true;
 let recoveryTabs = [];
 let openTabs = [1, 2, 3, 5, 6, 7, 8];
 let rejectNextNavigation = false;
 let requestOnUpdate = null;
+let onTabGet = null;
+const delayedCookies = new Map();
 let rules = [];
 
 globalThis.chrome = {
@@ -45,8 +51,19 @@ globalThis.chrome = {
         onErrorOccurred: { addListener: (fn) => on_finished.error.push(fn) },
     },
     tabs: {
+        onUpdated: { addListener: (fn) => on_updated.push(fn) },
+        onRemoved: { addListener: (fn) => on_removed.push(fn) },
         async get(tabId) {
-            return { id: tabId, url: tabUrls.get(tabId) };
+            const tab = {
+                id: tabId,
+                url: tabUrls.get(tabId),
+                status: tabStatuses.get(tabId) ?? "complete",
+                pendingUrl: tabPendingUrls.get(tabId),
+            };
+            const hook = onTabGet;
+            onTabGet = null;
+            if (hook) hook();
+            return tab;
         },
         async query({ url } = {}) {
             return url ? recoveryTabs : openTabs.map((id) => ({ id }));
@@ -97,6 +114,7 @@ const acquired = [];
 const broker = {
     async acquirePrtSsoCookie(account, url) {
         acquired.push(url);
+        await delayedCookies.get(url);
         const nonce = URL.parse(url).searchParams.get("sso_nonce");
         return {
             cookieName: "x-ms-RefreshTokenCredential",
@@ -168,6 +186,19 @@ async function navigate(tabId, url, type = "main_frame", method = "GET") {
 
 async function finish(requestId, outcome) {
     on_finished[outcome].forEach((fn) => fn({ requestId }));
+    await settle();
+}
+
+async function updateTab(tabId, changes) {
+    if ("url" in changes) tabUrls.set(tabId, changes.url);
+    if (changes.status) tabStatuses.set(tabId, changes.status);
+    if ("pendingUrl" in changes) {
+        if (changes.pendingUrl) tabPendingUrls.set(tabId, changes.pendingUrl);
+        else tabPendingUrls.delete(tabId);
+    }
+    on_updated.forEach((fn) =>
+        fn(tabId, { status: changes.status, url: changes.url }),
+    );
     await settle();
 }
 
@@ -372,6 +403,260 @@ check("POST: rejected reload attempted once", tabReloads, [1, 1]);
 check("POST: never falls back to URL navigation", reloads, []);
 tabReloads.length = 0;
 
+// Network completion can precede document/subresource completion.
+const loadingPostId = await navigate(
+    1,
+    samlUrl + "-loading",
+    "main_frame",
+    "POST",
+);
+tabStatuses.set(1, "loading");
+await finish(loadingPostId, "completed");
+check("POST: waits for tab completion", tabReloads, []);
+await updateTab(1, { status: "complete" });
+check("POST: reloads after tab completion", tabReloads, [1]);
+await updateTab(1, { status: "complete" });
+check("POST: duplicate tab completion does not replay", tabReloads, [1]);
+tabReloads.length = 0;
+
+// Chrome reports the old committed URL while an SP navigation is pending.
+const pendingPostId = await navigate(
+    1,
+    samlUrl + "-pending",
+    "main_frame",
+    "POST",
+);
+tabStatuses.set(1, "loading");
+tabPendingUrls.set(1, "https://example.com/acs");
+await finish(pendingPostId, "completed");
+check("POST: preserves a visible pending navigation", tabReloads, []);
+await updateTab(1, {
+    status: "complete",
+    url: "https://example.com/acs",
+    pendingUrl: null,
+});
+check("POST: leaves the completed SP navigation alone", tabReloads, []);
+
+// The pending URL is omitted without host permission for its origin.
+const hiddenPendingId = await navigate(
+    1,
+    samlUrl + "-hidden",
+    "main_frame",
+    "POST",
+);
+tabStatuses.set(1, "loading");
+await finish(hiddenPendingId, "completed");
+check("POST: preserves a hidden pending navigation", tabReloads, []);
+await updateTab(1, { status: "complete", url: undefined });
+check("POST: hidden committed SP URL does not replay", tabReloads, []);
+
+// A completion event can arrive while tabs.get returns an older snapshot.
+const racedPostId = await navigate(
+    1,
+    samlUrl + "-event-race",
+    "main_frame",
+    "POST",
+);
+tabStatuses.set(1, "loading");
+onTabGet = () => {
+    tabStatuses.set(1, "complete");
+    on_updated.forEach((fn) => fn(1, { status: "complete" }));
+};
+await finish(racedPostId, "completed");
+check("POST: does not miss completion during tabs.get", tabReloads, [1]);
+tabReloads.length = 0;
+
+const supersededPostId = await navigate(
+    1,
+    samlUrl + "-superseded",
+    "main_frame",
+    "POST",
+);
+tabStatuses.set(1, "loading");
+await finish(supersededPostId, "completed");
+await navigate(1, SIGNIN + "?client_id=next");
+await updateTab(1, { status: "complete" });
+check("POST: a newer main-frame request invalidates retry", tabReloads, []);
+
+const disabledPostId = await navigate(
+    1,
+    samlUrl + "-disable",
+    "main_frame",
+    "POST",
+);
+platform.update_request_handlers(false, { username: "a@x" }, broker);
+await settle();
+await finish(disabledPostId, "completed");
+check(
+    "POST: disabling before network completion cancels retry",
+    tabReloads,
+    [],
+);
+check("POST: disabling clears nonce rules", rules, []);
+platform.update_request_handlers(true, { username: "a@x" }, broker);
+await settle();
+
+const deferredDisableId = await navigate(
+    1,
+    samlUrl + "-deferred-disable",
+    "main_frame",
+    "POST",
+);
+tabStatuses.set(1, "loading");
+await finish(deferredDisableId, "completed");
+platform.update_request_handlers(false, { username: "a@x" }, broker);
+await settle();
+await updateTab(1, { status: "complete" });
+check(
+    "POST: disabling while waiting for tab completion cancels retry",
+    tabReloads,
+    [],
+);
+platform.update_request_handlers(true, { username: "a@x" }, broker);
+await settle();
+
+const switchedPostId = await navigate(
+    1,
+    samlUrl + "-switch",
+    "main_frame",
+    "POST",
+);
+platform.update_request_handlers(true, { username: "b@x" }, broker);
+await settle();
+await finish(switchedPostId, "completed");
+check("POST: account switch cancels old retry", tabReloads, []);
+check(
+    "POST: account switch removes old nonce rules",
+    rules.filter((r) => r.id >= 2),
+    [],
+);
+platform.update_request_handlers(true, { username: "a@x" }, broker);
+await settle();
+
+let resolveCookie;
+const delayedUrl = samlUrl + "-delayed-cookie";
+delayedCookies.set(
+    delayedUrl,
+    new Promise((resolve) => {
+        resolveCookie = resolve;
+    }),
+);
+const delayedPostId = await navigate(1, delayedUrl, "main_frame", "POST");
+platform.update_request_handlers(true, { username: "b@x" }, broker);
+await settle();
+resolveCookie();
+await settle();
+await finish(delayedPostId, "completed");
+check(
+    "POST: stale broker completion cannot install nonce rules",
+    rules.filter((r) => r.id >= 2),
+    [],
+);
+check("POST: stale broker completion cannot replay", tabReloads, []);
+platform.update_request_handlers(true, { username: "a@x" }, broker);
+await settle();
+
+// Delayed acquisition for an older request must not consume the nonce of
+// a newer request that will actually use the installed rule.
+let resolveSharedCookie;
+const sharedUrl = samlUrl + "-shared-cookie";
+delayedCookies.set(
+    sharedUrl,
+    new Promise((resolve) => {
+        resolveSharedCookie = resolve;
+    }),
+);
+const oldSharedId = await navigate(1, sharedUrl, "main_frame", "POST");
+const newSharedId = await navigate(1, sharedUrl, "main_frame", "POST");
+resolveSharedCookie();
+await settle();
+await finish(oldSharedId, "completed");
+check("POST: superseded acquisition does not replay", tabReloads, []);
+await finish(newSharedId, "completed");
+check("POST: newest request using the same nonce can retry", tabReloads, [1]);
+tabReloads.length = 0;
+
+// Chrome reuses requestId across redirects. Cleanup from an older callback
+// must not delete the completion watcher for the next request.
+let resolveRedirectCookie;
+const oldRedirectUrl = samlUrl + "-old-redirect";
+delayedCookies.set(
+    oldRedirectUrl,
+    new Promise((resolve) => {
+        resolveRedirectCookie = resolve;
+    }),
+);
+const reusedRequestId = await navigate(1, oldRedirectUrl, "main_frame", "POST");
+await finish(reusedRequestId, "redirect");
+const newRedirectUrl = samlUrl + "-new-redirect";
+tabUrls.set(1, newRedirectUrl);
+on_request.forEach((fn) =>
+    fn({
+        requestId: reusedRequestId,
+        tabId: 1,
+        url: newRedirectUrl,
+        type: "main_frame",
+        method: "POST",
+    }),
+);
+await settle();
+resolveRedirectCookie();
+await settle();
+await finish(reusedRequestId, "completed");
+check(
+    "POST: reused request ID keeps its newest completion watcher",
+    tabReloads,
+    [1],
+);
+tabReloads.length = 0;
+
+const closingPostId = await navigate(
+    1,
+    samlUrl + "-closing",
+    "main_frame",
+    "POST",
+);
+tabStatuses.set(1, "loading");
+await finish(closingPostId, "completed");
+on_removed.forEach((fn) => fn(1));
+await updateTab(1, { status: "complete" });
+check("POST: closing a tab discards its deferred retry", tabReloads, []);
+
+const changedDuringGetId = await navigate(
+    1,
+    samlUrl + "-state-race",
+    "main_frame",
+    "POST",
+);
+onTabGet = () =>
+    platform.update_request_handlers(false, { username: "a@x" }, broker);
+await finish(changedDuringGetId, "completed");
+check("POST: disabling during tabs.get cancels replay", tabReloads, []);
+platform.update_request_handlers(true, { username: "a@x" }, broker);
+await settle();
+
+let resolveGenericCookie;
+delayedCookies.set(
+    new URL(SIGNIN).origin,
+    new Promise((resolve) => {
+        resolveGenericCookie = resolve;
+    }),
+);
+platform.update_request_handlers(true, { username: "a@x" }, broker);
+await settle();
+platform.update_request_handlers(false, { username: "a@x" }, broker);
+await settle();
+resolveGenericCookie();
+await settle();
+check(
+    "disable: stale generic broker response cannot reinstall rules",
+    rules,
+    [],
+);
+delayedCookies.delete(new URL(SIGNIN).origin);
+platform.update_request_handlers(true, { username: "a@x" }, broker);
+await settle();
+
 platform.update_request_handlers(false, { username: "a@x" }, broker);
 await settle();
 check(
@@ -433,7 +718,7 @@ check(
 recoveryDone = false;
 const recoverySamlUrl = "https://login.microsoftonline.com/common/saml2";
 recoveryTabs = [{ id: 7, url: recoverySamlUrl }];
-tabUrls.set(7, recoverySamlUrl);
+await navigate(7, recoverySamlUrl);
 reloads.length = 0;
 tabReloads.length = 0;
 recoveryPlatform.update_request_handlers(true, { username: "a@x" }, broker);
