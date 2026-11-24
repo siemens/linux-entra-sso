@@ -15,9 +15,6 @@ export class PlatformChrome extends Platform {
     #on_alarm_cb = null;
     #seen_nonces = new Set();
     #pending_requests = new Map();
-    #tab_requests = new Map();
-    #pending_reloads = new Map();
-    #generation = 0;
     #nonce_rules_queue = Promise.resolve();
 
     static CHROME_PRT_SSO_REFRESH_INTERVAL_MIN = 30;
@@ -48,22 +45,13 @@ export class PlatformChrome extends Platform {
             types: ["main_frame"],
         };
         const settle = (outcome) => (details) =>
-            this.#pending_requests.get(details.requestId)?.resolve(outcome);
+            this.#pending_requests.get(details.requestId)?.(outcome);
         chrome.webRequest.onBeforeRedirect.addListener(
             settle("redirect"),
             filter,
         );
         chrome.webRequest.onCompleted.addListener(settle("completed"), filter);
         chrome.webRequest.onErrorOccurred.addListener(settle("error"), filter);
-        chrome.tabs.onUpdated.addListener((tabId, changes) => {
-            const context = this.#pending_reloads.get(tabId);
-            if (context && changes.status === "complete")
-                this.#reload_tab(context);
-        });
-        chrome.tabs.onRemoved.addListener((tabId) => {
-            this.#tab_requests.delete(tabId);
-            this.#pending_reloads.delete(tabId);
-        });
     }
 
     /*
@@ -78,33 +66,12 @@ export class PlatformChrome extends Platform {
         // not awaited, so it doesn't delay updating this tab's rule
         this.#remove_orphaned_nonce_rules();
         const main_frame = details.type === "main_frame";
-        const context = {
-            tabId: details.tabId,
-            url: details.url,
-            nonce: URL.parse(details.url)?.searchParams.get("sso_nonce"),
-            generation: this.#generation,
-            main_frame,
-        };
-        if (main_frame) {
-            this.#tab_requests.set(details.tabId, context);
-            this.#pending_reloads.delete(details.tabId);
-        }
         // watch from the start, the request may finish while we acquire
         const finished = main_frame && this.#watch_request(details.requestId);
         try {
-            if (!(await this.#update_nonce_rule(context))) return;
-            if (!main_frame) return;
-            /*
-             * A URL navigation discards a POST body, including SAMLRequest.
-             * Reload the committed navigation only after its response, so
-             * Chrome preserves the method and handles repost confirmation.
-             */
-            if (details.method !== "GET") {
-                if ((await finished.promise) === "completed")
-                    this.#schedule_reload(context);
-                return;
-            }
-            if (!this.#is_current(context)) return;
+            if (!(await this.#update_nonce_rule(details))) return;
+            // A URL-only retry would discard a POST body such as SAMLRequest.
+            if (!main_frame || details.method !== "GET") return;
             log.info("re-requesting sign-in with nonce-bound SSO token");
             if (await this.#update_tab(details.tabId, details.url)) return;
             /*
@@ -112,50 +79,36 @@ export class PlatformChrome extends Platform {
              * pending. Retry once it got a response, unless it redirected
              * away, i.e. the sign-in went ahead.
              */
-            if ((await finished.promise) === "redirect") return;
-            if (!this.#is_current(context)) return;
+            if ((await finished) === "redirect") return;
             log.info("retrying re-request of sign-in");
             await this.#update_tab(details.tabId, details.url);
         } finally {
-            if (this.#pending_requests.get(details.requestId) === finished)
-                this.#pending_requests.delete(details.requestId);
+            if (main_frame) this.#pending_requests.delete(details.requestId);
         }
     }
 
     #watch_request(requestId) {
-        const request = {};
-        request.promise = new Promise((resolve) => {
-            request.resolve = resolve;
-        });
-        this.#pending_requests.set(requestId, request);
-        return request;
-    }
-
-    #is_current(context) {
-        return (
-            this.#enabled &&
-            context.generation === this.#generation &&
-            (!context.main_frame ||
-                this.#tab_requests.get(context.tabId) === context)
+        return new Promise((resolve) =>
+            this.#pending_requests.set(requestId, resolve),
         );
     }
 
-    async #update_nonce_rule(context) {
-        const nonce = context.nonce;
+    async #update_nonce_rule(details) {
+        const nonce = URL.parse(details.url)?.searchParams.get("sso_nonce");
         if (!nonce || this.#seen_nonces.has(nonce)) return false;
+        this.#seen_nonces.add(nonce);
         let prt = undefined;
         try {
             prt = await this.#broker.acquirePrtSsoCookie(
                 this.account,
-                context.url,
+                details.url,
             );
         } catch (error) {
             log.warn("Failed to acquire nonce-bound SSO token: " + error);
             return false;
         }
-        const installed = await this.#add_nonce_rule(context, prt);
-        if (installed) this.#seen_nonces.add(nonce);
-        return installed;
+        await this.#add_nonce_rule(details.tabId, prt);
+        return true;
     }
 
     /*
@@ -175,10 +128,8 @@ export class PlatformChrome extends Platform {
      * different tabs never match the same request, hence they can share a
      * priority.
      */
-    #add_nonce_rule(context, prt) {
+    #add_nonce_rule(tabId, prt) {
         return this.#with_nonce_rules(async () => {
-            if (!this.#is_current(context)) return false;
-            const tabId = context.tabId;
             const rules = await chrome.declarativeNetRequest.getSessionRules();
             const previous = rules.find(
                 (rule) =>
@@ -191,7 +142,6 @@ export class PlatformChrome extends Platform {
                 id = PlatformChrome.NONCE_RULE_ID_BASE;
                 while (ids.has(id)) id++;
             }
-            if (!this.#is_current(context)) return false;
             await chrome.declarativeNetRequest.updateSessionRules({
                 removeRuleIds: [id],
                 addRules: [
@@ -202,7 +152,6 @@ export class PlatformChrome extends Platform {
                     }),
                 ],
             });
-            return this.#is_current(context);
         });
     }
 
@@ -235,42 +184,6 @@ export class PlatformChrome extends Platform {
         }
     }
 
-    #schedule_reload(context) {
-        if (!this.#is_current(context)) return;
-        this.#pending_reloads.set(context.tabId, context);
-        this.#reload_tab(context);
-    }
-
-    #reload_tab(context) {
-        // Serialize checks with rule updates and other completion events.
-        return this.#with_nonce_rules(async () => {
-            if (
-                !this.#is_current(context) ||
-                this.#pending_reloads.get(context.tabId) !== context
-            )
-                return;
-            try {
-                const tab = await chrome.tabs.get(context.tabId);
-                if (!this.#is_current(context)) return;
-                // pendingUrl may be hidden when its origin is not permitted.
-                // Network completion also precedes document/subresource loads.
-                if (tab.status === "loading") return;
-                this.#pending_reloads.delete(context.tabId);
-                if (
-                    tab.status !== "complete" ||
-                    tab.pendingUrl ||
-                    tab.url !== context.url
-                )
-                    return;
-                await chrome.tabs.reload(context.tabId);
-            } catch (error) {
-                if (this.#pending_reloads.get(context.tabId) === context)
-                    this.#pending_reloads.delete(context.tabId);
-                log.warn("Failed to reload sign-in: " + error);
-            }
-        });
-    }
-
     #sso_rule(
         id,
         prt,
@@ -299,27 +212,13 @@ export class PlatformChrome extends Platform {
     }
 
     update_request_handlers(enabled, account, broker) {
-        if (
-            enabled !== this.#enabled ||
-            account?.username() !== this.account?.username() ||
-            broker !== this.#broker
-        ) {
-            this.#generation++;
-            this.#seen_nonces.clear();
-            this.#tab_requests.clear();
-            this.#pending_reloads.clear();
-            for (const request of this.#pending_requests.values())
-                request.resolve("invalidated");
-            this.#pending_requests.clear();
-            this.clear_error();
-            this.#clear_net_rules();
-        }
         super.update_request_handlers(enabled, account, broker);
         this.#broker = broker;
         this.#enabled = enabled;
         if (!enabled) {
             chrome.alarms.clear(PlatformChrome.PRT_SSO_REFRESH_ALARM);
             chrome.alarms.clear(PlatformChrome.PRT_SSO_RETRY_ALARM);
+            this.#clear_net_rules();
             return;
         }
         this.#ensure_refresh_alarm(PlatformChrome.PRT_SSO_REFRESH_ALARM);
@@ -337,7 +236,7 @@ export class PlatformChrome extends Platform {
             alarm.name !== PlatformChrome.PRT_SSO_RETRY_ALARM
         )
             return;
-        if (!this.#enabled || !this.#broker || !this.account) return;
+        if (!this.#broker || !this.account) return;
         this.#update_net_rules(this.#broker);
     }
 
@@ -356,27 +255,26 @@ export class PlatformChrome extends Platform {
         });
     }
 
-    #clear_net_rules() {
+    async #clear_net_rules() {
         log.debug("clear network rules");
-        return this.#with_nonce_rules(async () => {
-            const oldRules =
-                await chrome.declarativeNetRequest.getSessionRules();
-            const oldRuleIds = oldRules.map((rule) => rule.id);
-            await chrome.declarativeNetRequest.updateSessionRules({
-                removeRuleIds: oldRuleIds,
-            });
+        const oldRules = await chrome.declarativeNetRequest.getSessionRules();
+        const oldRuleIds = oldRules.map((rule) => rule.id);
+        await chrome.declarativeNetRequest.updateSessionRules({
+            removeRuleIds: oldRuleIds,
         });
+        this.#seen_nonces.clear();
+        this.clear_error();
     }
 
     async #update_net_rules(broker) {
-        const generation = this.#generation;
-        const account = this.account;
         log.debug("update network rules");
         let prt = undefined;
         try {
-            prt = await broker.acquirePrtSsoCookie(account, Platform.SSO_URL);
+            prt = await broker.acquirePrtSsoCookie(
+                this.account,
+                Platform.SSO_URL,
+            );
         } catch (error) {
-            if (!this.#enabled || generation !== this.#generation) return;
             this.report_error("Failed to acquire the SSO token: " + error);
             // e.g. the broker refuses while the screen is locked after a wakeup
             chrome.alarms.create(PlatformChrome.PRT_SSO_RETRY_ALARM, {
@@ -385,19 +283,13 @@ export class PlatformChrome extends Platform {
             return;
         }
         const newRules = [this.#sso_rule(1, prt)];
-        const installed = await this.#with_nonce_rules(async () => {
-            if (!this.#enabled || generation !== this.#generation) return false;
-            await chrome.declarativeNetRequest.updateSessionRules({
-                removeRuleIds: [1],
-                addRules: newRules,
-            });
-            return true;
+        await chrome.declarativeNetRequest.updateSessionRules({
+            removeRuleIds: [1],
+            addRules: newRules,
         });
-        if (!installed || !this.#enabled || generation !== this.#generation)
-            return;
         this.clear_error();
         log.debug("network rules updated");
-        await this.#recover_missed_navigations(generation);
+        await this.#recover_missed_navigations();
     }
 
     /*
@@ -406,36 +298,21 @@ export class PlatformChrome extends Platform {
      * went out without the SSO header and Entra fell back to interactive
      * sign-in. Re-request them once.
      */
-    async #recover_missed_navigations(generation) {
+    async #recover_missed_navigations() {
         const flag = PlatformChrome.SSO_RECOVERY_DONE;
         const data = await chrome.storage.session.get(flag);
-        if (data[flag] || !this.#enabled || generation !== this.#generation)
-            return;
+        if (data[flag]) return;
+        await chrome.storage.session.set({ [flag]: true });
         const queryOptions = {
             url: Platform.SSO_URL + "/*",
         };
         for (const tab of await chrome.tabs.query(queryOptions)) {
-            if (!this.#enabled || generation !== this.#generation) return;
             const url = URL.parse(tab.url || "");
             if (!url) continue;
             if (!/\/oauth2\/(v2\.0\/)?authorize$|\/saml2$/.test(url.pathname))
                 continue;
             log.info("re-requesting sign-in tab that missed SSO");
-            let context = this.#tab_requests.get(tab.id);
-            // An observed nonce request has its own retry after acquisition.
-            if (context?.nonce) continue;
-            if (!context) {
-                context = {
-                    tabId: tab.id,
-                    url: url.href,
-                    generation,
-                    main_frame: true,
-                };
-                this.#tab_requests.set(tab.id, context);
-            }
-            if (context.url === url.href) this.#schedule_reload(context);
+            await this.#update_tab(tab.id, url.href);
         }
-        if (this.#enabled && generation === this.#generation)
-            await chrome.storage.session.set({ [flag]: true });
     }
 }
