@@ -301,7 +301,7 @@ export class PlatformChrome extends Platform {
     update_request_handlers(enabled, account, broker) {
         if (
             enabled !== this.#enabled ||
-            account?.username !== this.account?.username ||
+            account?.username() !== this.account?.username() ||
             broker !== this.#broker
         ) {
             this.#generation++;
@@ -311,6 +311,7 @@ export class PlatformChrome extends Platform {
             for (const request of this.#pending_requests.values())
                 request.resolve("invalidated");
             this.#pending_requests.clear();
+            this.clear_error();
             this.#clear_net_rules();
         }
         super.update_request_handlers(enabled, account, broker);
@@ -364,7 +365,6 @@ export class PlatformChrome extends Platform {
             await chrome.declarativeNetRequest.updateSessionRules({
                 removeRuleIds: oldRuleIds,
             });
-            this.clear_error();
         });
     }
 

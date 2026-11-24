@@ -26,6 +26,7 @@ let openTabs = [1, 2, 3, 5, 6, 7, 8];
 let rejectNextNavigation = false;
 let requestOnUpdate = null;
 let onTabGet = null;
+let onRulesGet = null;
 const delayedCookies = new Map();
 let rules = [];
 
@@ -91,6 +92,9 @@ globalThis.chrome = {
     },
     declarativeNetRequest: {
         async getSessionRules() {
+            const hook = onRulesGet;
+            onRulesGet = null;
+            if (hook) await hook();
             return rules;
         },
         async updateSessionRules({ removeRuleIds = [], addRules = [] }) {
@@ -130,6 +134,9 @@ await cp(path.join(root, "src"), dir, { recursive: true });
 await cp(path.join(root, "platform/chrome/js"), dir, { recursive: true });
 const { PlatformChrome } = await import(
     pathToFileURL(path.join(dir, "platform-chrome.js")).href
+);
+const { Account } = await import(
+    pathToFileURL(path.join(dir, "account.js")).href
 );
 await rm(dir, { recursive: true, force: true });
 
@@ -207,7 +214,11 @@ const platform = new PlatformChrome();
 await navigate(1, SIGNIN + "?sso_nonce=n0");
 check("disabled: nothing acquired", acquired, []);
 
-platform.update_request_handlers(true, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    true,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 acquired.length = 0;
 
@@ -270,7 +281,11 @@ check(
 check("other tab: keeps its cookie", header(3, frame_url), "nonce-n2");
 
 // the periodic PRT refresh must not disturb active nonce cookies
-platform.update_request_handlers(true, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    true,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 check(
     "refresh: keeps nonce cookies",
@@ -484,7 +499,11 @@ const disabledPostId = await navigate(
     "main_frame",
     "POST",
 );
-platform.update_request_handlers(false, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    false,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 await finish(disabledPostId, "completed");
 check(
@@ -493,7 +512,11 @@ check(
     [],
 );
 check("POST: disabling clears nonce rules", rules, []);
-platform.update_request_handlers(true, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    true,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 
 const deferredDisableId = await navigate(
@@ -504,7 +527,11 @@ const deferredDisableId = await navigate(
 );
 tabStatuses.set(1, "loading");
 await finish(deferredDisableId, "completed");
-platform.update_request_handlers(false, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    false,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 await updateTab(1, { status: "complete" });
 check(
@@ -512,7 +539,11 @@ check(
     tabReloads,
     [],
 );
-platform.update_request_handlers(true, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    true,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 
 const switchedPostId = await navigate(
@@ -521,7 +552,11 @@ const switchedPostId = await navigate(
     "main_frame",
     "POST",
 );
-platform.update_request_handlers(true, { username: "b@x" }, broker);
+platform.update_request_handlers(
+    true,
+    new Account({ username: "b@x" }),
+    broker,
+);
 await settle();
 await finish(switchedPostId, "completed");
 check("POST: account switch cancels old retry", tabReloads, []);
@@ -530,7 +565,11 @@ check(
     rules.filter((r) => r.id >= 2),
     [],
 );
-platform.update_request_handlers(true, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    true,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 
 let resolveCookie;
@@ -542,7 +581,11 @@ delayedCookies.set(
     }),
 );
 const delayedPostId = await navigate(1, delayedUrl, "main_frame", "POST");
-platform.update_request_handlers(true, { username: "b@x" }, broker);
+platform.update_request_handlers(
+    true,
+    new Account({ username: "b@x" }),
+    broker,
+);
 await settle();
 resolveCookie();
 await settle();
@@ -553,7 +596,11 @@ check(
     [],
 );
 check("POST: stale broker completion cannot replay", tabReloads, []);
-platform.update_request_handlers(true, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    true,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 
 // Delayed acquisition for an older request must not consume the nonce of
@@ -629,10 +676,18 @@ const changedDuringGetId = await navigate(
     "POST",
 );
 onTabGet = () =>
-    platform.update_request_handlers(false, { username: "a@x" }, broker);
+    platform.update_request_handlers(
+        false,
+        new Account({ username: "a@x" }),
+        broker,
+    );
 await finish(changedDuringGetId, "completed");
 check("POST: disabling during tabs.get cancels replay", tabReloads, []);
-platform.update_request_handlers(true, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    true,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 
 let resolveGenericCookie;
@@ -642,9 +697,17 @@ delayedCookies.set(
         resolveGenericCookie = resolve;
     }),
 );
-platform.update_request_handlers(true, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    true,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
-platform.update_request_handlers(false, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    false,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 resolveGenericCookie();
 await settle();
@@ -654,10 +717,18 @@ check(
     [],
 );
 delayedCookies.delete(new URL(SIGNIN).origin);
-platform.update_request_handlers(true, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    true,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 
-platform.update_request_handlers(false, { username: "a@x" }, broker);
+platform.update_request_handlers(
+    false,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 check(
     "disable: no cookie injected",
@@ -688,7 +759,11 @@ requestOnUpdate = {
     method: "GET",
 };
 rejectNextNavigation = true;
-recoveryPlatform.update_request_handlers(true, { username: "a@x" }, broker);
+recoveryPlatform.update_request_handlers(
+    true,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 check("recovery: rejected navigation handled", rejectNextNavigation, false);
 check("recovery: nonce cookie acquired for exact url", acquired, [
@@ -705,7 +780,11 @@ check(
     "nonce-during-recovery",
 );
 check("recovery: missed tab uses generic cookie", header(7), "generic");
-recoveryPlatform.update_request_handlers(true, { username: "a@x" }, broker);
+recoveryPlatform.update_request_handlers(
+    true,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 check(
     "recovery: listener registered only once",
@@ -721,10 +800,47 @@ recoveryTabs = [{ id: 7, url: recoverySamlUrl }];
 await navigate(7, recoverySamlUrl);
 reloads.length = 0;
 tabReloads.length = 0;
-recoveryPlatform.update_request_handlers(true, { username: "a@x" }, broker);
+recoveryPlatform.update_request_handlers(
+    true,
+    new Account({ username: "a@x" }),
+    broker,
+);
 await settle();
 check("recovery: SAML tab has no URL-only navigation", reloads, []);
 check("recovery: SAML navigation entry reloaded", tabReloads, [7]);
+
+// A failed acquisition can finish before the previous generation's queued
+// rule cleanup. Cleanup must leave the current error visible.
+let releaseCleanup;
+const cleanupWait = new Promise((resolve) => {
+    releaseCleanup = resolve;
+});
+onRulesGet = () => cleanupWait;
+const statuses = [];
+recoveryPlatform.set_status_handler((message) => statuses.push(message));
+const failingBroker = {
+    async acquirePrtSsoCookie() {
+        throw new Error("current failure");
+    },
+};
+recoveryPlatform.update_request_handlers(
+    true,
+    new Account({ username: "b@x" }),
+    failingBroker,
+);
+await settle();
+check(
+    "cleanup: current acquisition error is displayed",
+    statuses.at(-1),
+    "Failed to acquire the SSO token: Error: current failure",
+);
+releaseCleanup();
+await settle();
+check(
+    "cleanup: preserves the newer acquisition error",
+    statuses.at(-1),
+    "Failed to acquire the SSO token: Error: current failure",
+);
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);
