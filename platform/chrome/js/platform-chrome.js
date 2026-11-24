@@ -71,6 +71,16 @@ export class PlatformChrome extends Platform {
         try {
             if (!(await this.#update_nonce_rule(details))) return;
             if (!main_frame) return;
+            /*
+             * A URL navigation discards a POST body, including SAMLRequest.
+             * Reload the committed navigation only after its response, so
+             * Chrome preserves the method and handles repost confirmation.
+             */
+            if (details.method !== "GET") {
+                if ((await finished) === "completed")
+                    await this.#reload_tab(details.tabId, details.url);
+                return;
+            }
             log.info("re-requesting sign-in with nonce-bound SSO token");
             if (await this.#update_tab(details.tabId, details.url)) return;
             /*
@@ -180,6 +190,16 @@ export class PlatformChrome extends Platform {
         } catch (error) {
             log.warn("Failed to re-request sign-in: " + error);
             return false;
+        }
+    }
+
+    async #reload_tab(tabId, url) {
+        try {
+            const tab = await chrome.tabs.get(tabId);
+            if (tab.url !== url) return;
+            await chrome.tabs.reload(tabId);
+        } catch (error) {
+            log.warn("Failed to reload sign-in: " + error);
         }
     }
 
@@ -311,7 +331,7 @@ export class PlatformChrome extends Platform {
             if (!/\/oauth2\/(v2\.0\/)?authorize$|\/saml2$/.test(url.pathname))
                 continue;
             log.info("re-requesting sign-in tab that missed SSO");
-            await this.#update_tab(tab.id, url.href);
+            await this.#reload_tab(tab.id, url.href);
         }
     }
 }

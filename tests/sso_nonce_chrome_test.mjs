@@ -14,6 +14,8 @@ const on_request = [];
 const on_finished = { redirect: [], completed: [], error: [] };
 const alarms = new Map();
 const reloads = [];
+const tabReloads = [];
+const tabUrls = new Map();
 let recoveryDone = true;
 let recoveryTabs = [];
 let openTabs = [1, 2, 3, 5, 6, 7, 8];
@@ -43,11 +45,24 @@ globalThis.chrome = {
         onErrorOccurred: { addListener: (fn) => on_finished.error.push(fn) },
     },
     tabs: {
+        async get(tabId) {
+            return { id: tabId, url: tabUrls.get(tabId) };
+        },
         async query({ url } = {}) {
             return url ? recoveryTabs : openTabs.map((id) => ({ id }));
         },
         async update(tabId, { url }) {
             reloads.push([tabId, url]);
+            const request = requestOnUpdate;
+            requestOnUpdate = null;
+            if (request) on_request.forEach((fn) => fn(request));
+            if (rejectNextNavigation) {
+                rejectNextNavigation = false;
+                throw new Error("Navigation rejected.");
+            }
+        },
+        async reload(tabId) {
+            tabReloads.push(tabId);
             const request = requestOnUpdate;
             requestOnUpdate = null;
             if (request) on_request.forEach((fn) => fn(request));
@@ -143,9 +158,10 @@ function header(tabId, url = SIGNIN + "?client_id=c") {
 }
 
 let nextRequestId = 0;
-async function navigate(tabId, url, type = "main_frame") {
+async function navigate(tabId, url, type = "main_frame", method = "GET") {
     const requestId = String(++nextRequestId);
-    on_request.forEach((fn) => fn({ requestId, tabId, url, type }));
+    tabUrls.set(tabId, url);
+    on_request.forEach((fn) => fn({ requestId, tabId, url, type, method }));
     await settle();
     return requestId;
 }
@@ -250,7 +266,13 @@ for (const [tabId, url] of [
     [11, url11],
 ]) {
     on_request.forEach((fn) =>
-        fn({ requestId: "c" + tabId, tabId, url, type: "main_frame" }),
+        fn({
+            requestId: "c" + tabId,
+            tabId,
+            url,
+            type: "main_frame",
+            method: "GET",
+        }),
     );
 }
 await settle();
@@ -302,6 +324,54 @@ const redirectId = await navigate(6, redirect_url);
 await finish(redirectId, "redirect");
 check("pending: no retry after redirect", reloads, [[6, redirect_url]]);
 
+// A URL navigation would turn a SAML POST into a GET and lose its body.
+// Wait for the POST response, then reload its navigation entry instead.
+reloads.length = 0;
+const samlUrl = "https://login.microsoftonline.com/common/saml2?sso_nonce=post";
+const postId = await navigate(1, samlUrl, "main_frame", "POST");
+check("POST: no URL-only navigation", reloads, []);
+check("POST: no reload while pending", tabReloads, []);
+check("POST: nonce cookie ready", header(1, samlUrl), "nonce-post");
+await finish(postId, "completed");
+check("POST: reloads the committed POST", tabReloads, [1]);
+await finish(postId, "completed");
+check("POST: reloads only once", tabReloads, [1]);
+
+const redirectedPostId = await navigate(
+    1,
+    samlUrl + "-redirect",
+    "main_frame",
+    "POST",
+);
+await finish(redirectedPostId, "redirect");
+check("POST: no reload after redirect", tabReloads, [1]);
+
+const failedPostId = await navigate(
+    1,
+    samlUrl + "-error",
+    "main_frame",
+    "POST",
+);
+await finish(failedPostId, "error");
+check("POST: no reload after cancellation", tabReloads, [1]);
+
+const movedPostId = await navigate(1, samlUrl + "-moved", "main_frame", "POST");
+tabUrls.set(1, "https://example.com/");
+await finish(movedPostId, "completed");
+check("POST: no reload after leaving sign-in", tabReloads, [1]);
+
+const rejectedPostId = await navigate(
+    1,
+    samlUrl + "-rejected",
+    "main_frame",
+    "POST",
+);
+rejectNextNavigation = true;
+await finish(rejectedPostId, "completed");
+check("POST: rejected reload attempted once", tabReloads, [1, 1]);
+check("POST: never falls back to URL navigation", reloads, []);
+tabReloads.length = 0;
+
 platform.update_request_handlers(false, { username: "a@x" }, broker);
 await settle();
 check(
@@ -316,6 +386,7 @@ const duringRecoveryUrl = SIGNIN + "?client_id=c&sso_nonce=during-recovery";
 const listenerCount = on_request.length;
 recoveryDone = false;
 recoveryTabs = [{ id: 7, url: recoveryUrl }];
+tabUrls.set(7, recoveryUrl);
 acquired.length = 0;
 reloads.length = 0;
 const recoveryPlatform = new PlatformChrome();
@@ -329,6 +400,7 @@ requestOnUpdate = {
     tabId: 8,
     url: duringRecoveryUrl,
     type: "main_frame",
+    method: "GET",
 };
 rejectNextNavigation = true;
 recoveryPlatform.update_request_handlers(true, { username: "a@x" }, broker);
@@ -339,9 +411,9 @@ check("recovery: nonce cookie acquired for exact url", acquired, [
     duringRecoveryUrl,
 ]);
 check("recovery: handler active during tab updates", reloads, [
-    [7, recoveryUrl],
     [8, duringRecoveryUrl],
 ]);
+check("recovery: reloads the original navigation entry", tabReloads, [7]);
 check(
     "recovery: redirected tab carries nonce cookie",
     header(8, duringRecoveryUrl),
@@ -355,6 +427,19 @@ check(
     on_request.length,
     listenerCount + 1,
 );
+
+// Startup recovery cannot infer the original method from a tab URL.
+// A SAML tab must reload its existing navigation entry too.
+recoveryDone = false;
+const recoverySamlUrl = "https://login.microsoftonline.com/common/saml2";
+recoveryTabs = [{ id: 7, url: recoverySamlUrl }];
+tabUrls.set(7, recoverySamlUrl);
+reloads.length = 0;
+tabReloads.length = 0;
+recoveryPlatform.update_request_handlers(true, { username: "a@x" }, broker);
+await settle();
+check("recovery: SAML tab has no URL-only navigation", reloads, []);
+check("recovery: SAML navigation entry reloaded", tabReloads, [7]);
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);
