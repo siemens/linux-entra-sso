@@ -128,7 +128,7 @@ check("app policy filters", update.filters_to_add, [
 policy = await policy_with({});
 update = policy.getPolicyUpdate([]);
 check("no app policy pending", update.pending, false);
-check("no app policy managed", update.apps_managed, null);
+check("no app policy managed", update.apps_managed, {});
 
 /* 6. a disabled profile picture is never queried from the Graph API */
 const broker = {

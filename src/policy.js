@@ -61,7 +61,7 @@ export class PolicyManager {
             filters_to_add: [],
             filters_to_remove: [],
             has_catch_all: catch_all !== undefined,
-            apps_managed: this.#apps,
+            apps_managed: this.#apps ?? {},
         };
         if (this.#apps === null) return gpo_update;
 
