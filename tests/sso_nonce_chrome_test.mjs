@@ -143,9 +143,9 @@ function header(tabId, url = SIGNIN + "?client_id=c") {
 }
 
 let nextRequestId = 0;
-async function navigate(tabId, url, type = "main_frame") {
+async function navigate(tabId, url, type = "main_frame", method = "GET") {
     const requestId = String(++nextRequestId);
-    on_request.forEach((fn) => fn({ requestId, tabId, url, type }));
+    on_request.forEach((fn) => fn({ requestId, tabId, url, type, method }));
     await settle();
     return requestId;
 }
@@ -250,7 +250,13 @@ for (const [tabId, url] of [
     [11, url11],
 ]) {
     on_request.forEach((fn) =>
-        fn({ requestId: "c" + tabId, tabId, url, type: "main_frame" }),
+        fn({
+            requestId: "c" + tabId,
+            tabId,
+            url,
+            type: "main_frame",
+            method: "GET",
+        }),
     );
 }
 await settle();
@@ -302,6 +308,25 @@ const redirectId = await navigate(6, redirect_url);
 await finish(redirectId, "redirect");
 check("pending: no retry after redirect", reloads, [[6, redirect_url]]);
 
+// Acquiring a nonce credential must not replace a SAML POST with a GET.
+const postUrl = "https://login.microsoftonline.com/common/saml2?sso_nonce=post";
+const retriesBeforePost = reloads.length;
+const postId = await navigate(1, postUrl, "main_frame", "POST");
+check("POST: credential acquired for exact URL", acquired.at(-1), postUrl);
+check("POST: nonce credential installed", header(1, postUrl), "nonce-post");
+check("POST: no URL-only navigation", reloads.length, retriesBeforePost);
+await finish(postId, "completed");
+check("POST: no retry after completion", reloads.length, retriesBeforePost);
+
+const cancelledPostId = await navigate(
+    1,
+    postUrl + "-cancel",
+    "main_frame",
+    "POST",
+);
+await finish(cancelledPostId, "error");
+check("POST: no retry after cancellation", reloads.length, retriesBeforePost);
+
 platform.update_request_handlers(false, { username: "a@x" }, broker);
 await settle();
 check(
@@ -315,7 +340,10 @@ const recoveryUrl = SIGNIN + "?client_id=c";
 const duringRecoveryUrl = SIGNIN + "?client_id=c&sso_nonce=during-recovery";
 const listenerCount = on_request.length;
 recoveryDone = false;
-recoveryTabs = [{ id: 7, url: recoveryUrl }];
+recoveryTabs = [
+    { id: 7, url: recoveryUrl },
+    { id: 9, url: "https://login.microsoftonline.com/common/saml2" },
+];
 acquired.length = 0;
 reloads.length = 0;
 const recoveryPlatform = new PlatformChrome();
@@ -329,6 +357,7 @@ requestOnUpdate = {
     tabId: 8,
     url: duringRecoveryUrl,
     type: "main_frame",
+    method: "GET",
 };
 rejectNextNavigation = true;
 recoveryPlatform.update_request_handlers(true, { username: "a@x" }, broker);
