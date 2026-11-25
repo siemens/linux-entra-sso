@@ -70,7 +70,8 @@ export class PlatformChrome extends Platform {
         const finished = main_frame && this.#watch_request(details.requestId);
         try {
             if (!(await this.#update_nonce_rule(details))) return;
-            if (!main_frame) return;
+            // A URL-only retry would discard a POST body such as SAMLRequest.
+            if (!main_frame || details.method !== "GET") return;
             log.info("re-requesting sign-in with nonce-bound SSO token");
             if (await this.#update_tab(details.tabId, details.url)) return;
             /*
@@ -295,7 +296,9 @@ export class PlatformChrome extends Platform {
      * Session rules do not survive a browser restart. Top-level sign-in
      * requests sent before the first rule of this browser session existed
      * went out without the SSO header and Entra fell back to interactive
-     * sign-in. Re-request them once.
+     * sign-in. Re-request them once. SAML sign-ins are skipped, as their
+     * original request may have been a POST, whose body a URL-only
+     * re-request would discard.
      */
     async #recover_missed_navigations() {
         const flag = PlatformChrome.SSO_RECOVERY_DONE;
@@ -308,8 +311,7 @@ export class PlatformChrome extends Platform {
         for (const tab of await chrome.tabs.query(queryOptions)) {
             const url = URL.parse(tab.url || "");
             if (!url) continue;
-            if (!/\/oauth2\/(v2\.0\/)?authorize$|\/saml2$/.test(url.pathname))
-                continue;
+            if (!/\/oauth2\/(v2\.0\/)?authorize$/.test(url.pathname)) continue;
             log.info("re-requesting sign-in tab that missed SSO");
             await this.#update_tab(tab.id, url.href);
         }
