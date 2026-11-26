@@ -23,6 +23,7 @@ export class PlatformChrome extends Platform {
     static PRT_SSO_RETRY_DELAY_MIN = 1;
     static SSO_RECOVERY_DONE = "sso_recovery_done";
     static NONCE_RULE_ID_BASE = 2;
+    static OAUTH_AUTHORIZE_PATH = /\/oauth2\/(v2\.0\/)?authorize$/;
 
     constructor() {
         super();
@@ -67,11 +68,20 @@ export class PlatformChrome extends Platform {
         this.#remove_orphaned_nonce_rules();
         const main_frame = details.type === "main_frame";
         // watch from the start, the request may finish while we acquire
-        const finished = main_frame && this.#watch_request(details.requestId);
+        let outcome = undefined;
+        const finished =
+            main_frame &&
+            this.#watch_request(details.requestId).then((o) => (outcome = o));
         try {
             if (!(await this.#update_nonce_rule(details))) return;
-            // A URL-only retry would discard a POST body such as SAMLRequest.
-            if (!main_frame || details.method !== "GET") return;
+            if (!main_frame || !PlatformChrome.#may_rerequest(details)) return;
+            /*
+             * The broker may answer after the sign-in went ahead. Re-requesting
+             * it then would deliver a second response to the application.
+             */
+            if (!(await this.#tab_shows(details.tabId, details.url))) return;
+            // checked last, the request may redirect while we look at the tab
+            if (outcome === "redirect") return;
             log.info("re-requesting sign-in with nonce-bound SSO token");
             if (await this.#update_tab(details.tabId, details.url)) return;
             /*
@@ -80,10 +90,45 @@ export class PlatformChrome extends Platform {
              * away, i.e. the sign-in went ahead.
              */
             if ((await finished) === "redirect") return;
+            if (!(await this.#tab_shows(details.tabId, details.url))) return;
             log.info("retrying re-request of sign-in");
             await this.#update_tab(details.tabId, details.url);
         } finally {
             if (main_frame) this.#pending_requests.delete(details.requestId);
+        }
+    }
+
+    /*
+     * Only re-request sign-ins that can be repeated safely, i.e. OAuth
+     * authorize requests whose result is a redirect. A URL-only re-request
+     * would discard a POST body such as SAMLRequest. Successful SAML and
+     * form_post sign-ins answer with a page that posts the result to the
+     * application, which a re-request would deliver again.
+     */
+    static #may_rerequest(details) {
+        if (details.method !== "GET") return false;
+        const url = URL.parse(details.url);
+        return url !== null && PlatformChrome.#is_redirect_signin(url);
+    }
+
+    static #is_redirect_signin(url) {
+        return (
+            PlatformChrome.OAUTH_AUTHORIZE_PATH.test(url.pathname) &&
+            url.searchParams.get("response_mode") !== "form_post"
+        );
+    }
+
+    /*
+     * Whether the tab still shows or loads the sign-in, i.e. it did not
+     * move on to the application. Without host permissions for the current
+     * page the URL is hidden, which also means it moved on.
+     */
+    async #tab_shows(tabId, url) {
+        try {
+            const tab = await chrome.tabs.get(tabId);
+            return (tab.pendingUrl || tab.url) === url;
+        } catch {
+            return false;
         }
     }
 
@@ -296,9 +341,10 @@ export class PlatformChrome extends Platform {
      * Session rules do not survive a browser restart. Top-level sign-in
      * requests sent before the first rule of this browser session existed
      * went out without the SSO header and Entra fell back to interactive
-     * sign-in. Re-request them once. SAML sign-ins are skipped, as their
-     * original request may have been a POST, whose body a URL-only
-     * re-request would discard.
+     * sign-in. Re-request them once. Only OAuth sign-ins answered with a
+     * redirect are re-requested, as with nonce-bound tokens: the original
+     * request of a SAML sign-in may have been a POST, and form_post
+     * sign-ins may already have posted their result to the application.
      */
     async #recover_missed_navigations() {
         const flag = PlatformChrome.SSO_RECOVERY_DONE;
@@ -310,8 +356,7 @@ export class PlatformChrome extends Platform {
         };
         for (const tab of await chrome.tabs.query(queryOptions)) {
             const url = URL.parse(tab.url || "");
-            if (!url) continue;
-            if (!/\/oauth2\/(v2\.0\/)?authorize$/.test(url.pathname)) continue;
+            if (!url || !PlatformChrome.#is_redirect_signin(url)) continue;
             log.info("re-requesting sign-in tab that missed SSO");
             await this.#update_tab(tab.id, url.href);
         }

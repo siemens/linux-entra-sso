@@ -20,6 +20,10 @@ let openTabs = [1, 2, 3, 5, 6, 7, 8];
 let rejectNextNavigation = false;
 let requestOnUpdate = null;
 let rules = [];
+// tab id -> URL it shows
+const tabUrls = new Map();
+// promises the broker and tabs.get wait for before answering, see hold()
+const gates = { broker: null, tabsGet: null };
 
 globalThis.chrome = {
     alarms: {
@@ -46,8 +50,14 @@ globalThis.chrome = {
         async query({ url } = {}) {
             return url ? recoveryTabs : openTabs.map((id) => ({ id }));
         },
+        async get(tabId) {
+            const url = tabUrls.get(tabId);
+            if (gates.tabsGet) await gates.tabsGet;
+            return { id: tabId, url };
+        },
         async update(tabId, { url }) {
             reloads.push([tabId, url]);
+            tabUrls.set(tabId, url);
             const request = requestOnUpdate;
             requestOnUpdate = null;
             if (request) on_request.forEach((fn) => fn(request));
@@ -82,6 +92,7 @@ const acquired = [];
 const broker = {
     async acquirePrtSsoCookie(account, url) {
         acquired.push(url);
+        if (gates.broker) await gates.broker;
         const nonce = URL.parse(url).searchParams.get("sso_nonce");
         return {
             cookieName: "x-ms-RefreshTokenCredential",
@@ -145,6 +156,7 @@ function header(tabId, url = SIGNIN + "?client_id=c") {
 let nextRequestId = 0;
 async function navigate(tabId, url, type = "main_frame", method = "GET") {
     const requestId = String(++nextRequestId);
+    if (type === "main_frame") tabUrls.set(tabId, url);
     on_request.forEach((fn) => fn({ requestId, tabId, url, type, method }));
     await settle();
     return requestId;
@@ -249,6 +261,7 @@ for (const [tabId, url] of [
     [10, url10],
     [11, url11],
 ]) {
+    tabUrls.set(tabId, url);
     on_request.forEach((fn) =>
         fn({
             requestId: "c" + tabId,
@@ -327,6 +340,76 @@ const cancelledPostId = await navigate(
 await finish(cancelledPostId, "error");
 check("POST: no retry after cancellation", reloads.length, retriesBeforePost);
 
+/*
+ * The broker may answer after the sign-in went ahead. The application then
+ * already got its response and must not get a second one.
+ */
+const APP = "https://app.example.com/callback";
+// hold back answers of gates[name] until the returned function is called
+function hold(name) {
+    let release;
+    gates[name] = new Promise((r) => (release = r));
+    return async () => {
+        gates[name] = null;
+        release();
+        await settle();
+    };
+}
+
+// the tab still reports the sign-in, only the redirect tells it went ahead
+reloads.length = 0;
+let release = hold("tabsGet");
+const racingUrl = SIGNIN + "?sso_nonce=racing";
+const racingId = await navigate(1, racingUrl);
+await finish(racingId, "redirect");
+await release();
+check(
+    "late broker: no re-request after redirect during tab lookup",
+    reloads,
+    [],
+);
+
+release = hold("broker");
+const lateDoneUrl = SIGNIN + "?sso_nonce=late-done";
+const lateDoneId = await navigate(1, lateDoneUrl);
+await finish(lateDoneId, "completed");
+tabUrls.set(1, APP);
+await release();
+check("late broker: no re-request after tab moved on", reloads, []);
+
+release = hold("broker");
+const promptUrl = SIGNIN + "?sso_nonce=prompt";
+const promptId = await navigate(1, promptUrl);
+await finish(promptId, "completed");
+await release();
+check("late broker: re-request while tab shows prompt", reloads, [
+    [1, promptUrl],
+]);
+
+reloads.length = 0;
+const movedUrl = SIGNIN + "?sso_nonce=moved";
+rejectNextNavigation = true;
+const movedId = await navigate(1, movedUrl);
+tabUrls.set(1, APP);
+await finish(movedId, "completed");
+check("pending: no retry after tab moved on", reloads, [[1, movedUrl]]);
+
+// Successful SAML and form_post sign-ins post their result to the application.
+reloads.length = 0;
+const samlUrl =
+    "https://login.microsoftonline.com/common/saml2?SAMLRequest=r&sso_nonce=saml";
+await navigate(1, samlUrl);
+check("SAML GET: nonce cookie installed", header(1, samlUrl), "nonce-saml");
+check("SAML GET: not re-requested", reloads, []);
+
+const formPostUrl = SIGNIN + "?response_mode=form_post&sso_nonce=form-post";
+await navigate(1, formPostUrl);
+check("form_post: not re-requested", reloads, []);
+
+const otherUrl = "https://login.microsoftonline.com/common/login?sso_nonce=o";
+await navigate(1, otherUrl);
+check("other endpoint: not re-requested", reloads, []);
+
 platform.update_request_handlers(false, { username: "a@x" }, broker);
 await settle();
 check(
@@ -343,6 +426,7 @@ recoveryDone = false;
 recoveryTabs = [
     { id: 7, url: recoveryUrl },
     { id: 9, url: "https://login.microsoftonline.com/common/saml2" },
+    { id: 10, url: SIGNIN + "?client_id=c&response_mode=form_post" },
 ];
 acquired.length = 0;
 reloads.length = 0;
@@ -359,6 +443,7 @@ requestOnUpdate = {
     type: "main_frame",
     method: "GET",
 };
+tabUrls.set(8, duringRecoveryUrl);
 rejectNextNavigation = true;
 recoveryPlatform.update_request_handlers(true, { username: "a@x" }, broker);
 await settle();
